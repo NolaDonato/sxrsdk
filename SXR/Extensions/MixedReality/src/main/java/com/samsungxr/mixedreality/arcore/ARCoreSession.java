@@ -769,27 +769,25 @@ public class ARCoreSession implements IMixedReality
         arCamera.getProjectionMatrix(m, 0, near, far);
         projmtx.set(m);
 
+        float arDist = far - near;
         float aspectRatio = projmtx.m11() / projmtx.m00();
-        float vrTanfov =  (float) Math.tan(vrFov * 0.5f);
         float arFov = projmtx.perspectiveFov();
         float arTanfov =  (float) Math.tan(arFov * 0.5f);
-        float distance = far - near;
-        float vrHeight = distance * vrTanfov * 2;
-        float arHeight = distance * arTanfov * 2;
+        float vrTanfov =  (float) Math.tan(vrFov * 0.5f);
+        float arHeight = arDist * arTanfov * 2;
         float arWidth = arHeight * aspectRatio;
-        float vrWidth = arWidth * vrHeight / arHeight;
 
-        mScreenToCamera.x = vrWidth / mScreenToCamera.x;
-        mScreenToCamera.y = vrHeight / mScreenToCamera.y;
-        mScreenDepth = distance;
+        mScreenToCamera.x = arWidth / mScreenToCamera.x;
+        mScreenToCamera.y = arHeight / mScreenToCamera.y;
+        mScreenDepth = arDist;
         android.util.Log.d(TAG, "ARCore configured to: passthrough[w: "
-                + vrWidth + ", h: " + vrHeight +", z: " + distance
-                + "], cam fov: " +vrFov + ", aspect ratio: " + aspectRatio);
-        mDisplayGeometry = new Vector3f(vrWidth, vrHeight, -distance);
-        mSession.setDisplayGeometry(Surface.ROTATION_90, (int) vrWidth, (int) vrHeight);
+                + arWidth + ", h: " + arHeight +", z: " + arDist
+                + "], cam fov: " + arFov + ", aspect ratio: " + aspectRatio);
+        mDisplayGeometry = new Vector3f(arWidth, arHeight, -arDist);
+        mSession.setDisplayGeometry(Surface.ROTATION_90, (int) arWidth, (int) arHeight);
         return SXRMesh.createQuad(mContext,
                                  "float3 a_position float2 a_texcoord",
-                                  vrHeight, vrWidth);
+                                  arHeight, arWidth);
     }
 
     private static void setVRCameraFov(SXRCameraRig camRig, float degreesFov)
