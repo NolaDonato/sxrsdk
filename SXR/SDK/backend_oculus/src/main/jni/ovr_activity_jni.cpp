@@ -14,11 +14,12 @@
  */
 
 #include <jni.h>
-#include <engine/renderer/renderer.h>
 #include <objects/textures/render_texture.h>
 #include "ovr_activity.h"
+
 namespace sxr {
-    extern "C" {
+
+extern "C" {
 
     JNIEXPORT long JNICALL Java_com_samsungxr_OvrActivityNative_onCreate(JNIEnv *jni, jclass,
                                                                        jobject activity,
@@ -27,8 +28,10 @@ namespace sxr {
         return reinterpret_cast<long>(sxrActivity);
     }
 
-    JNIEXPORT long JNICALL Java_com_samsungxr_OvrViewManager_getRenderTextureInfo(JNIEnv* jni, jclass clazz, jlong jactivity ,  jint index, jint eye){
-        SXRActivity* sxrActivity = reinterpret_cast<SXRActivity*>(jactivity);
+    JNIEXPORT jlong JNICALL
+    Java_com_samsungxr_OvrViewManager_getRenderTextureInfo(JNIEnv *, jobject, jlong jactivity,
+                                                           jint index, jint eye) {
+        SXRActivity *sxrActivity = reinterpret_cast<SXRActivity *>(jactivity);
         return reinterpret_cast<long>(sxrActivity->getRenderTextureInfo(eye, index));
     }
 
@@ -65,11 +68,11 @@ namespace sxr {
         activity->onSurfaceChanged(*jni, jsurface);
     }
 
-    JNIEXPORT void JNICALL Java_com_samsungxr_OvrViewManager_drawEyes(JNIEnv * jni, jobject jViewManager,
-                                                                    jlong appPtr) {
-        SXRActivity *activity = reinterpret_cast<SXRActivity*>(appPtr);
-        activity->onDrawFrame(jViewManager);
-    }
+JNIEXPORT void JNICALL
+Java_com_samsungxr_OvrViewManager_drawEyes(JNIEnv* env, jobject jViewManager, jlong appPtr, jobject mainScene) {
+    SXRActivity *activity = reinterpret_cast<SXRActivity *>(appPtr);
+    activity->onDrawFrame(env, jViewManager, mainScene);
+}
     
     JNIEXPORT void JNICALL Java_com_samsungxr_OvrVrapiActivityHandler_nativeShowConfirmQuit(JNIEnv * jni, jclass clazz, jlong appPtr) {
         SXRActivity *activity = reinterpret_cast<SXRActivity*>(appPtr);
@@ -80,7 +83,7 @@ namespace sxr {
         SXRActivity *activity = reinterpret_cast<SXRActivity*>(appPtr);
         return activity->initializeVrApi();
     }
-    
+
     JNIEXPORT void JNICALL Java_com_samsungxr_OvrVrapiActivityHandler_nativeUninitializeVrApi(JNIEnv *, jclass) {
         SXRActivity::uninitializeVrApi();
     }
@@ -90,11 +93,24 @@ namespace sxr {
         return activity->isHmtConnected();
     }
     
-    JNIEXPORT jboolean JNICALL Java_com_samsungxr_SXRConfigurationManager_nativeUsingMultiview(JNIEnv* jni, jclass clazz, jlong appPtr) {
-        const SXRActivity *activity = reinterpret_cast<SXRActivity*>(appPtr);
-        return activity->usingMultiview();
+    extern "C"
+    JNIEXPORT void JNICALL
+    Java_com_samsungxr_OvrViewManager_recenterPose__J(JNIEnv*, jobject, jlong ptr) {
+        const SXRActivity *activity = reinterpret_cast<SXRActivity*>(ptr);
+        activity->recenterPose();
     }
-    
-    } //extern "C" {
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_OvrViewManager_initialize(JNIEnv *env, jobject instance, jlong aNative,
+                                             jlong materialShaderManager,
+                                             jlong postEffectRenderTextureA,
+                                             jlong postEffectRenderTextureB) {
+    SXRActivity *activity = reinterpret_cast<SXRActivity*>(aNative);
+    activity->initialize(reinterpret_cast<ShaderManager *>(materialShaderManager),
+                         reinterpret_cast<RenderTexture *>(postEffectRenderTextureA),
+                         reinterpret_cast<RenderTexture *>(postEffectRenderTextureB));
+}
+
+} //extern "C" {
     
 } //namespace sxr

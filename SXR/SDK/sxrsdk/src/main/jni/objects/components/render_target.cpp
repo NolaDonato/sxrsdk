@@ -37,7 +37,6 @@ namespace sxr {
  */
 RenderTarget::RenderTarget(RenderTexture* tex, bool is_multiview, bool is_stereo)
 :   Component(RenderTarget::getComponentType()),
-    mNextRenderTarget(nullptr),
     mRenderTexture(tex)
 {
     mRenderState.is_shadow = false;
@@ -54,7 +53,6 @@ RenderTarget::RenderTarget(RenderTexture* tex, bool is_multiview, bool is_stereo
 
 RenderTarget::RenderTarget(Scene* scene, int w, int h)
   :   Component(RenderTarget::getComponentType()),
-      mNextRenderTarget(nullptr),
       mRenderTexture(nullptr),
       mDefaultWidth(w),
       mDefaultHeight(h)
@@ -68,7 +66,6 @@ RenderTarget::RenderTarget(Scene* scene, int w, int h)
 
 RenderTarget::RenderTarget(RenderTexture* tex, const RenderTarget* source)
     : Component(RenderTarget::getComponentType()),
-      mNextRenderTarget(nullptr),
       mRenderTexture(tex)
 {
     mRenderState.is_shadow = false;

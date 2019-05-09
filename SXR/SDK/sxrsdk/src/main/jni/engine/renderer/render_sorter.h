@@ -25,7 +25,6 @@
 #include "glm/glm.hpp"
 #include "objects/node.h"
 #include "objects/bounding_volume.h"
-#include "util/sxr_jni.h"
 
 namespace sxr {
 

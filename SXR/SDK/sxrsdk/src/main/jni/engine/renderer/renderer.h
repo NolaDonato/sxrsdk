@@ -24,9 +24,10 @@
 #include "render_sorter.h"
 #include "shaders/shader_manager.h"
 #include "render_state.h"
+#include "util/sxr_log.h"
 
 namespace sxr {
-extern bool use_multiview;
+extern bool gUseMultiview;
 struct RenderTextureInfo;
 class Camera;
 class Scene;
@@ -53,7 +54,6 @@ class Mesh;
 class TextureParameters;
 
 extern uint8_t* oculusTexData;
-
 
 
 enum EYE
@@ -128,34 +128,8 @@ public:
     virtual Light* createLight(const char* uniformDescriptor, const char* textureDescriptor) = 0;
     virtual void updatePostEffectMesh(Mesh*) = 0;
     virtual int getMaxArraySize(int elemSize) const;
-    void addRenderTarget(RenderTarget* renderTarget, EYE eye, int index){
-        switch (eye) {
-            case LEFT:
-                mLeftRenderTarget[index] = renderTarget;
-                break;
-            case RIGHT:
-                mRightRenderTarget[index] = renderTarget;
-                break;
-            case MULTIVIEW:
-                mMultiviewRenderTarget[index] = renderTarget;
-                break;
-            default:
-                LOGE("invalid Eye");
-        }
-    }
-    RenderTarget* getRenderTarget(int index, int eye){
-        switch (eye) {
-            case LEFT:
-                return mLeftRenderTarget[index];
-            case RIGHT:
-                return mRightRenderTarget[index];
-            case MULTIVIEW:
-                return mMultiviewRenderTarget[index];
-            default:
-                FAIL("invalid eye");
-        }
-        return nullptr;
-    }
+    void addRenderTarget(RenderTarget* renderTarget, EYE eye, int index);
+    RenderTarget* getRenderTarget(int index, int eye);
     virtual void validate(RenderSorter::Renderable& r) = 0;
     virtual void render(const RenderState&, const RenderSorter::Renderable&) = 0;
 private:
@@ -163,6 +137,7 @@ private:
     RenderTarget* mRightRenderTarget[3];
     RenderTarget* mMultiviewRenderTarget[3];
     static bool isVulkan_;
+
     Renderer(const Renderer& render_engine) = delete;
     Renderer(Renderer&& render_engine) = delete;
     Renderer& operator=(const Renderer& render_engine) = delete;
@@ -190,6 +165,10 @@ public:
     bool useStencilBuffer(){
         return  useStencilBuffer_;
     }
+
+    static constexpr int MAX_LAYERS = 2;
+    static constexpr int LAYER_NORMAL = 0;
+    static constexpr int LAYER_CURSOR = 1;
 };
 
 }

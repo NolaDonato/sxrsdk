@@ -40,7 +40,10 @@ public class SXRColorAnimation extends SXRMaterialAnimation {
      */
     public SXRColorAnimation(SXRMaterial target, float duration, float[] rgb) {
         super(target, duration);
-
+        if (duration < 0)
+        {
+            throw new IllegalArgumentException("Duration cannot be negative");
+        }
         float[] rgbStart = mMaterial.getColor();
         mStartR = rgbStart[0];
         mStartG = rgbStart[1];
@@ -81,6 +84,11 @@ public class SXRColorAnimation extends SXRMaterialAnimation {
      */
     public SXRColorAnimation(SXRNode target, float duration, float[] rgb) {
         this(getMaterial(target), duration, rgb);
+        String name = target.getName();
+        if ((name != null) && (mName == null))
+        {
+            setName(name + ".material");
+        }
     }
 
     /**
@@ -97,10 +105,17 @@ public class SXRColorAnimation extends SXRMaterialAnimation {
      */
     public SXRColorAnimation(SXRNode target, float duration, int color) {
         this(target, duration, Colors.toColors(color));
+        String name = target.getName();
+        if ((name != null) && (mName == null))
+        {
+            setName(name + ".material");
+        }
     }
 
     @Override
-    protected void animate(SXRHybridObject target, float ratio) {
+    public void animate(float timeInSec)
+    {
+        float ratio = timeInSec / getDuration();
         mMaterial.setColor(mStartR + ratio * mDeltaR,
                 mStartG + ratio * mDeltaG, mStartB + ratio * mDeltaB);
     }

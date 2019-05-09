@@ -32,6 +32,8 @@
 #include <array>
 #include "vk_device_component.h"
 
+#include "util/sxr_log.h"
+
 #define TEXTURE_BIND_START 5
 #define QUEUE_INDEX_MAX 99999
 #define VERTEX_BUFFER_BIND_ID 0
@@ -45,9 +47,9 @@ namespace sxr {
             case 1:
                 return VK_SAMPLE_COUNT_1_BIT;
             case 2:
-                return  VK_SAMPLE_COUNT_2_BIT;
+                return VK_SAMPLE_COUNT_2_BIT;
             case 4:
-                return  VK_SAMPLE_COUNT_4_BIT;
+                return VK_SAMPLE_COUNT_4_BIT;
             case 8:
                 return VK_SAMPLE_COUNT_8_BIT;
         }
@@ -1371,8 +1373,9 @@ void VulkanCore::InitPipelineForRenderData(const SXR_VK_Vertices* m_vertices, Vu
         }
 
         if(vkData->owner_object()->getComponent(Skin::getComponentType()) && bones_present){
-            static_cast<VulkanUniformBlock*>(vkData->getBonesUbo())->setDescriptorSet(descriptorSet);
-            writes.push_back(static_cast<VulkanUniformBlock*>(vkData->getBonesUbo())->getDescriptorSet());
+            VulkanUniformBlock * ub = static_cast<VulkanUniformBlock*>(static_cast<Skin*>(vkData->owner_object()->getComponent(Skin::getComponentType()))->getUniformBlock());
+            ub->setDescriptorSet(rp->m_descriptorSet[0]);
+            writes.push_back(ub->getDescriptorSet());
         }
 
         if(lights != NULL && lights->getUBO() != nullptr){

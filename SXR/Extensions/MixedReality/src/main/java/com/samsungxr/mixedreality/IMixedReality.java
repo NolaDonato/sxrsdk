@@ -17,7 +17,9 @@ package com.samsungxr.mixedreality;
 
 
 import android.graphics.Bitmap;
+import android.media.Image;
 
+import com.google.ar.core.exceptions.NotYetAvailableException;
 import com.samsungxr.SXRPicker;
 import com.samsungxr.SXRNode;
 import com.samsungxr.IEventReceiver;
@@ -56,6 +58,12 @@ public interface IMixedReality extends IEventReceiver
      */
     float getARToVRScale();
 
+
+    /**
+     * Set the scale factor from AR to VR
+     */
+    void setARToVRScale(float scale);
+
     /**
      * Get the Z depth of the touch screen.
      * <p>
@@ -89,18 +97,12 @@ public interface IMixedReality extends IEventReceiver
      * Create an anchor with the specified pose.
      *
      * @param pose 4x4 matrix with real world position and orientation
+     * @param owner {@link SXRNode} to attach the anchor component to.
+     *                             This node will be moved and rotated by the anchor.
      * @return The anchor created
      */
-    SXRAnchor createAnchor(float[] pose);
+    SXRAnchor createAnchor(float[] pose, SXRNode owner);
 
-    /**
-     * Create an anchor with the specified pose and attach it
-     * to a newly created node.
-     *
-     * @param pose 4x4 matrix with real world position and orientation
-     * @return The node created with the SXRAnchor component attached.
-     */
-    SXRNode createAnchorNode(float[] pose);
 
     /**
      * Update the pose of an anchor.
@@ -193,6 +195,12 @@ public interface IMixedReality extends IEventReceiver
      * @return SXRPointCloud with points info
      */
     SXRPointCloud acquirePointCloud();
+
+    /**
+     * Acquires an image from the camera that corresponds to the current frame
+     * @return an Android image object that contains the image data from the camera
+     */
+    Image acquireCameraImage() throws NotYetAvailableException;
 
     /**
      * Set the behavior of the plane detection subsystem.

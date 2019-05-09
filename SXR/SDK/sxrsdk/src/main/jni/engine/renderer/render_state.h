@@ -21,7 +21,8 @@
 #define RENDER_STATE_H_
 
 #include "glm/glm.hpp"
-#include "util/sxr_jni.h"
+#include "util/jni_utils.h"
+#include <GLES3/gl3.h>
 
 namespace sxr
 {

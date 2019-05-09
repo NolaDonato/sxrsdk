@@ -23,7 +23,6 @@
 #include <memory>
 #include <vector>
 #include <sstream>
-#include "gl/gl_program.h"
 
 #include "objects/components/component.h"
 #include "objects/shader_data.h"
@@ -107,6 +106,10 @@ namespace sxr
         }
 
         ShaderData* material(int pass) const;
+
+        int layer() { return mLayer; }
+
+        void setLayer(int layer);
 
         /**
          * Select or generate a shader for this render data.
@@ -345,11 +348,6 @@ namespace sxr
         int stencil_op_dppass()
         { return render_pass_list_[0]->stencil_op_dppass(); }
 
-        UniformBlock* getBonesUbo()
-        {
-            return bones_ubo_;
-        }
-
         bool isHashCodeDirty()
         { return render_pass_list_[0]->render_modes().isDirty(); }
 
@@ -381,6 +379,7 @@ namespace sxr
         bool dirty_ = false;
         jobject bindShaderObject_ = nullptr;
         JavaVM* javaVm_ = nullptr;
+        int mLayer = 0;
     };
 }
 

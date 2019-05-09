@@ -149,7 +149,7 @@ final class OvrVrapiActivityHandler implements OvrActivityHandler {
         mSurfaceView.setZOrderOnTop(true);
 
         final DisplayMetrics metrics = new DisplayMetrics();
-        mApplication.getActivity().getWindowManager().getDefaultDisplay().getMetrics(metrics);
+        mApplication.getActivity().getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
         final VrAppSettings appSettings = mApplication.getAppSettings();
         int defaultWidthPixels = Math.max(metrics.widthPixels, metrics.heightPixels);
         int defaultHeightPixels = Math.min(metrics.widthPixels, metrics.heightPixels);
@@ -375,7 +375,6 @@ final class OvrVrapiActivityHandler implements OvrActivityHandler {
             nativeOnSurfaceChanged(mPtr, mSurfaceView.getHolder().getSurface());
 
             mViewManager.onSurfaceChanged(width, height);
-            mViewManager.createSwapChain();
         }
 
         @Override
@@ -399,7 +398,7 @@ final class OvrVrapiActivityHandler implements OvrActivityHandler {
 
     private static native int nativeInitializeVrApi(long ptr);
 
-    static native int nativeUninitializeVrApi();
+    static native void nativeUninitializeVrApi();
 
     private static final int VRAPI_INITIALIZE_UNKNOWN_ERROR = -1;
 

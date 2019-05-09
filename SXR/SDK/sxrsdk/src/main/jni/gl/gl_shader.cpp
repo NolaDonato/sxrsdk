@@ -25,6 +25,8 @@
 #include <sstream>
 #include <istream>
 #include "gl_light.h"
+#include <GLES3/gl3.h>
+#include "util/sxr_log.h"
 
 namespace sxr {
 
@@ -37,7 +39,6 @@ namespace sxr {
                const char* fragmentShader,
                const char* matrixCalc)
     : Shader(id, signature, uniformDescriptor, textureDescriptor, vertexDescriptor, vertexShader, fragmentShader, matrixCalc),
-      mProgram(NULL),
       mNumTextures(0),
       mIsReady(false)
 { }
@@ -45,9 +46,9 @@ namespace sxr {
 
 GLShader::~GLShader()
 {
-    if (mProgram)
+    if (mProgramId != -1)
     {
-        delete mProgram;
+        GL(glDeleteProgram(mProgramId));
     }
 }
 
@@ -86,6 +87,7 @@ void modifyShader(std::string& shader)
     std::string line;
     std::getline(shaderStream, line);
     std::string mod_shader("#version 300 es\n");
+    std::string temp;
 
     std::unordered_map<std::string, int>::iterator it;
     std::unordered_map<std::string, int>::iterator it1;
@@ -98,22 +100,29 @@ void modifyShader(std::string& shader)
         std::unordered_map<std::string, int> tokens;
         getTokens(tokens, line);
 
-        if ((it = tokens.find("uniform")) != tokens.end() && checkSamplers(tokens)){
+        if ((it = tokens.find("uniform")) != tokens.end() && checkSamplers(tokens))
+        {
             int layout_pos = tokens["layout"];
-            mod_shader += ((layout_pos > 0) ? line.substr(0, layout_pos) : "") + line.substr(it->second) + "\n";
-
+            temp = ((layout_pos > 0) ? line.substr(0, layout_pos) : "") + line.substr(it->second) + "\n";
+            mod_shader += temp;
         }
-        else if ((it = tokens.find("layout")) != tokens.end() && tokens.find("uniform")==tokens.end() && tokens.find("num_views") == tokens.end()) {
+        else if ((it = tokens.find("layout")) != tokens.end() && tokens.find("uniform")==tokens.end() && tokens.find("num_views") == tokens.end())
+        {
             it1 = tokens.find("in");
             if (it1 == tokens.end())
+            {
                 it1 = tokens.find("out");
+            }
             int pos = it->second;
 
             if(it1 != tokens.end())
-            mod_shader += ((pos > 0) ? line.substr(0, pos) : "") + line.substr(it1->second) + "\n";
+            {
+                temp = ((pos > 0) ? line.substr(0, pos) : "") + line.substr(it1->second) + "\n";
+                mod_shader += temp;
+            }
         }
         else
-            {
+        {
             mod_shader += line + "\n";
         }
     }
@@ -126,26 +135,23 @@ void GLShader::convertToGLShaders()
         return;
     modifyShader(mVertexShader);
     modifyShader(mFragmentShader);
-
 }
 
 void GLShader::initialize(bool is_multiview)
 {
     convertToGLShaders();
-    mProgram = new GLProgram(mVertexShader.c_str(), mFragmentShader.c_str());
+    mProgramId  = createProgram();
     if (is_multiview && !(strstr(mVertexShader.c_str(), "GL_OVR_multiview2")))
     {
         std::string error = "Your shaders are not multiview";
         LOGE("Your shaders are not multiview");
         throw error;
     }
-    mVertexShader.clear();
-    mFragmentShader.clear();
 }
 
 bool GLShader::useShader(bool is_multiview)
 {
-    if (nullptr == mProgram)
+    if (mProgramId == 0)
     {
         initialize(is_multiview);
     }
@@ -170,6 +176,25 @@ bool GLShader::useShader(bool is_multiview)
     }
     return true;
 }
+
+void GLShader::bindVertexAttribs(int programId)
+{
+    const DataDescriptor& desc = mVertexDesc;
+    desc.forEachEntry([&](const DataDescriptor::DataEntry& entry) mutable
+    {
+        if (entry.NotUsed)
+        {
+            return;
+        }
+        int loc = entry.Index;
+        glBindAttribLocation(programId, loc, entry.Name);
+    #ifdef DEBUG_SHADER
+        LOGV("SHADER: program %d vertex attribute %s loc %d", programId, entry.Name, loc);
+    #endif
+    });
+    checkGLError("GLShader::findUniforms");
+
+};
 
 void GLShader::bindLights(LightList& lights, Renderer* renderer)
 {
@@ -410,6 +435,96 @@ std::string GLShader::makeLayout(const DataDescriptor& desc, const char* blockNa
         });
     }
     return stream.str();
+}
+
+GLuint GLShader::loadShader(GLenum shaderType, const char* sourceString)
+{
+    GLuint shader = glCreateShader(shaderType);
+    if (shader)
+    {
+        int len = strlen(sourceString);
+        const char* pstr = sourceString;
+        glShaderSource(shader, 1, &pstr, &len);
+        glCompileShader(shader);
+        GLint compiled = 0;
+        glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+        if (!compiled)
+        {
+            GLint infoLen = 0;
+            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLen);
+            if (infoLen)
+            {
+                char* buf = (char*) malloc(infoLen);
+                if (buf)
+                {
+                    glGetShaderInfoLog(shader, infoLen, NULL, buf);
+                    LOGE("Could not compile shader %d:\n%s\n", shaderType,
+                         buf);
+                    free(buf);
+                }
+                glDeleteShader(shader);
+                shader = 0;
+            }
+        }
+    }
+    return shader;
+}
+
+GLuint GLShader::createProgram()
+{
+    const char* vertexSourceString = mVertexShader.c_str();
+    const char* fragmentSourceString = mFragmentShader.c_str();
+    int vlen = mVertexShader.size();
+    GLuint vertexShader = loadShader(GL_VERTEX_SHADER, mVertexShader.c_str());
+    if (!vertexShader)
+    {
+        return 0;
+    }
+
+    GLuint pixelShader = loadShader(GL_FRAGMENT_SHADER, mFragmentShader.c_str());
+    if (!pixelShader)
+    {
+        return 0;
+    }
+
+    GLuint program = glCreateProgram();
+    if (program)
+    {
+        LOGW("createProgram attaching shaders");
+        GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (status != GL_FRAMEBUFFER_COMPLETE)
+        {
+            LOGW("createProgram glCheckFramebufferStatus not complete, status %d", status);
+            std::string error = "glCheckFramebufferStatus not complete.";
+            throw error;
+        }
+
+        glAttachShader(program, vertexShader);
+        glAttachShader(program, pixelShader);
+        bindVertexAttribs(program);
+        checkGLError("createProgram");
+        glLinkProgram(program);
+        GLint linkStatus = GL_FALSE;
+        glGetProgramiv(program, GL_LINK_STATUS, &linkStatus);
+        if (linkStatus != GL_TRUE)
+        {
+            GLint bufLength = 0;
+            glGetProgramiv(program, GL_INFO_LOG_LENGTH, &bufLength);
+            if (bufLength)
+            {
+                char* buf = (char*) malloc(bufLength);
+                if (buf)
+                {
+                    glGetProgramInfoLog(program, bufLength, NULL, buf);
+                    LOGE("Could not link program:\n%s\n", buf);
+                    free(buf);
+                }
+            }
+            glDeleteProgram(program);
+            program = 0;
+        }
+    }
+    return program;
 }
 
 } /* namespace sxr */

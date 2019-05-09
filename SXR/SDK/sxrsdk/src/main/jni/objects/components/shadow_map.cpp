@@ -15,6 +15,8 @@
 #include "shadow_map.h"
 #include "objects/textures/render_texture.h"
 
+#include "util/sxr_log.h"
+
 namespace sxr {
 class Renderer;
     ShadowMap::ShadowMap()

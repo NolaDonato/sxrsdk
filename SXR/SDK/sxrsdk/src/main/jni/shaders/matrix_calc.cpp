@@ -15,6 +15,7 @@
 #include <cstring>
 #include "engine/renderer/render_state.h"
 #include "matrix_calc.h"
+#include "util/sxr_log.h"
 
 #define OUTPUT_OFFSET 10
 namespace sxr

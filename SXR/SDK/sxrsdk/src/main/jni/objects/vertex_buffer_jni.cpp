@@ -12,18 +12,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
-/***************************************************************************
- * JNI
- ***************************************************************************/
+#include <jni.h>
 
 #include <engine/renderer/renderer.h>
 #include <glm/gtc/type_ptr.hpp>
 #include "objects/vertex_buffer.h"
 
 #include "util/sxr_log.h"
-#include "util/sxr_jni.h"
+#include "util/jni_utils.h"
 
 namespace sxr {
     extern "C" {

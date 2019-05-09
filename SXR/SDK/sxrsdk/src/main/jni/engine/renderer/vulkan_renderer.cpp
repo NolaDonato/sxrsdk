@@ -38,6 +38,8 @@
 
 #include <glslang/Include/Common.h>
 
+#include "util/sxr_log.h"
+
 namespace sxr {
 ShaderData* VulkanRenderer::createMaterial(const char* uniform_desc, const char* texture_desc)
 {
@@ -197,7 +199,9 @@ void VulkanRenderer::render(const RenderState& rstate, const RenderSorter::Rende
 }
 
 void VulkanRenderer::renderRenderTarget(Scene* scene, jobject javaSceneObject, RenderTarget* renderTarget, ShaderManager* shader_manager,
-                                        RenderTexture* post_effect_render_texture_a, RenderTexture* post_effect_render_texture_b){
+                                        RenderTexture* post_effect_render_texture_a, RenderTexture* post_effect_render_texture_b)
+{
+
     std::vector<RenderData*> render_data_list;
     Camera* camera = renderTarget->getCamera();
     RenderState rstate = renderTarget->getRenderState();
@@ -209,7 +213,11 @@ void VulkanRenderer::renderRenderTarget(Scene* scene, jobject javaSceneObject, R
     rstate.javaSceneObject = javaSceneObject;
 
     if(vulkanCore_->isSwapChainPresent())
-        rstate.u_matrices[PROJECTION] = glm::mat4(1,0,0,0,  0,-1,0,0, 0,0,0.5,0, 0,0,0.5,1) * rstate.u_matrices[PROJECTION];
+    {
+        rstate.u_matrices[PROJECTION] =
+                glm::mat4(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 1) *
+                rstate.u_matrices[PROJECTION];
+    }
     int postEffectCount = 0;
 
     if (!rstate.is_shadow)

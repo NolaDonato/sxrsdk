@@ -33,7 +33,6 @@ import org.joml.Matrix4f;
  */
 public class SXRNodeAnimation extends SXRTransformAnimation implements PrettyPrint
 {
-    protected final String mName;
     protected final SXRAnimationChannel mChannel;
 
     /**
@@ -76,12 +75,6 @@ public class SXRNodeAnimation extends SXRTransformAnimation implements PrettyPri
             mChannel.animate(timeInSec, mTempMtx);
             mTransform.setModelMatrix(mTempMtx);
         }
-    }
-
-    @Override
-    protected void animate(SXRHybridObject target, float ratio)
-    {
-        animate(getDuration() * ratio);
     }
 
 }

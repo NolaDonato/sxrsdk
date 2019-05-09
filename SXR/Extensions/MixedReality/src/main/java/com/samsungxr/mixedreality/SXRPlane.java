@@ -17,8 +17,10 @@ package com.samsungxr.mixedreality;
 
 import android.support.annotation.NonNull;
 
+import com.google.ar.core.Pose;
 import com.samsungxr.SXRBehavior;
 import com.samsungxr.SXRContext;
+import com.samsungxr.SXRNode;
 
 import java.nio.FloatBuffer;
 
@@ -52,6 +54,13 @@ public abstract class SXRPlane extends SXRBehavior
      * @param poseOut Array to export the pose to.
      */
     public abstract void getCenterPose(@NonNull float[] poseOut);
+
+    /**
+     * Gets the center pose.
+     *
+     * @return the pose of the center of the detected plane.
+     */
+    public abstract Pose getCenterPose();
 
     public Type getPlaneType()
     {
@@ -96,6 +105,14 @@ public abstract class SXRPlane extends SXRBehavior
      * @return whether the pose is in the plane's polygon or not.
      */
     public abstract boolean isPoseInPolygon(float[] pose);
+
+    /**
+     * Create an {@link SXRAnchor} attached to this plane
+     * at the given pose.
+     * @param pose  pose in AR space.
+     * @param owner {@link SXRNode} node to attach the plane component to.
+     */
+    public abstract SXRAnchor createAnchor(float[] pose, SXRNode owner);
 
     /**
      * Describes the possible types of planes

@@ -28,7 +28,7 @@
 
 namespace sxr {
 
-bool use_multiview = false; // TODO: don't use a global variable for this
+bool gUseMultiview = false; // TODO: don't use a global variable for this
 
 Renderer::Renderer(int token) :
     mToken(token),
@@ -137,6 +137,36 @@ bool Renderer::renderPostEffectData(RenderState& rstate, RenderTexture* input_te
     mPostEffectSorter->sort(rstate, *this);
     mPostEffectSorter->render(rstate, *this);
     return true;
+}
+
+void Renderer::addRenderTarget(RenderTarget *renderTarget, EYE eye, int index) {
+    switch (eye) {
+        case LEFT:
+            mLeftRenderTarget[index] = renderTarget;
+            break;
+        case RIGHT:
+            mRightRenderTarget[index] = renderTarget;
+            break;
+        case MULTIVIEW:
+            mMultiviewRenderTarget[index] = renderTarget;
+            break;
+        default:
+            LOGE("invalid Eye");
+    }
+}
+
+RenderTarget *Renderer::getRenderTarget(int index, int eye) {
+    switch (eye) {
+        case LEFT:
+            return mLeftRenderTarget[index];
+        case RIGHT:
+            return mRightRenderTarget[index];
+        case MULTIVIEW:
+            return mMultiviewRenderTarget[index];
+        default:
+            FAIL("invalid eye");
+    }
+    return nullptr;
 }
 
 }

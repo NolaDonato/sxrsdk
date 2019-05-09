@@ -33,6 +33,9 @@ public:
     void scalePositions(float sf);
     void bindBuffer(Renderer* renderer, Shader* shader);
     bool updateGPU(Renderer* renderer, Shader* shader);
+    UniformBlock* getUniformBlock(){
+        return mBonesBuffer;
+    }
 
 private:
     Skin(const Skin& sksel) = delete;

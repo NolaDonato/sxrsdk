@@ -136,6 +136,7 @@ public class SXRRenderTarget extends SXRBehavior
     public void attachRenderTarget(SXRRenderTarget renderTarget){
         NativeRenderTarget.attachRenderTarget(getNative(),renderTarget.getNative());
     }
+
     public void beginRendering(SXRCamera camera){
         NativeRenderTarget.beginRendering(getNative(), camera.getNative());
     }

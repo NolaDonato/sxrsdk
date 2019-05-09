@@ -210,11 +210,14 @@ class  SXRJassimpAdapter
         }
 
         IntBuffer indices = aiMesh.getIndexBuffer();
-        int len = indices.capacity();
-        SXRIndexBuffer indexBuffer = new SXRIndexBuffer(ctx, 4, len);
+        if (indices != null)
+        {
+            int len = indices.capacity();
+            SXRIndexBuffer indexBuffer = new SXRIndexBuffer(ctx, 4, len);
 
-        indexBuffer.setIntVec(indices);
-        mesh.setIndexBuffer(indexBuffer);
+            indexBuffer.setIntVec(indices);
+            mesh.setIndexBuffer(indexBuffer);
+        }
 
         if (verticesArray != null)
         {
@@ -543,15 +546,27 @@ class  SXRJassimpAdapter
 
 
         //add morph animations
-        if(aiAnim.getNumMeshChannels() > 0 ) {
-            for (AiMeshAnim aiMeshMorphAnim : aiAnim.getMeshChannels()) {
+        if (aiAnim.getNumMeshChannels() > 0 )
+        {
+            for (AiMeshAnim aiMeshMorphAnim : aiAnim.getMeshChannels())
+            {
                 SXRNode baseObject = target.getNodeByName(aiMeshMorphAnim.getNodeName());
-                SXRMeshMorph morph = (SXRMeshMorph)baseObject.getComponent(SXRMeshMorph.getComponentType());
-                SXRMorphAnimation morphAnim = new SXRMorphAnimation(morph,
-                        aiMeshMorphAnim.getMorphAnimationKeys(), aiMeshMorphAnim.getNumMorphTargets() + 1);
-                if (morphAnim != null) {
-                    animator.addAnimation(morphAnim);
+                SXRMeshMorph morph = (SXRMeshMorph) baseObject.getComponent(SXRMeshMorph.getComponentType());
+                SXRMorphAnimation morphanim;
+
+                if (morph != null)
+                {
+                    morphanim = new SXRMorphAnimation(morph,
+                            aiMeshMorphAnim.getMorphAnimationKeys(),
+                            aiMeshMorphAnim.getNumMorphTargets() + 1);
                 }
+                else
+                {
+                    morphanim = new SXRMorphAnimation(aiMeshMorphAnim.getNodeName(),
+                            aiMeshMorphAnim.getMorphAnimationKeys(),
+                            aiMeshMorphAnim.getNumMorphTargets() + 1);
+                }
+                animator.addAnimation(morphanim);
             }
         }
     }

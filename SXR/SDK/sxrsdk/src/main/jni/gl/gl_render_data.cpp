@@ -20,6 +20,8 @@
 #include "objects/components/skeleton.h"
 #include "objects/components/skin.h"
 
+#include "util/sxr_log.h"
+
 namespace sxr
 {
     void GLRenderData::bindToShader(Shader* shader, Renderer* renderer)

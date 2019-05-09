@@ -33,6 +33,16 @@
 #include "objects/components/render_target.h"
 #include "objects/components/skin.h"
 
+#include "util/sxr_log.h"
+
+#ifndef GL_TEXTURE_BORDER_COLOR
+#define GL_TEXTURE_BORDER_COLOR 0x1004
+#endif
+
+#ifndef GL_CLAMP_TO_BORDER
+#define GL_CLAMP_TO_BORDER 0x812D
+#endif
+
 namespace sxr
 {
 
@@ -360,9 +370,9 @@ namespace sxr
             GL(glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT));
             renderPostEffectData(rstate, input_texture, post_effects, npost);
         }
+        GL(glDisable(GL_BLEND));
+
         renderTarget->endRendering(*this);
-        rstate.javaSceneObject = nullptr;
-        checkGLError("GLRenderer::renderRenderTarget after");
     }
 
     void GLRenderer::setRenderStates(const RenderModes& rmodes)

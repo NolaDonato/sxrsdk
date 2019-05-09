@@ -48,7 +48,6 @@ public:
     virtual ~RenderTarget();
 
     static long long getComponentType()         { return COMPONENT_TYPE_RENDER_TARGET; }
-    RenderTarget*   getNextRenderTarget()       { return mNextRenderTarget; }
     RenderSorter*   getRenderSorter() const     { return mRenderSorter; }
     bool            isStereo() const            { return mRenderState.is_stereo; }
     void            setStereo(bool flag)        { mRenderState.is_stereo = flag; }
@@ -57,7 +56,6 @@ public:
     bool            hasTexture() const          { return (mRenderTexture != nullptr); }
     RenderTexture*  getTexture()                { return mRenderTexture; }
     RenderState&    getRenderState()            { return mRenderState; }
-    void attachNextRenderTarget(RenderTarget* rt) { mNextRenderTarget = rt; }
 
     void            setTexture(RenderTexture* texture);
     void            setRenderSorter(RenderSorter* sorter);
@@ -73,12 +71,12 @@ private:
     RenderTarget& operator=(RenderTarget&& render_texture) = delete;
 
 protected:
-    RenderTarget*   mNextRenderTarget;
     RenderState     mRenderState;
     RenderTexture*  mRenderTexture = nullptr;
     RenderSorter*   mRenderSorter;
     int             mDefaultWidth;
     int             mDefaultHeight;
+
 };
 
 }

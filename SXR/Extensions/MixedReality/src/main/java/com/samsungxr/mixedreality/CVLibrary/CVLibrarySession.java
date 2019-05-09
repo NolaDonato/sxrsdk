@@ -23,6 +23,7 @@ import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.graphics.Bitmap;
+import android.media.Image;
 import android.opengl.Matrix;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -50,6 +51,7 @@ import android.app.Activity;
 
 import com.google.ar.core.Camera;
 import com.google.ar.core.HitResult;
+import com.google.ar.core.exceptions.NotYetAvailableException;
 import com.samsungxr.SXRCameraRig;
 import com.samsungxr.SXRContext;
 import com.samsungxr.SXRDrawFrameListener;
@@ -86,11 +88,9 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
 {
 
     private SXRContext mContext;
-    private static float AR2VR_SCALE = 100;
+    private float mARtoVRScale = 100;
     private SXREventReceiver    mListeners;
     private SXRScene mVRScene;
-    private SXRNode mARPassThroughObject;
-    private boolean mEnableCloudAnchor;
     private ArrayList<SXRAnchor> mAnchors = new ArrayList<>();
     private ArrayList<SXRPlane> mPlanes = new ArrayList<>();
 
@@ -107,7 +107,6 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
     {
         mContext = scene.getSXRContext();
         mVRScene = scene;
-        mEnableCloudAnchor = enableCloudAnchor;
         mListeners = new SXREventReceiver(this);
         initSession(scene.getSXRContext());
     }
@@ -120,16 +119,6 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
         ctx.getActivity().getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
         mScreenToCamera.x = metrics.widthPixels;
         mScreenToCamera.y = metrics.heightPixels;
-/*
-        mARPassThroughObject = new SXRNode(ctx, mDisplayGeometry.x, mDisplayGeometry.y);
-        mARPassThroughObject.getRenderData().setRenderingOrder(SXRRenderData.SXRRenderingOrder.BACKGROUND);
-        mARPassThroughObject.getRenderData().setDepthTest(false);
-        mARPassThroughObject.getTransform().setPosition(0, 0, mDisplayGeometry.z);
-        mARPassThroughObject.attachComponent(new SXRMeshCollider(ctx, true));
-        mARPassThroughObject.getRenderData().setRenderMask(0);
-        mVRScene.addNode(mARPassThroughObject);
-*/
-        /* AR main loop */
         configDisplayGeometry(mVRScene.getMainCameraRig());
         ctx.registerDrawFrameListener(this);
     }
@@ -140,18 +129,20 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
 
     public float getScreenDepth() { return mScreenDepth; }
 
-    public float getARToVRScale() { return AR2VR_SCALE; }
+    public float getARToVRScale() { return mARtoVRScale; }
+
+    public void setARToVRScale(float scale) { mARtoVRScale = scale; }
 
     public void onDrawFrame(float t)
     {
-        updatePlanes(mARViewMatrix, mSXRCamMatrix, AR2VR_SCALE);
-        updateAnchors(mARViewMatrix, mSXRCamMatrix, AR2VR_SCALE);
+        updatePlanes(mARViewMatrix, mSXRCamMatrix, mARtoVRScale);
+        updateAnchors(mARViewMatrix, mSXRCamMatrix, mARtoVRScale);
     }
 
     @Override
     public SXRNode getPassThroughObject()
     {
-        return mARPassThroughObject;
+        return null;
     }
 
     @Override
@@ -161,26 +152,14 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
     }
 
     @Override
-    public SXRAnchor createAnchor(float[] pose)
+    public SXRAnchor createAnchor(float[] pose, SXRNode owner)
     {
         CVLibraryAnchor anchor = new CVLibraryAnchor(mContext);
-        anchor.setAnchorAR();
+        owner.attachComponent(anchor);
         mAnchors.add(anchor);
         return anchor;
     }
 
-    @Override
-    public SXRNode createAnchorNode(float[] pose)
-    {
-        SXRAnchor anchor = createAnchor(pose);
-        if (anchor != null)
-        {
-            SXRNode node = new SXRNode(anchor.getSXRContext());
-            node.attachComponent(anchor);
-            return node;
-        }
-        return null;
-    }
 
     @Override
     public void updateAnchorPose(SXRAnchor anchor, float[] pose)
@@ -223,7 +202,10 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
 
     public void setEnableCloudAnchor(boolean enableCloudAnchor)
     {
-        mEnableCloudAnchor = enableCloudAnchor;
+        if (enableCloudAnchor)
+        {
+            throw new IllegalArgumentException("Cloud anchors are not supported by CVLib");
+        }
     }
 
     public SXRLightEstimate getLightEstimate()
@@ -251,7 +233,7 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
     {
         if (mPlanes.size() == 0)
         {
-            SXRPlane plane = new CVLibraryPlane(mContext);
+            SXRPlane plane = new CVLibraryPlane(mContext, this);
             mPlanes.add(plane);
             mContext.getEventManager().sendEvent(this, IPlaneEvents.class, "onPlaneDetected", plane);
         }
@@ -300,6 +282,11 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
 
     @Override
     public SXRPointCloud acquirePointCloud() {
+        return null;
+    }
+
+    @Override
+    public Image acquireCameraImage() {
         return null;
     }
 

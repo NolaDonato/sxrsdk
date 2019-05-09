@@ -49,8 +49,8 @@ import java.util.List;
  * @see SXRPose
  */
 public class SXRSkeletonAnimation extends SXRAnimation implements PrettyPrint {
-    protected String mName;
     private SXRSkeleton mSkeleton = null;
+
 
     /**
      * List of animation channels for each of the
@@ -67,7 +67,7 @@ public class SXRSkeletonAnimation extends SXRAnimation implements PrettyPrint {
      */
     public SXRSkeletonAnimation(String name, SXRNode target, float duration)
     {
-    	super(target, duration);
+        super(target, duration);
         mName = name;
     }
 
@@ -210,16 +210,10 @@ public class SXRSkeletonAnimation extends SXRAnimation implements PrettyPrint {
     {
         mTarget = target;
         if ((mSkeleton != null) &&
-            target.getComponent(SXRSkeleton.getComponentType()) == null)
+                target.getComponent(SXRSkeleton.getComponentType()) == null)
         {
             target.attachComponent(mSkeleton);
         }
-    }
-
-    @Override
-    protected void animate(SXRHybridObject target, float ratio)
-    {
-        animate(getDuration() * ratio);
     }
 
     /**
@@ -264,7 +258,7 @@ public class SXRSkeletonAnimation extends SXRAnimation implements PrettyPrint {
                 pose.setLocalMatrix(i, temp);
             }
         }
-     return pose;
+        return pose;
     }
 
     @Override

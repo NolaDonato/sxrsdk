@@ -48,7 +48,10 @@ public class SXRScaleAnimation extends SXRTransformAnimation
             float scaleY, float scaleZ)
     {
         super(target, duration);
-
+        if (duration < 0)
+        {
+            throw new IllegalArgumentException("Duration cannot be negative");
+        }
         mStartX = target.getScaleX();
         mStartY = target.getScaleY();
         mStartZ = target.getScaleZ();
@@ -100,6 +103,11 @@ public class SXRScaleAnimation extends SXRTransformAnimation
             float scaleX, float scaleY, float scaleZ)
     {
         this(target.getTransform(), duration, scaleX, scaleY, scaleZ);
+        String name = target.getName();
+        if ((name != null) && (mName == null))
+        {
+            setName(name + ".scale");
+        }
     }
 
     /**
@@ -123,8 +131,9 @@ public class SXRScaleAnimation extends SXRTransformAnimation
     }
 
     @Override
-    protected void animate(SXRHybridObject target, float ratio)
+    public void animate(float timeInSec)
     {
+        float ratio = timeInSec / mDuration;
         mTransform.setScale(mStartX + ratio * mDeltaX, mStartY + ratio
                 * mDeltaY, mStartZ + ratio * mDeltaZ);
     }

@@ -53,6 +53,10 @@ public class SXRRotationByAxisAnimation extends SXRTransformAnimation
         mAxisY = y;
         mAxisZ = z;
         mStartRotation.set(mRotation);
+        if (duration < 0)
+        {
+            throw new IllegalArgumentException("Duration cannot be negative");
+        }
     }
 
     /**
@@ -76,11 +80,17 @@ public class SXRRotationByAxisAnimation extends SXRTransformAnimation
                                       float angle, float x, float y, float z)
     {
         this(target.getTransform(), duration, angle, x, y, z);
+        String name = target.getName();
+        if ((name != null) && (mName == null))
+        {
+            setName(name + ".rotation");
+        }
     }
 
     @Override
-    protected void animate(SXRHybridObject target, float ratio)
+    public void animate(float timeInSec)
     {
+        float ratio = timeInSec / mDuration;
         float angle = ratio * mAngle;
 
         mRotation.fromAxisAngleDeg(mAxisX, mAxisY, mAxisZ, angle);

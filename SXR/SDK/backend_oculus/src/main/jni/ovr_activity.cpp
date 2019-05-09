@@ -25,6 +25,11 @@
 #include <VrApi_Types.h>
 #include <engine/renderer/vulkan_renderer.h>
 #include <objects/textures/render_texture.h>
+#include <objects/scene.h>
+#include <objects/components/perspective_camera.h>
+#include <objects/components/render_target.h>
+
+#include "util/sxr_log.h"
 
 static const char* activityClassName = "android/app/Activity";
 static const char* applicationClassName = "com/samsungxr/SXRApplication";
@@ -44,9 +49,16 @@ SXRActivity::SXRActivity(JNIEnv &env, jobject activity, jobject vrAppSettings) :
         applicationClass_ = GetGlobalClassReference(env, applicationClassName);
 
         jclass viewManagerClass = env.FindClass(viewManagerClassName);
-        onDrawEyeMethodId = GetMethodId(env, viewManagerClass, "onDrawEye", "(IIZ)V");
         onBeforeDrawEyesMethodId = GetMethodId(env, viewManagerClass, "beforeDrawEyes", "()V");
         updateSensoredSceneMethodId = GetMethodId(env, viewManagerClass, "updateSensoredScene", "()Z");
+
+        mCaptureCenterEyeMethod = GetMethodId(env, viewManagerClass, "captureCenterEye", "(IIZ)V");
+        mCaptureLeftEyeMethod = GetMethodId(env, viewManagerClass, "captureLeftEye", "(IIZ)V");
+        mCaptureRightEyeMethod = GetMethodId(env, viewManagerClass, "captureRightEye", "(IIZ)V");
+        mCaptureFinishMethod = GetMethodId(env, viewManagerClass, "captureFinish", "()V");
+        mCapture3DScreenShot = GetMethodId(env, viewManagerClass, "capture3DScreenShot", "(IIZ)V");
+
+        mGetCaptureTargets = GetMethodId(env, viewManagerClass, "getCaptureTargets", "()I");
 
         mainThreadId_ = gettid();
     }
@@ -127,7 +139,7 @@ RenderTextureInfo *SXRActivity::getRenderTextureInfo(int eye, int index) {
     renderTextureInfo->fboHeight = fbo.getHeight();
     renderTextureInfo->fboWidth = fbo.getWidth();
     renderTextureInfo->multisamples = mMultisamplesConfiguration;
-    renderTextureInfo->useMultiview = use_multiview;
+    renderTextureInfo->useMultiview = gUseMultiview;
     renderTextureInfo->texId = fbo.getColorTexId(index);
     renderTextureInfo->viewport[0] = x;
     renderTextureInfo->viewport[1] = y;
@@ -158,7 +170,10 @@ void SXRActivity::onSurfaceChanged(JNIEnv &env, jobject jsurface) {
             parms.Flags |= VRAPI_MODE_FLAG_RESET_WINDOW_FULLSCREEN;
         }
         parms.Flags |= VRAPI_MODE_FLAG_NATIVE_WINDOW;
-        //@todo consider VRAPI_MODE_FLAG_CREATE_CONTEXT_NO_ERROR as a release-build optimization
+#ifdef NDEBUG
+        //apply first EGL_CONTEXT_OPENGL_NO_ERROR_KHR
+        //parms.Flags |= VRAPI_MODE_FLAG_CREATE_CONTEXT_NO_ERROR;
+#endif
 
         ANativeWindow *nativeWindow = ANativeWindow_fromSurface(&env, jsurface_);
         if (nullptr == nativeWindow) {
@@ -203,9 +218,9 @@ void SXRActivity::onSurfaceChanged(JNIEnv &env, jobject jsurface) {
 
     const char *extensions = (const char *) glGetString(GL_EXTENSIONS);
     if (multiview && std::strstr(extensions, "GL_OVR_multiview2") != NULL) {
-        use_multiview = true;
+        gUseMultiview = true;
     }
-    if (multiview && !use_multiview) {
+    if (multiview && !gUseMultiview) {
         std::string error = "Multiview is not supported by your device";
         LOGE(" Multiview is not supported by your device");
         throw error;
@@ -213,11 +228,19 @@ void SXRActivity::onSurfaceChanged(JNIEnv &env, jobject jsurface) {
 
     clampToBorderSupported_ = nullptr != std::strstr(extensions, "GL_EXT_texture_border_clamp");
 
-    for (int eye = 0; eye < (use_multiview ? 1 : VRAPI_FRAME_LAYER_EYE_MAX); eye++) {
+    mUseCursorLayer = configurationHelper_.getUseCursorLayer(env);
+    for (int eye = 0; eye < (gUseMultiview ? 1 : VRAPI_FRAME_LAYER_EYE_MAX); eye++) {
         frameBuffer_[eye].create(mColorTextureFormatConfiguration, mWidthConfiguration,
                                  mHeightConfiguration, mMultisamplesConfiguration,
                                  mResolveDepthConfiguration,
                                  mDepthTextureFormatConfiguration);
+
+        if (mUseCursorLayer) {
+            cursorBuffer_[eye].create(mColorTextureFormatConfiguration, mWidthConfiguration / 2,
+                                      mHeightConfiguration / 2, mMultisamplesConfiguration,
+                                      mResolveDepthConfiguration,
+                                      mDepthTextureFormatConfiguration);
+        }
     }
 
     // default viewport same as window size
@@ -226,6 +249,33 @@ void SXRActivity::onSurfaceChanged(JNIEnv &env, jobject jsurface) {
     width = mWidthConfiguration;
     height = mHeightConfiguration;
     configurationHelper_.getSceneViewport(env, x, y, width, height);
+
+    if (mUseCursorLayer) {
+        const int cnt = vrapi_GetTextureSwapChainLength(cursorBuffer_->mColorTextureSwapChain);
+        const int eyeCount = gUseMultiview ? 1 : VRAPI_FRAME_LAYER_EYE_MAX;
+        for (int i = 0; i < cnt; ++i) {
+            for (int j = 0; j < eyeCount; ++j) {
+                FrameBufferObject fbo = cursorBuffer_[j];
+
+                RenderTextureInfo renderTextureInfo;
+                renderTextureInfo.fboId = fbo.getRenderBufferFBOId(i);
+                renderTextureInfo.fboHeight = fbo.getHeight();
+                renderTextureInfo.fboWidth = fbo.getWidth();
+                renderTextureInfo.multisamples = mMultisamplesConfiguration;
+                renderTextureInfo.useMultiview = gUseMultiview;
+                renderTextureInfo.texId = fbo.getColorTexId(i);
+                renderTextureInfo.viewport[0] = x;
+                renderTextureInfo.viewport[1] = y;
+                renderTextureInfo.viewport[2] = fbo.getHeight();
+                renderTextureInfo.viewport[3] = fbo.getWidth();
+
+                mCursorRenderTextures[j][i] = Renderer::getInstance()->createRenderTexture(
+                        renderTextureInfo);
+                mCursorRenderTarget[j][i] = Renderer::getInstance()->createRenderTarget(
+                        mCursorRenderTextures[j][i], gUseMultiview, true);
+            }
+        }
+    }
 
     projectionMatrix_ = ovrMatrix4f_CreateProjectionFov(
             vrapi_GetSystemPropertyFloat(&oculusJavaGlThread_,
@@ -246,7 +296,7 @@ void SXRActivity::onSurfaceChanged(JNIEnv &env, jobject jsurface) {
 
 void SXRActivity::copyVulkanTexture(int texSwapChainIndex, int eye){
     Renderer* r = Renderer::getInstance();
-    RenderTarget* renderTarget = r->getRenderTarget(texSwapChainIndex, use_multiview ? 2 : eye);
+    RenderTarget* renderTarget = r->getRenderTarget(texSwapChainIndex, gUseMultiview ? 2 : eye);
     reinterpret_cast<VulkanRenderer*>(r)->renderToOculus(renderTarget);
 
     glBindTexture(GL_TEXTURE_2D,vrapi_GetTextureSwapChainHandle(frameBuffer_[eye].mColorTextureSwapChain, texSwapChainIndex));
@@ -264,14 +314,8 @@ void SXRActivity::copyVulkanTexture(int texSwapChainIndex, int eye){
     reinterpret_cast<VulkanRenderer*>(r)->unmapRenderToOculus(renderTarget);
 }
 
-void SXRActivity::onDrawFrame(jobject jViewManager) {
-    ovrFrameParms parms = vrapi_DefaultFrameParms(&oculusJavaGlThread_, VRAPI_FRAME_INIT_DEFAULT,
-                                                  vrapi_GetTimeInSeconds(),
-                                                  NULL);
-    parms.FrameIndex = ++frameIndex;
-    parms.SwapInterval = 1;
-    parms.PerformanceParms = oculusPerformanceParms_;
-
+void SXRActivity::onDrawFrame(JNIEnv* env, jobject jViewManager, jobject javaMainScene)
+{
     const double predictedDisplayTime = vrapi_GetPredictedDisplayTime(oculusMobile_, frameIndex);
     const ovrTracking tracking = vrapi_GetPredictedTracking(oculusMobile_, predictedDisplayTime);
 
@@ -279,24 +323,41 @@ void SXRActivity::onDrawFrame(jobject jViewManager) {
                                                              tracking.HeadPose.TimeInSeconds);
     updatedTracking.HeadPose.Pose.Position = tracking.HeadPose.Pose.Position;
 
-    for (int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++) {
-        ovrFrameLayerTexture &eyeTexture = parms.Layers[0].Textures[eye];
+    ovrLayerProjection2 layers[2] = { vrapi_DefaultLayerProjection2(), vrapi_DefaultLayerProjection2() };
 
-        eyeTexture.ColorTextureSwapChain = frameBuffer_[use_multiview ? 0
-                                                                      : eye].mColorTextureSwapChain;
-        eyeTexture.DepthTextureSwapChain = frameBuffer_[use_multiview ? 0
-                                                                      : eye].mDepthTextureSwapChain;
-        eyeTexture.TextureSwapChainIndex = frameBuffer_[use_multiview ? 0
-                                                                      : eye].mTextureSwapChainIndex;
-        eyeTexture.TexCoordsFromTanAngles = texCoordsTanAnglesMatrix_;
+    const int eyeCount = gUseMultiview ? 1 : VRAPI_FRAME_LAYER_EYE_MAX;
+    for (int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++) {
+        auto& eyeLayer = layers[0].Textures[eye];
+
+        eyeLayer.ColorSwapChain = frameBuffer_[gUseMultiview ? 0 : eye].mColorTextureSwapChain;
+        eyeLayer.SwapChainIndex = frameBuffer_[gUseMultiview ? 0 : eye].mTextureSwapChainIndex;
+        eyeLayer.TexCoordsFromTanAngles = texCoordsTanAnglesMatrix_;
         if (CameraRig::CameraRigType::FREEZE != cameraRig_->camera_rig_type()) {
-            eyeTexture.HeadPose = updatedTracking.HeadPose;
+            layers[0].HeadPose = updatedTracking.HeadPose;
+        }
+
+        if (mUseCursorLayer) {
+            auto &cursorLayer = layers[1].Textures[eye];
+            cursorLayer.ColorSwapChain = cursorBuffer_[gUseMultiview ? 0 : eye].mColorTextureSwapChain;
+            cursorLayer.SwapChainIndex = cursorBuffer_[gUseMultiview ? 0 : eye].mTextureSwapChainIndex;
+            cursorLayer.TexCoordsFromTanAngles = texCoordsTanAnglesMatrix_;
+            layers[1].HeadPose = updatedTracking.HeadPose;
         }
     }
 
-    parms.Layers[0].Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
+    layers[0].Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
+    layers[0].Header.SrcBlend = VRAPI_FRAME_LAYER_BLEND_ONE;
+    layers[0].Header.DstBlend = VRAPI_FRAME_LAYER_BLEND_ZERO;
+
+    if (mUseCursorLayer) {
+        layers[1].Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
+        layers[1].Header.Flags |= VRAPI_FRAME_LAYER_FLAG_FIXED_TO_VIEW;
+        layers[1].Header.SrcBlend = VRAPI_FRAME_LAYER_BLEND_SRC_ALPHA;
+        layers[1].Header.DstBlend = VRAPI_FRAME_LAYER_BLEND_ONE_MINUS_SRC_ALPHA;
+    }
+
     if (CameraRig::CameraRigType::FREEZE == cameraRig_->camera_rig_type()) {
-        parms.Layers[0].Flags |= VRAPI_FRAME_LAYER_FLAG_FIXED_TO_VIEW;
+        layers[0].Header.Flags |= VRAPI_FRAME_LAYER_FLAG_FIXED_TO_VIEW;
     } else {
         const ovrQuatf &orientation = updatedTracking.HeadPose.Pose.Orientation;
         const glm::quat tmp(orientation.w, orientation.x, orientation.y, orientation.z);
@@ -312,18 +373,75 @@ void SXRActivity::onDrawFrame(jobject jViewManager) {
     }
     oculusJavaGlThread_.Env->CallVoidMethod(jViewManager, onBeforeDrawEyesMethodId);
 
-    // Render the eye images.
-    for (int eye = 0; eye < (use_multiview ? 1 : VRAPI_FRAME_LAYER_EYE_MAX); eye++) {
-        int textureSwapChainIndex = frameBuffer_[eye].mTextureSwapChainIndex;
-        oculusJavaGlThread_.Env->CallVoidMethod(jViewManager, onDrawEyeMethodId, eye,
-                                                textureSwapChainIndex, use_multiview);
-        Renderer* r = Renderer::getInstance();
+    Renderer* renderer = Renderer::getInstance();
+    Scene* mainScene = Scene::main_scene();
 
-        if (r->isVulkanInstance()) {
+    ovrSubmitFrameDescription2 parms = {0};
+    parms.FrameIndex = ++frameIndex;
+    parms.SwapInterval = 1;
+    parms.DisplayTime = predictedDisplayTime;
+    parms.LayerCount = 1;
+
+    constexpr int SCREENSHOT_TARGET_CENTER = 0x01;
+    constexpr int SCREENSHOT_TARGET_LEFT = 0x02;
+    constexpr int SCREENSHOT_TARGET_RIGHT = 0x04;
+    constexpr int SCREENSHOT_TARGET_3D = 0x08;
+
+    const int captureTargets = env->CallIntMethod(jViewManager, mGetCaptureTargets);
+
+    // Render the eye images; @todo fix this unwieldy loop
+    for (int eye = 0; eye < eyeCount; eye++) {
+        int textureSwapChainIndex = frameBuffer_[eye].mTextureSwapChainIndex;
+        RenderTarget *renderTarget = renderer->getRenderTarget(textureSwapChainIndex, gUseMultiview ? EYE::MULTIVIEW : eye);
+        Camera *centerCamera = static_cast<Camera *>(cameraRig_->center_camera());
+
+        if (0 == eye) {
+            if (SCREENSHOT_TARGET_3D & captureTargets) {
+                env->CallVoidMethod(jViewManager, mCapture3DScreenShot, eye, textureSwapChainIndex, gUseMultiview);
+            }
+
+            renderTarget->cullFromCamera(mainScene, javaMainScene, centerCamera, mMaterialShaderManager);
+            // TODO: implement cursor layer in terms of RenderSorter
+            if (mUseCursorLayer) {
+            }
+
+            if (SCREENSHOT_TARGET_CENTER & captureTargets) {
+                renderTarget->setCamera(centerCamera);
+                renderer->renderRenderTarget(Scene::main_scene(), javaMainScene, renderTarget,
+                                             mMaterialShaderManager,
+                                             mPostEffectRenderTextureA, mPostEffectRenderTextureB);
+
+                env->CallVoidMethod(jViewManager, mCaptureCenterEyeMethod, eye, textureSwapChainIndex, gUseMultiview);
+            }
+
+            Camera *leftCamera = cameraRig_->left_camera();
+            renderTarget->setCamera(leftCamera);
+            renderer->renderRenderTarget(Scene::main_scene(), javaMainScene, renderTarget,
+                                         mMaterialShaderManager,
+                                         mPostEffectRenderTextureA, mPostEffectRenderTextureB);
+            if (SCREENSHOT_TARGET_LEFT & captureTargets) {
+                env->CallVoidMethod(jViewManager, mCaptureLeftEyeMethod, eye, textureSwapChainIndex, gUseMultiview);
+            }
+
+        } else if (1 == eye) {
+            Camera *rightCamera = cameraRig_->right_camera();
+            renderTarget->setCamera(rightCamera);
+            renderer->renderRenderTarget(Scene::main_scene(), javaMainScene, renderTarget,
+                                         mMaterialShaderManager,
+                                         mPostEffectRenderTextureA, mPostEffectRenderTextureB);
+
+            if (SCREENSHOT_TARGET_RIGHT & captureTargets) {
+                env->CallVoidMethod(jViewManager, mCaptureRightEyeMethod, eye, textureSwapChainIndex, gUseMultiview);
+            }
+            if (0 != captureTargets) {
+                env->CallVoidMethod(jViewManager, mCaptureFinishMethod);
+            }
+        }
+
+        if (renderer->isVulkanInstance()) {
             copyVulkanTexture(textureSwapChainIndex, eye);
         } else {
             endRenderingEye(eye);
-            FrameBufferObject::unbind();
         }
     }
 
@@ -333,7 +451,17 @@ void SXRActivity::onDrawFrame(jobject jViewManager) {
         gearController->onFrame(predictedDisplayTime);
     }
 
-    vrapi_SubmitFrame(oculusMobile_, &parms);
+    const ovrLayerHeader2 *layersToSubmit[] =
+            {
+                    &layers[0].Header,
+                    &layers[1].Header,
+            };
+    parms.Layers = layersToSubmit;
+
+    ovrResult result = vrapi_SubmitFrame2(oculusMobile_, &parms);
+    if (ovrSuccess != result) {
+        FAIL("vrapi_SubmitFrame2 failed with 0x%X", result);
+    }
 }
 
     void SXRActivity::endRenderingEye(const int eye) {
@@ -364,6 +492,7 @@ void SXRActivity::onDrawFrame(jobject jViewManager) {
         //per vrAppFw
         frameBuffer_[eye].resolve();
         frameBuffer_[eye].advance();
+        frameBuffer_[eye].unbind();
     }
 
     void SXRActivity::initializeOculusJava(JNIEnv& env, ovrJava& oculusJava) {
@@ -375,8 +504,9 @@ void SXRActivity::onDrawFrame(jobject jViewManager) {
     void SXRActivity::leaveVrMode() {
         LOGV("SXRActivity::leaveVrMode");
         if (nullptr != oculusMobile_) {
-            for (int eye = 0; eye < (use_multiview ? 1 : VRAPI_FRAME_LAYER_EYE_MAX); eye++) {
+            for (int eye = 0; eye < (gUseMultiview ? 1 : VRAPI_FRAME_LAYER_EYE_MAX); eye++) {
                 frameBuffer_[eye].destroy();
+                cursorBuffer_[eye].destroy();
             }
 
             if (nullptr != gearController) {
@@ -396,8 +526,15 @@ void SXRActivity::onDrawFrame(jobject jViewManager) {
         return vrapi_GetSystemStatusInt(&oculusJavaMainThread_, VRAPI_SYS_STATUS_DOCKED);
     }
 
-    bool SXRActivity::usingMultiview() const {
-        LOGD("Activity: usingMultview = %d", use_multiview);
-        return use_multiview;
-    }
+void SXRActivity::recenterPose() const {
+    vrapi_RecenterPose(oculusMobile_);
 }
+
+void SXRActivity::initialize(sxr::ShaderManager* shaderManager, sxr::RenderTexture* textureA,
+                             sxr::RenderTexture* textureB) {
+    mMaterialShaderManager = shaderManager;
+    mPostEffectRenderTextureA = textureA;
+    mPostEffectRenderTextureB = textureB;
+}
+
+} // namespace sxr

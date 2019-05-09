@@ -72,6 +72,10 @@ public class SXRRotationByAxisWithPivotAnimation extends SXRTransformAnimation {
         mPivotZ = pivotZ;
         mStartRotation.set(mRotation);
         mStartPosition.set(mPosition);
+        if (duration < 0)
+        {
+            throw new IllegalArgumentException("Duration cannot be negative");
+        }
     }
 
     /**
@@ -103,10 +107,17 @@ public class SXRRotationByAxisWithPivotAnimation extends SXRTransformAnimation {
                                                float pivotX, float pivotY, float pivotZ) {
         this(target.getTransform(), duration, angle, axisX, axisY, axisZ,
              pivotX, pivotY, pivotZ);
+        String name = target.getName();
+        if ((name != null) && (mName == null))
+        {
+            setName(name + ".rotation");
+        }
     }
 
     @Override
-    protected void animate(SXRHybridObject target, float ratio) {
+    public void animate(float timeInSec)
+    {
+        float ratio = timeInSec / mDuration;
         // Reset rotation and position (this is pretty cheap - SXRF uses a 'lazy
         // update' policy on the matrix, so three changes don't cost all that
         // much more than one)

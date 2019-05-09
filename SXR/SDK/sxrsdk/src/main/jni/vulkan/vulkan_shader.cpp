@@ -28,6 +28,8 @@
 #include "objects/components/skin.h"
 #include "objects/node.h"
 
+#include "util/sxr_log.h"
+
 namespace sxr {
 
 VulkanShader::VulkanShader(int id,
@@ -67,9 +69,9 @@ void VulkanShader::makeUniformLayout(VulkanMaterial& vkMtl, std::vector<VkDescri
     }
 
     if (vkdata->owner_object()->getComponent(Skin::getComponentType()) && hasBones()){
-       VkDescriptorSetLayoutBinding &bones_uniformBinding = static_cast<VulkanUniformBlock*>(vkdata->getBonesUbo())->getVulkanDescriptor()->getLayoutBinding();
+       VkDescriptorSetLayoutBinding &bones_uniformBinding = static_cast<VulkanUniformBlock*>(static_cast<Skin*>(vkdata->owner_object()->getComponent(Skin::getComponentType()))->getUniformBlock())->getVulkanDescriptor()->getLayoutBinding();
        samplerBinding.push_back(bones_uniformBinding);
-   }
+    }
     else{
         dummy_binding.binding = BONES_UBO_INDEX;
         samplerBinding.push_back(dummy_binding);

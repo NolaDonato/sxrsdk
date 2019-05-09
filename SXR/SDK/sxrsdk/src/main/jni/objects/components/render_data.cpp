@@ -23,6 +23,8 @@
 #include "objects/components/skin.h"
 #include <glslang/Include/Common.h> //@todo remove; for to_string
 
+#include "util/sxr_log.h"
+
 namespace sxr {
 
 RenderData::~RenderData() {
@@ -154,6 +156,10 @@ void RenderData::setBindShaderObject(JNIEnv* env, jobject bindShaderObject)
     bindShaderMethod_ = method;
     bindShaderObject_ = env->NewGlobalRef(bindShaderObject);
     env->GetJavaVM(&javaVm_);
+}
+
+void RenderData::setLayer(int layer) {
+    mLayer = layer;
 }
 
 }

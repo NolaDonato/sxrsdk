@@ -17,7 +17,6 @@
 #define GL_SHADER_H_
 
 #include "shaders/shader.h"
-#include "gl/gl_program.h"
 
 namespace sxr {
     class Mesh;
@@ -64,15 +63,9 @@ public:
      */
     GLuint getProgramId()
     {
-        if (mProgram)
-        {
-            return mProgram->id();
-        }
-        else
-        {
-            return -1;
-        }
+        return mProgramId;
     }
+
     virtual void bindLights(LightList&, Renderer*);
     void convertToGLShaders();
     void findTextures();
@@ -85,6 +78,9 @@ public:
 
 protected:
     void initialize(bool);
+    void bindVertexAttribs(int programId);
+    GLuint createProgram();
+    GLuint loadShader(GLenum shaderType, const char* shaderSource);
 
 private:
     GLShader(const GLShader& shader) = delete;
@@ -92,7 +88,7 @@ private:
     GLShader& operator=(const GLShader& shader) = delete;
     GLShader& operator=(GLShader&& shader) = delete;
 
-    GLProgram* mProgram;
+    GLuint mProgramId;
     bool mIsReady;
     int mNumTextures;
     std::vector<int> mShaderLocs[LAST_UBO_INDEX + 1];

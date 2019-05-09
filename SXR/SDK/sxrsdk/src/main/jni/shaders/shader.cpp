@@ -21,6 +21,8 @@
 #include "shader.h"
 #include "matrix_calc.h"
 
+#include "util/sxr_log.h"
+
 namespace sxr {
 Shader::Shader(int id,
                const char* signature,
