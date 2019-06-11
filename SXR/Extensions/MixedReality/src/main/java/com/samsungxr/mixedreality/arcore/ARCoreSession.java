@@ -43,34 +43,36 @@ import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException;
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException;
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException;
 
+import com.samsungxr.SXRCamera;
 import com.samsungxr.SXRCameraRig;
 import com.samsungxr.SXRContext;
 import com.samsungxr.SXRDrawFrameListener;
 import com.samsungxr.SXREventReceiver;
-import com.samsungxr.SXRExternalTexture;
+import com.samsungxr.SXRExternalImage;
 import com.samsungxr.SXRMaterial;
 import com.samsungxr.SXRMesh;
 import com.samsungxr.SXRMeshCollider;
+import com.samsungxr.SXRNode;
 import com.samsungxr.SXRPerspectiveCamera;
 import com.samsungxr.SXRPicker;
 import com.samsungxr.SXRRenderData;
 import com.samsungxr.SXRScene;
-import com.samsungxr.SXRNode;
 import com.samsungxr.SXRTexture;
+import com.samsungxr.mixedreality.IAnchorEvents;
 import com.samsungxr.mixedreality.IMarkerEvents;
 import com.samsungxr.mixedreality.IMixedReality;
 import com.samsungxr.mixedreality.IMixedRealityEvents;
 import com.samsungxr.mixedreality.IPlaneEvents;
 import com.samsungxr.mixedreality.SXRAnchor;
-import com.samsungxr.mixedreality.SXRMarker;
 import com.samsungxr.mixedreality.SXRHitResult;
 import com.samsungxr.mixedreality.SXRLightEstimate;
+import com.samsungxr.mixedreality.SXRMarker;
 import com.samsungxr.mixedreality.SXRMixedReality;
 import com.samsungxr.mixedreality.SXRPlane;
-import com.samsungxr.mixedreality.IAnchorEvents;
 import com.samsungxr.mixedreality.SXRPointCloud;
 import com.samsungxr.mixedreality.SXRTrackingState;
 import com.samsungxr.utility.Log;
+
 import org.joml.Math;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -103,13 +105,16 @@ public class ARCoreSession implements IMixedReality
     private boolean mEnableCloudAnchor;
     private Vector2f mScreenToCamera = new Vector2f(1, 1);
     private float[] mSXRCamMatrix = new float[16]; /* From AR to SXR space matrices */
-    private Vector3f mDisplayGeometry;
+    private Vector3f mDisplayGeometry = new Vector3f();
+    private float mScreenWidth;
+    private float mScreenHeight;
     private float mScreenDepth;
     private Map<Plane, ARCorePlane> mPlanes;
     private ArrayList<SXRMarker> mMarkers;
     private List<ARCoreAnchor> mAnchors;
     private boolean mIsMono;
     private AugmentedImageDatabase mMarkerDB;
+    private boolean mIsRunning = false;
 
     private Camera mCamera;// ARCore camera
     private final Map<Anchor, CloudAnchorCallback> pendingAnchors = new HashMap<>();
@@ -185,6 +190,7 @@ public class ARCoreSession implements IMixedReality
                 try
                 {
                     onInitARCoreSession(mContext);
+                    mIsRunning = true;
                 }
                 catch (CameraNotAvailableException e)
                 {
@@ -201,6 +207,13 @@ public class ARCoreSession implements IMixedReality
         if (mSession != null) {
             mSession.pause();
         }
+        mIsRunning = false;
+    }
+
+    @Override
+    public boolean isPaused()
+    {
+        return !mIsRunning;
     }
 
 
@@ -213,8 +226,14 @@ public class ARCoreSession implements IMixedReality
     @Override
     public SXRHitResult hitTest(SXRPicker.SXRPickedObject collision)
     {
-        Vector2f tapPosition = convertToDisplayGeometrySpace(collision.hitLocation[0], collision.hitLocation[1]);
-        List<HitResult> hitResult = mLastARFrame.hitTest(tapPosition.x, tapPosition.y);
+        float x;
+        float y;
+
+        x = collision.hitLocation[0] / mDisplayGeometry.x;
+        y = collision.hitLocation[1] / mDisplayGeometry.y;
+        x = (x + 0.5f) * mScreenWidth;
+        y = (0.5f - y) * mScreenHeight;
+        List<HitResult> hitResult = mLastARFrame.hitTest(x, y);
         return hitTest(hitResult);
     }
 
@@ -274,8 +293,8 @@ public class ARCoreSession implements IMixedReality
         final float[] arPose = pose.clone();
         ARCoreAnchor coreAnchor = (ARCoreAnchor) anchor;
 
+        gvr2ar(arPose);
         convertMatrixPoseToVector(arPose, translation, rotation);
-
         Anchor arAnchor = mSession.createAnchor(new Pose(translation, rotation));
         if (coreAnchor.getAnchorAR() != null)
         {
@@ -349,7 +368,6 @@ public class ARCoreSession implements IMixedReality
     {
         // Don't update planes (or notify) when the plane listener is empty, i.e., there is
         // no listener registered.
-        float scale = mARtoVRScale;
         ARCorePlane arCorePlane;
         for (Plane plane: allPlanes)
         {
@@ -569,7 +587,7 @@ public class ARCoreSession implements IMixedReality
 
     private void onInitARCoreSession(SXRContext gvrContext) throws CameraNotAvailableException
     {
-        SXRTexture passThroughTexture = new SXRExternalTexture(gvrContext);
+        final SXRTexture passThroughTexture = new SXRTexture(new SXRExternalImage(gvrContext));
         final SXRCameraRig cameraRig = mVRScene.getMainCameraRig();
         final SXRPerspectiveCamera centerCam = cameraRig.getCenterCamera();
         final SXRMesh mesh;
@@ -622,22 +640,34 @@ public class ARCoreSession implements IMixedReality
     {
         for (HitResult hit : hitResult)
         {
-            // Check if any plane was hit, and if it was hit inside the plane polygon
+            float[] hitPoseMtx = new float[16];
+            Pose hitPose = hit.getHitPose();
             Trackable trackable = hit.getTrackable();
-            // Creates an anchor if a plane or an oriented point was hit.
-            if ((trackable instanceof Plane &&
-                ((Plane) trackable).isPoseInPolygon(hit.getHitPose())) &&
-                ((Plane) trackable).getSubsumedBy() == null)
-            {
-                SXRHitResult gvrHitResult = new SXRHitResult();
-                float[] hitPose = new float[16];
 
-                hit.getHitPose().toMatrix(hitPose, 0);
-                ar2gvr(hitPose);
-                gvrHitResult.setPose(hitPose);
-                gvrHitResult.setDistance(hit.getDistance() * mARtoVRScale);
-                gvrHitResult.setPlane(mPlanes.get(trackable));
-                return gvrHitResult;
+            hitPose.toMatrix(hitPoseMtx, 0);
+            Log.d(TAG, "ARCORE hit %f, %f, %f", hitPoseMtx[12], hitPoseMtx[13], hitPoseMtx[14]);
+            ar2gvr(hitPoseMtx);
+            // Check if any plane was hit, and if it was hit inside the plane polygon
+            // Creates an anchor if a plane or an oriented point was hit.
+            if (trackable instanceof Plane)
+            {
+                Plane plane = (Plane) trackable;
+                if ((plane.getSubsumedBy() == null) && plane.isPoseInPolygon(hitPose))
+                {
+                    SXRHitResult gvrHitResult = new SXRHitResult();
+                    SXRPlane sxrPlane = mPlanes.get(plane);
+                    SXRNode owner = sxrPlane.getOwnerObject();
+                    if (owner != null)
+                    {
+                        Log.d(TAG, "SXR hit %f, %f, %f  plane = %s",
+                              hitPoseMtx[12], hitPoseMtx[13], hitPoseMtx[14],
+                              owner.getName());
+                    }
+                    gvrHitResult.setPose(hitPoseMtx);
+                    gvrHitResult.setDistance(hit.getDistance() * mARtoVRScale);
+                    gvrHitResult.setPlane(sxrPlane);
+                    return gvrHitResult;
+                }
             }
         }
         return null;
@@ -703,8 +733,8 @@ public class ARCoreSession implements IMixedReality
         final DisplayMetrics metrics = new DisplayMetrics();
         activity.getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
         int width = mIsMono ? metrics.widthPixels : metrics.heightPixels;
-        mScreenToCamera.x = width;
-        mScreenToCamera.y = metrics.heightPixels;
+        mScreenToCamera.x = mScreenWidth = width;
+        mScreenToCamera.y = mScreenHeight = metrics.heightPixels;
         mSession.setDisplayGeometry(Surface.ROTATION_90, width, metrics.heightPixels);
     }
 
@@ -714,8 +744,8 @@ public class ARCoreSession implements IMixedReality
         float[] m = new float[16];
         Matrix4f projmtx = new Matrix4f();
         SXRPerspectiveCamera centerCamera = cameraRig.getCenterCamera();
-        float near = centerCamera.getNearClippingDistance();
-        float far = centerCamera.getFarClippingDistance();
+        float near = centerCamera.getNearClippingDistance() / mARtoVRScale;
+        float far = centerCamera.getFarClippingDistance() / mARtoVRScale;
 
         // Get phones' cam projection matrix.
         arCamera.getProjectionMatrix(m, 0, near, far);
@@ -723,7 +753,6 @@ public class ARCoreSession implements IMixedReality
         cameraRig.getHeadTransform().reset();
         cameraRig.getTransform().reset();
         cameraRig.setCameraRigType(SXRCameraRig.SXRCameraRigType.Freeze.ID);
-
 
         float aspectRatio = projmtx.m11() / projmtx.m00();
         float arCamFOV = projmtx.perspectiveFov();
@@ -735,15 +764,16 @@ public class ARCoreSession implements IMixedReality
         // Use the same fov from AR to VR Camera as default value.
         centerCamera.setFovY((float) Math.toDegrees(arCamFOV));
         centerCamera.setAspectRatio(aspectRatio);
-        mScreenToCamera.x = quadWidth / mScreenToCamera.x;
-        mScreenToCamera.y = quadHeight / mScreenToCamera.y;
+        mScreenToCamera.x = 1.0f;
+        mScreenToCamera.y = 1.0f;
         mScreenDepth = quadDistance;
         android.util.Log.d(TAG, "ARCore configured to: passthrough[w: "
                 + quadWidth + ", h: " + quadHeight +", z: " + quadDistance
                 + "], cam fov: " + arCamFOV + ", aspect ratio: " + aspectRatio);
         mDisplayGeometry = new Vector3f(quadWidth, quadHeight, -quadDistance);
-        return SXRMesh.createQuad(mContext, "float3 a_position float2 a_texcoord",
-                quadWidth, quadHeight);
+        return SXRMesh.createQuad(mContext,
+                                  "float3 a_position float2 a_texcoord",
+                                  quadWidth, quadHeight);
     }
 
     private SXRMesh configVRDisplay(Frame frame, SXRCameraRig cameraRig)
@@ -755,8 +785,8 @@ public class ARCoreSession implements IMixedReality
 
         cameraRig.getHeadTransform().setRotation(1, 0, 0, 0);
         cameraRig.setCameraRigType(SXRCameraRig.SXRCameraRigType.Freeze.ID);
-        float near = leftCamera.getNearClippingDistance();
-        float far = leftCamera.getFarClippingDistance();
+        float near = leftCamera.getNearClippingDistance() / mARtoVRScale;
+        float far = leftCamera.getFarClippingDistance() / mARtoVRScale;
 
         arCamera.getProjectionMatrix(m, 0, near, far);
         projmtx.set(m);
@@ -857,8 +887,10 @@ public class ARCoreSession implements IMixedReality
     {
         final float[] translation = new float[3];
         final float[] rotation = new float[4];
+        final float[] newPose = pose.clone();
 
-        convertMatrixPoseToVector(pose, translation, rotation);
+        gvr2ar(newPose);
+        convertMatrixPoseToVector(newPose, translation, rotation);
         return new Pose(translation, rotation);
     }
 
@@ -933,14 +965,6 @@ public class ARCoreSession implements IMixedReality
                                              "onMarkerStateChange",
                                              image,
                                              trackingState);
-    }
-
-    private Vector2f convertToDisplayGeometrySpace(float x, float y)
-    {
-        final float hitX = x + 0.5f * mDisplayGeometry.x;
-        final float hitY = 0.5f * mDisplayGeometry.y - y;
-
-        return new Vector2f(hitX, hitY);
     }
 
     /**

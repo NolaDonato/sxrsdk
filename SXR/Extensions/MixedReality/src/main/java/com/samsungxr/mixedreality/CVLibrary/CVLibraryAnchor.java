@@ -25,12 +25,18 @@ import com.samsungxr.mixedreality.SXRTrackingState;
  * Represents a ARCore anchor in the scene.
  *
  */
-public class CVLibraryAnchor extends SXRAnchor {
+public class CVLibraryAnchor extends SXRAnchor
+{
+    private final float[] mPose = new float[16];
+
     protected CVLibraryAnchor(SXRContext ctx)
     {
         super(ctx);
+        mPose[0] = 1;
+        mPose[5] = 1;
+        mPose[10] = 1;
+        mPose[15] = 1;
     }
-
 
     /**
      * Set the anchor tracking state
@@ -39,58 +45,32 @@ public class CVLibraryAnchor extends SXRAnchor {
      */
     protected void setTrackingState(SXRTrackingState state) { mTrackingState = state; }
 
-    /**
-     * @return ARCore Anchor instance
-     */
-//    protected Anchor getAnchorAR() {
-//
-//        //return this.mAnchor;
-//        return null;
-//    }
 
     @Override
-    public SXRTrackingState getTrackingState() {
+    public SXRTrackingState getTrackingState()
+    {
         return mTrackingState;
     }
 
     @Override
-    public String getCloudAnchorId() {
-
-        //return mAnchor.getCloudAnchorId();
-        return null;
+    public String getCloudAnchorId()
+    {
+        throw new UnsupportedOperationException("Cloud anchors are not supported at this time");
     }
 
-    /**
-     * Update the anchor based on arcore best knowledge of the world
-     *
-     * @param viewmtx
-     * @param gvrmatrix
-     * @param scale
-     */
-    protected void update(float[] viewmtx, float[] gvrmatrix, float scale)
+    void update(float[] pose)
     {
         SXRNode owner = getOwnerObject();
 
         if (owner != null && isEnabled())
         {
-            convertFromARtoVRSpace(viewmtx, gvrmatrix, scale);
+            System.arraycopy(pose, 0, mPose, 0, 16);
         }
     }
 
-    public float[] getPose()
+    public final float[] getPose()
     {
-        return new float[] { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
+        return mPose;
     }
 
-    /**
-     * Converts from ARCore world space to SXRf's world space.
-     *
-     * @param arViewMatrix Phone's camera view matrix.
-     * @param vrCamMatrix SXRf Camera matrix.
-     * @param scale Scale from AR to SXRf world.
-     */
-    protected void convertFromARtoVRSpace(float[] arViewMatrix, float[] vrCamMatrix, float scale) {
-//        mPose.update(mAnchor.getPose(), arViewMatrix, vrCamMatrix, scale);
-//        getTransform().setModelMatrix(mPose.getPoseMatrix());
-    }
 }
