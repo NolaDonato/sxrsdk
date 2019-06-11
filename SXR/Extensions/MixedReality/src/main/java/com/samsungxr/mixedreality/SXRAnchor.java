@@ -49,5 +49,4 @@ public abstract class SXRAnchor extends SXRBehavior
     public abstract String getCloudAnchorId();
 
     public abstract float[] getPose();
-//    public abstract float[] makeTranslate(float x, float y, float z);
 }
