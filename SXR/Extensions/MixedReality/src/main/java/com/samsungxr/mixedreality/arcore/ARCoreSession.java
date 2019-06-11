@@ -18,7 +18,6 @@ package com.samsungxr.mixedreality.arcore;
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.media.Image;
-import android.opengl.Matrix;
 import android.util.DisplayMetrics;
 import android.view.Surface;
 
@@ -43,7 +42,6 @@ import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException;
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException;
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException;
 
-import com.samsungxr.SXRCamera;
 import com.samsungxr.SXRCameraRig;
 import com.samsungxr.SXRContext;
 import com.samsungxr.SXRDrawFrameListener;
@@ -92,7 +90,7 @@ public class ARCoreSession implements IMixedReality
 {
     private final SXRContext mContext;
     private static final String TAG = "ARCORE";
-    private static float mARtoVRScale = 100.0f;
+    private static float mARtoVRScale = 1.0f;
     protected SXREventReceiver mListeners;
     private Session mSession;
     private boolean mInstallRequested;
@@ -106,9 +104,11 @@ public class ARCoreSession implements IMixedReality
     private float[] mSXRCamMatrix = new float[16]; /* From AR to SXR space matrices */
     private Vector3f mDisplayGeometry;
     private float mScreenDepth;
-    private Map<Plane, ARCorePlane> mArPlanes;
-    private Map<AugmentedImage, ARCoreMarker> mArAugmentedImages;
-    private List<ARCoreAnchor> mArAnchors;
+    private Map<Plane, ARCorePlane> mPlanes;
+    private ArrayList<SXRMarker> mMarkers;
+    private List<ARCoreAnchor> mAnchors;
+    private boolean mIsMono;
+    private AugmentedImageDatabase mMarkerDB;
 
     private Camera mCamera;// ARCore camera
     private final Map<Anchor, CloudAnchorCallback> pendingAnchors = new HashMap<>();
@@ -120,9 +120,9 @@ public class ARCoreSession implements IMixedReality
         mSession = null;
         mLastARFrame = null;
         mVRScene = scene;
-        mArPlanes = new HashMap<>();
-        mArAugmentedImages = new HashMap<>();
-        mArAnchors = new ArrayList<>();
+        mPlanes = new HashMap<>();
+        mMarkers = new ArrayList<>();
+        mAnchors = new ArrayList<>();
         mEnableCloudAnchor = enableCloudAnchor;
     }
 
@@ -154,15 +154,18 @@ public class ARCoreSession implements IMixedReality
             }
             // Create default config and check if supported.
             mConfig = new Config(mSession);
-            if (mEnableCloudAnchor) {
+            if (mEnableCloudAnchor)
+            {
                 mConfig.setCloudAnchorMode(Config.CloudAnchorMode.ENABLED);
             }
             mConfig.setUpdateMode(Config.UpdateMode.LATEST_CAMERA_IMAGE);
             ArCoreApk arCoreApk = ArCoreApk.getInstance();
             ArCoreApk.Availability availability = arCoreApk.checkAvailability(mContext.getContext());
-            if (availability == ArCoreApk.Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE) {
+            if (availability == ArCoreApk.Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE)
+            {
                 showSnackbarMessage("This device does not support AR", true);
             }
+            mMarkerDB = new AugmentedImageDatabase(mSession);
             mSession.configure(mConfig);
         }
         showLoadingMessage();
@@ -244,22 +247,21 @@ public class ARCoreSession implements IMixedReality
     }
 
     @Override
-    public void setMarker(Bitmap image)
+    public void addMarker(String name, Bitmap image)
     {
-        ArrayList<Bitmap> imagesList = new ArrayList<>();
-        imagesList.add(image);
-        setMarkers(imagesList);
+        mMarkerDB.addImage(name, image);
+        mConfig.setAugmentedImageDatabase(mMarkerDB);
+        mSession.configure(mConfig);
     }
 
     @Override
-    public void setMarkers(ArrayList<Bitmap> imagesList)
+    public void addMarkers(Map<String, Bitmap> imagesList)
     {
-        AugmentedImageDatabase augmentedImageDatabase = new AugmentedImageDatabase(mSession);
-        for (Bitmap image : imagesList)
+        for (Map.Entry<String, Bitmap> entry : imagesList.entrySet())
         {
-            augmentedImageDatabase.addImage("image_name", image);
+            mMarkerDB.addImage(entry.getKey(), entry.getValue());
         }
-        mConfig.setAugmentedImageDatabase(augmentedImageDatabase);
+        mConfig.setAugmentedImageDatabase(mMarkerDB);
         mSession.configure(mConfig);
     }
 
@@ -351,18 +353,18 @@ public class ARCoreSession implements IMixedReality
         for (Plane plane: allPlanes)
         {
             if (plane.getTrackingState() != TrackingState.TRACKING
-                || mArPlanes.containsKey(plane))
+                || mPlanes.containsKey(plane))
             {
                 continue;
             }
             arCorePlane = new ARCorePlane(this, plane);
-            mArPlanes.put(plane, arCorePlane);
+            mPlanes.put(plane, arCorePlane);
             arCorePlane.update();
             notifyPlaneDetectionListeners(arCorePlane);
         }
-        for (Plane plane: mArPlanes.keySet())
+        for (Plane plane: mPlanes.keySet())
         {
-            arCorePlane = mArPlanes.get(plane);
+            arCorePlane = mPlanes.get(plane);
 
             if (plane.getTrackingState() == TrackingState.TRACKING &&
                 arCorePlane.getTrackingState() != SXRTrackingState.TRACKING)
@@ -385,7 +387,7 @@ public class ARCoreSession implements IMixedReality
 
             if (plane.getSubsumedBy() != null && arCorePlane.getParentPlane() == null)
             {
-                arCorePlane.setParentPlane(mArPlanes.get(plane.getSubsumedBy()));
+                arCorePlane.setParentPlane(mPlanes.get(plane.getSubsumedBy()));
                 notifyMergedPlane(arCorePlane, arCorePlane.getParentPlane());
             }
             arCorePlane.update();
@@ -398,85 +400,90 @@ public class ARCoreSession implements IMixedReality
 
     public void updateMarkers(Collection<AugmentedImage> allAugmentedImages)
     {
-        ARCoreMarker arCoreMarker;
-
+        /*
+         * Make markers for newly added images.
+         */
         for (AugmentedImage augmentedImage: allAugmentedImages)
         {
-            if (augmentedImage.getTrackingState() != TrackingState.TRACKING
-                || mArAugmentedImages.containsKey(augmentedImage))
+            if (augmentedImage.getTrackingState() == TrackingState.TRACKING)
             {
-                continue;
+                boolean found = false;
+                for (SXRMarker marker : mMarkers)
+                {
+                    if (((ARCoreMarker) marker).getImage() == augmentedImage)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found)
+                {
+                    ARCoreMarker marker = new ARCoreMarker(this, augmentedImage);
+                    mMarkers.add(marker);
+                    notifyMarkerDetectionListeners(marker);
+                }
             }
-
-            arCoreMarker = new ARCoreMarker(this, augmentedImage);
-            notifyMarkerDetectionListeners(arCoreMarker);
-            mArAugmentedImages.put(augmentedImage, arCoreMarker);
         }
-
-        for (AugmentedImage augmentedImage: mArAugmentedImages.keySet())
+        for (SXRMarker marker : mMarkers)
         {
-            arCoreMarker = mArAugmentedImages.get(augmentedImage);
+            ARCoreMarker am = (ARCoreMarker) marker;
+            AugmentedImage augmentedImage = am.getImage();
 
             if (augmentedImage.getTrackingState() == TrackingState.TRACKING &&
-                arCoreMarker.getTrackingState() != SXRTrackingState.TRACKING)
+                marker.getTrackingState() != SXRTrackingState.TRACKING)
             {
-                arCoreMarker.setTrackingState(SXRTrackingState.TRACKING);
-                notifyMarkerStateChangeListeners(arCoreMarker, SXRTrackingState.TRACKING);
+                am.setTrackingState(SXRTrackingState.TRACKING);
+                notifyMarkerStateChangeListeners(marker, SXRTrackingState.TRACKING);
             }
             else if (augmentedImage.getTrackingState() == TrackingState.PAUSED &&
-                arCoreMarker.getTrackingState() != SXRTrackingState.PAUSED)
+                     marker.getTrackingState() != SXRTrackingState.PAUSED)
             {
-                arCoreMarker.setTrackingState(SXRTrackingState.PAUSED);
-                notifyMarkerStateChangeListeners(arCoreMarker, SXRTrackingState.PAUSED);
+                am.setTrackingState(SXRTrackingState.PAUSED);
+                notifyMarkerStateChangeListeners(marker, SXRTrackingState.PAUSED);
             }
             else if (augmentedImage.getTrackingState() == TrackingState.STOPPED &&
-                arCoreMarker.getTrackingState() != SXRTrackingState.STOPPED)
+                     marker.getTrackingState() != SXRTrackingState.STOPPED)
             {
-                arCoreMarker.setTrackingState(SXRTrackingState.STOPPED);
-                notifyMarkerStateChangeListeners(arCoreMarker, SXRTrackingState.STOPPED);
+                am.setTrackingState(SXRTrackingState.STOPPED);
+                notifyMarkerStateChangeListeners(marker, SXRTrackingState.STOPPED);
             }
         }
     }
 
     public void updateAnchors()
     {
-        for (ARCoreAnchor anchor: mArAnchors)
+        for (ARCoreAnchor anchor: mAnchors)
         {
             Anchor arAnchor = anchor.getAnchorAR();
 
-            if (arAnchor.getTrackingState() == TrackingState.TRACKING &&
-                anchor.getTrackingState() != SXRTrackingState.TRACKING)
+            if (arAnchor.getTrackingState() == TrackingState.TRACKING)
             {
-                anchor.setTrackingState(SXRTrackingState.TRACKING);
-                notifyAnchorStateChangeListeners(anchor, SXRTrackingState.TRACKING);
+                anchor.update();
+                if (anchor.getTrackingState() != SXRTrackingState.TRACKING)
+                {
+                    anchor.setTrackingState(SXRTrackingState.TRACKING);
+                    notifyAnchorStateChangeListeners(anchor, SXRTrackingState.TRACKING);
+                }
             }
-            else if (arAnchor.getTrackingState() == TrackingState.PAUSED &&
-                anchor.getTrackingState() != SXRTrackingState.PAUSED)
+            else if ((arAnchor.getTrackingState() == TrackingState.PAUSED) &&
+                     (anchor.getTrackingState() != SXRTrackingState.PAUSED))
             {
                 anchor.setTrackingState(SXRTrackingState.PAUSED);
                 notifyAnchorStateChangeListeners(anchor, SXRTrackingState.PAUSED);
             }
-            else if (arAnchor.getTrackingState() == TrackingState.STOPPED &&
-                anchor.getTrackingState() != SXRTrackingState.STOPPED)
+            else if ((arAnchor.getTrackingState() == TrackingState.STOPPED) &&
+                     (anchor.getTrackingState() != SXRTrackingState.STOPPED))
             {
                 anchor.setTrackingState(SXRTrackingState.STOPPED);
                 notifyAnchorStateChangeListeners(anchor, SXRTrackingState.STOPPED);
             }
-            anchor.update();
         }
     }
 
     @Override
-    public ArrayList<SXRMarker> getAllMarkers()
+    public final ArrayList<SXRMarker> getAllMarkers()
     {
-        ArrayList<SXRMarker> allAugmentedImages = new ArrayList<>();
-
-        for (AugmentedImage augmentedImage: mArAugmentedImages.keySet())
-        {
-            allAugmentedImages.add(mArAugmentedImages.get(augmentedImage));
-        }
-
-        return allAugmentedImages;
+        return mMarkers;
     }
 
     @Override
@@ -492,7 +499,7 @@ public class ARCoreSession implements IMixedReality
     {
         ARCoreAnchor arAnchor = (ARCoreAnchor) anchor;
         arAnchor.detach();
-        mArAnchors.remove(anchor);
+        mAnchors.remove(anchor);
         SXRNode anchorNode = anchor.getOwnerObject();
         anchorNode.detachComponent(SXRAnchor.getComponentType());
     }
@@ -561,36 +568,31 @@ public class ARCoreSession implements IMixedReality
     private void onInitARCoreSession(SXRContext gvrContext) throws CameraNotAvailableException
     {
         SXRTexture passThroughTexture = new SXRExternalTexture(gvrContext);
+        final SXRCameraRig cameraRig = mVRScene.getMainCameraRig();
+        final SXRPerspectiveCamera centerCam = cameraRig.getCenterCamera();
+        final SXRMesh mesh;
+        final float aspect = centerCam.getAspectRatio();
 
+        mIsMono = Math.abs(1.0f - aspect) > 0.0001f;
         mSession.setCameraTextureName(passThroughTexture.getId());
 
         configDisplayAspectRatio(mContext.getActivity());
 
         mLastARFrame = mSession.update();
-        final SXRCameraRig cameraRig = mVRScene.getMainCameraRig();
+        if (mIsMono)
+        {
+            mesh = configMonoDisplay(mLastARFrame, cameraRig);
+        }
+        else
+        {
+            mesh = configVRDisplay(mLastARFrame, cameraRig);
+        }
+        float[] oldTexCoords = mesh.getTexCoords();
+        float[] newTexCoords = new float[oldTexCoords.length];
 
-        mDisplayGeometry = configDisplayGeometry(mLastARFrame.getCamera(), cameraRig);
-        mSession.setDisplayGeometry(Surface.ROTATION_90,
-                                    (int) mDisplayGeometry.x, (int) mDisplayGeometry.y);
-
-        final SXRMesh mesh = SXRMesh.createQuad(mContext, "float3 a_position float2 a_texcoord",
-                                                mDisplayGeometry.x, mDisplayGeometry.y);
-
-        final FloatBuffer texCoords = mesh.getTexCoordsAsFloatBuffer();
-        final int capacity = texCoords.capacity();
-        final int FLOAT_SIZE = 4;
-
-        ByteBuffer bbTexCoordsTransformed = ByteBuffer.allocateDirect(capacity * FLOAT_SIZE);
-        bbTexCoordsTransformed.order(ByteOrder.nativeOrder());
-
-        FloatBuffer quadTexCoordTransformed = bbTexCoordsTransformed.asFloatBuffer();
-
-        mLastARFrame.transformDisplayUvCoords(texCoords, quadTexCoordTransformed);
-
-        float[] uv = new float[capacity];
-        quadTexCoordTransformed.get(uv);
-
-        mesh.setTexCoords(uv);
+        mLastARFrame.transformCoordinates2d(Coordinates2d.VIEW_NORMALIZED, oldTexCoords,
+                                            Coordinates2d.TEXTURE_NORMALIZED, newTexCoords);
+        mesh.setTexCoords(newTexCoords);
 
         /* To render texture from phone's camera */
         mARPassThroughObject = new SXRNode(gvrContext, mesh,
@@ -629,10 +631,10 @@ public class ARCoreSession implements IMixedReality
                 float[] hitPose = new float[16];
 
                 hit.getHitPose().toMatrix(hitPose, 0);
-//                ar2gvr(hitPose);
+                ar2gvr(hitPose);
                 gvrHitResult.setPose(hitPose);
                 gvrHitResult.setDistance(hit.getDistance() * mARtoVRScale);
-                gvrHitResult.setPlane(mArPlanes.get(trackable));
+                gvrHitResult.setPlane(mPlanes.get(trackable));
                 return gvrHitResult;
             }
         }
@@ -670,11 +672,12 @@ public class ARCoreSession implements IMixedReality
                 return;
             }
             Camera arCamera = arFrame.getCamera();
-            syncARCamToVRCam(arCamera, mVRScene.getMainCameraRig());
+
             if (arCamera.getTrackingState() != TrackingState.TRACKING)
             {
                 return;
             }
+            syncARCamToVRCam(arCamera, mVRScene.getMainCameraRig());
             updatePlanes(mSession.getAllTrackables(Plane.class));
             updateMarkers(arFrame.getUpdatedTrackables(AugmentedImage.class));
             updateAnchors();
@@ -689,17 +692,7 @@ public class ARCoreSession implements IMixedReality
 
     private void syncARCamToVRCam(Camera arCamera, SXRCameraRig cameraRig)
     {
-        float x = mSXRCamMatrix[12];
-        float y = mSXRCamMatrix[13];
-        float z = mSXRCamMatrix[14];
-
         arCamera.getDisplayOrientedPose().toMatrix(mSXRCamMatrix, 0);
-
-        // FIXME: This is a workaround because the AR camera's pose is changing its
-        // position values even if it is stopped! To avoid the scene looks trembling
-        mSXRCamMatrix[12] = (mSXRCamMatrix[12] * mARtoVRScale + x) * 0.5f;
-        mSXRCamMatrix[13] = (mSXRCamMatrix[13] * mARtoVRScale + y) * 0.5f;
-        mSXRCamMatrix[14] = (mSXRCamMatrix[14] * mARtoVRScale + z) * 0.5f;
         cameraRig.getTransform().setModelMatrix(mSXRCamMatrix);
     }
 
@@ -707,76 +700,97 @@ public class ARCoreSession implements IMixedReality
     {
         final DisplayMetrics metrics = new DisplayMetrics();
         activity.getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
-        mScreenToCamera.x = metrics.widthPixels;
+        int width = mIsMono ? metrics.widthPixels : metrics.heightPixels;
+        mScreenToCamera.x = width;
         mScreenToCamera.y = metrics.heightPixels;
-        mSession.setDisplayGeometry(Surface.ROTATION_90, metrics.widthPixels, metrics.heightPixels);
+        mSession.setDisplayGeometry(Surface.ROTATION_90, width, metrics.heightPixels);
     }
 
-    private Vector3f configDisplayGeometry(Camera arCamera, SXRCameraRig cameraRig)
+    private SXRMesh configMonoDisplay(Frame frame, SXRCameraRig cameraRig)
     {
+        Camera arCamera = frame.getCamera();
+        float[] m = new float[16];
+        Matrix4f projmtx = new Matrix4f();
         SXRPerspectiveCamera centerCamera = cameraRig.getCenterCamera();
         float near = centerCamera.getNearClippingDistance();
         float far = centerCamera.getFarClippingDistance();
 
         // Get phones' cam projection matrix.
-        float[] m = new float[16];
         arCamera.getProjectionMatrix(m, 0, near, far);
-        Matrix4f projmtx = new Matrix4f();
         projmtx.set(m);
+        cameraRig.getHeadTransform().reset();
+        cameraRig.getTransform().reset();
+        cameraRig.setCameraRigType(SXRCameraRig.SXRCameraRigType.Freeze.ID);
+
 
         float aspectRatio = projmtx.m11() / projmtx.m00();
         float arCamFOV = projmtx.perspectiveFov();
         float tanfov =  (float) Math.tan(arCamFOV * 0.5f);
-        float quadDistance = far - 1;
+        float quadDistance = far - near;
         float quadHeight = quadDistance * tanfov * 2;
         float quadWidth = quadHeight * aspectRatio;
 
         // Use the same fov from AR to VR Camera as default value.
-        float vrFov = (float) Math.toDegrees(arCamFOV);
-        setVRCameraFov(cameraRig, vrFov);
-
-        // VR Camera will be updated by AR pose, not by internal sensors.
-        cameraRig.getHeadTransform().setRotation(1, 0, 0, 0);
-        cameraRig.setCameraRigType(SXRCameraRig.SXRCameraRigType.Freeze.ID);
-
+        centerCamera.setFovY((float) Math.toDegrees(arCamFOV));
+        centerCamera.setAspectRatio(aspectRatio);
+        mScreenToCamera.x = quadWidth / mScreenToCamera.x;
+        mScreenToCamera.y = quadHeight / mScreenToCamera.y;
+        mScreenDepth = quadDistance;
         android.util.Log.d(TAG, "ARCore configured to: passthrough[w: "
                 + quadWidth + ", h: " + quadHeight +", z: " + quadDistance
-                + "], cam fov: " +vrFov + ", aspect ratio: " + aspectRatio);
-        mScreenToCamera.x = quadWidth / mScreenToCamera.x;    // map [0, ScreenSize] to [-Display, +Display]
-        mScreenToCamera.y = quadHeight / mScreenToCamera.y;
-        mScreenDepth = quadHeight / tanfov;
-        return new Vector3f(quadWidth, quadHeight, -quadDistance);
+                + "], cam fov: " + arCamFOV + ", aspect ratio: " + aspectRatio);
+        mDisplayGeometry = new Vector3f(quadWidth, quadHeight, -quadDistance);
+        return SXRMesh.createQuad(mContext, "float3 a_position float2 a_texcoord",
+                quadWidth, quadHeight);
     }
 
-    private static void setVRCameraFov(SXRCameraRig camRig, float degreesFov)
+    private SXRMesh configVRDisplay(Frame frame, SXRCameraRig cameraRig)
     {
-        camRig.getCenterCamera().setFovY(degreesFov);
+        Camera arCamera = frame.getCamera();
+        float[] m = new float[16];
+        Matrix4f projmtx = new Matrix4f();
+        SXRPerspectiveCamera leftCamera = (SXRPerspectiveCamera) cameraRig.getLeftCamera();
 
-        final SXRCamera leftCamera = camRig.getLeftCamera();
-        if (leftCamera instanceof SXRPerspectiveCamera) {
-            ((SXRPerspectiveCamera)leftCamera).setFovY(degreesFov);
-        }
+        cameraRig.getHeadTransform().setRotation(1, 0, 0, 0);
+        cameraRig.setCameraRigType(SXRCameraRig.SXRCameraRigType.Freeze.ID);
+        float near = leftCamera.getNearClippingDistance();
+        float far = leftCamera.getFarClippingDistance();
 
-        final SXRCamera rightCamera = camRig.getRightCamera();
-        if (rightCamera instanceof SXRPerspectiveCamera) {
-            ((SXRPerspectiveCamera)rightCamera).setFovY(degreesFov);
-        }
+        arCamera.getProjectionMatrix(m, 0, near, far);
+        projmtx.set(m);
+
+        float arDist = far - near;
+        float aspectRatio = projmtx.m11() / projmtx.m00();
+        float arFov = projmtx.perspectiveFov();
+        float arTanfov =  (float) Math.tan(arFov * 0.5f);
+        float arHeight = arDist * arTanfov * 2;
+        float arWidth = arHeight * aspectRatio;
+
+        mScreenToCamera.x = arWidth / mScreenToCamera.x;
+        mScreenToCamera.y = arHeight / mScreenToCamera.y;
+        mScreenDepth = arDist;
+        android.util.Log.d(TAG, "ARCore configured to: passthrough[w: "
+                + arWidth + ", h: " + arHeight +", z: " + arDist
+                + "], cam fov: " + arFov + ", aspect ratio: " + aspectRatio);
+        mDisplayGeometry = new Vector3f(arWidth, arHeight, -arDist);
+        mSession.setDisplayGeometry(Surface.ROTATION_90, (int) arWidth, (int) arHeight);
+        return SXRMesh.createQuad(mContext,
+                                 "float3 a_position float2 a_texcoord",
+                                  arHeight, arWidth);
     }
 
     @Override
     public SXRNode getPassThroughObject() {
         return mARPassThroughObject;
     }
-
-
-    @Override
+    
     public ArrayList<SXRPlane> getAllPlanes()
     {
         ArrayList<SXRPlane> allPlanes = new ArrayList<>();
 
-        for (Plane plane: mArPlanes.keySet())
+        for (Plane plane: mPlanes.keySet())
         {
-            allPlanes.add(mArPlanes.get(plane));
+            allPlanes.add(mPlanes.get(plane));
         }
         return allPlanes;
     }
@@ -831,7 +845,7 @@ public class ARCoreSession implements IMixedReality
             owner.attachComponent(arCoreAnchor);
         }
         arCoreAnchor.setAnchorAR(anchor);
-        mArAnchors.add(arCoreAnchor);
+        mAnchors.add(arCoreAnchor);
         arCoreAnchor.update();
         return arCoreAnchor;
     }

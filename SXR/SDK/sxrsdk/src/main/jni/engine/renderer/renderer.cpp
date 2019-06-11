@@ -16,6 +16,7 @@
 /***************************************************************************
  * Renders a scene, a screen.
  ***************************************************************************/
+#define VERBOSE_LOGGING 0
 
 #include "glm/gtc/type_ptr.hpp"
 #include "glm/glm.hpp"
@@ -24,6 +25,8 @@
 #include "objects/scene.h"
 #include "objects/textures/texture.h"
 #include "objects/textures/render_texture.h"
+
+#define VERBOSE_LOGGING 0
 #include "util/sxr_log.h"
 
 #define MAX_INDICES 500
@@ -50,7 +53,7 @@ void Renderer::frustum_cull(glm::vec3 camera_position, Scene* scene, Node* objec
         float frustum[6][4], std::vector<Node*>* scene_objects,
         bool need_cull, int planeMask)
 {
-    LOGD("Renderer::frustum_cull: object: %s", object->name().c_str());
+    LOGV("Renderer::frustum_cull: object: %s", object->name().c_str());
     // frustumCull() return 3 possible values:
     // 0 when the HBV of the object is completely outside the frustum: cull itself and all its children out
     // 1 when the HBV of the object is intersecting the frustum but the object itself is not: cull it out and continue culling test with its children
@@ -81,7 +84,7 @@ void Renderer::frustum_cull(glm::vec3 camera_position, Scene* scene, Node* objec
             return distance;
         });
         objectLayer = renderData->layer();
-        LOGD("Renderer::frustum_cull: object's layer is %d", objectLayer);
+        LOGV("Renderer::frustum_cull: object's layer is %d", objectLayer);
     } else {
         objectLayer = Renderer::LAYER_NORMAL;
     }
@@ -95,7 +98,7 @@ void Renderer::frustum_cull(glm::vec3 camera_position, Scene* scene, Node* objec
 
         if (cullVal >= 2) {
             object->setCullStatus(false);
-            LOGD("Renderer::frustum_cull: adding to layer %d", objectLayer);
+            LOGV("Renderer::frustum_cull: adding to layer %d", objectLayer);
             scene_objects[objectLayer].push_back(object);
         }
 
@@ -105,7 +108,7 @@ void Renderer::frustum_cull(glm::vec3 camera_position, Scene* scene, Node* objec
         }
     } else {
         object->setCullStatus(false);
-        LOGD("Renderer::frustum_cull: adding to layer %d", objectLayer);
+        LOGV("Renderer::frustum_cull: adding to layer %d", objectLayer);
         scene_objects[objectLayer].push_back(object);
     }
 
@@ -124,11 +127,11 @@ void Renderer::state_sort(std::vector<RenderData*>& render_data_vector) {
     std::sort(render_data_vector.begin(), render_data_vector.end(), compareRenderDataByOrderShaderDistance);
 
     if (DEBUG_RENDERER) {
-        LOGD("SORTING: After sorting");
+        LOGV("SORTING: After sorting");
 
         for (int i = 0; i < render_data_vector.size(); ++i) {
             RenderData* renderData = render_data_vector[i];
-            LOGD(
+            LOGV(
                     "SORTING: pass_count = %d, rendering order = %d, shader_type = %d, camera_distance = %f\n",
                     renderData->pass_count(), renderData->rendering_order(),
                     renderData->get_shader(0),
@@ -190,18 +193,15 @@ void Renderer::cullFromCamera(Scene *scene, jobject javaNode, Camera* camera,
 
     // 2. Iteratively execute frustum culling for each root object (as well as its children objects recursively)
     Node *object = scene->getRoot();
-    if (DEBUG_RENDERER) {
-        LOGD("FRUSTUM: start frustum culling for root %s\n", object->name().c_str());
-    }
+
+    LOGV("FRUSTUM: start frustum culling for root %s\n", object->name().c_str());
 
     rstate.scene->lockColliders();
     rstate.scene->clearVisibleColliders();
     frustum_cull(campos, scene, object, frustum, scene_objects, scene->get_frustum_culling(), 0);
     rstate.scene->unlockColliders();
 
-    if (DEBUG_RENDERER) {
-        LOGD("FRUSTUM: end frustum culling for root %s\n", object->name().c_str());
-    }
+    LOGV("FRUSTUM: end frustum culling for root %s\n", object->name().c_str());
     // 3. do occlusion culling, if enabled
     occlusion_cull(rstate, scene_objects, render_data_vector);
 }
