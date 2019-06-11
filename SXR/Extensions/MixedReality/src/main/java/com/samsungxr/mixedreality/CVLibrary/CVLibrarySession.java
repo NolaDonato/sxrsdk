@@ -166,7 +166,7 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
             float y = t.getPositionY();
             float z = t.getPositionZ();
 
-            Log.v("CVLIB", "campos %f, %f, %f", x, y, z);
+            //Log.v("CVLIB", "campos %f, %f, %f", x, y, z);
             if ((x != 0) || (y != 0) || (z != 0))
             {
                 mTracking = true;
@@ -174,18 +174,6 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
                 updateMarkers();
                 updateAnchors();
             }
-        }
-        else
-        {
-            for (SXRPlane p : mPlanes)
-            {
-//                ((CVLibraryPlane) p).update(mVRScene.getMainCameraRig());
-            }
-            for (SXRMarker m : mMarkers)
-            {
-//                ((CVLibraryMarker) m).update(mVRScene.getMainCameraRig());
-            }
-
         }
     }
 
@@ -206,7 +194,6 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
     {
         CVLibraryAnchor anchor = new CVLibraryAnchor(mContext);
         owner.attachComponent(anchor);
-        anchor.update(pose);
         mAnchors.add(anchor);
         return anchor;
     }
@@ -305,7 +292,6 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
         {
             SXRPlane plane = new CVLibraryPlane(mContext, this);
             mPlanes.add(plane);
-            ((CVLibraryPlane) plane).update(mVRScene.getMainCameraRig());
             mContext.getEventManager().sendEvent(this, IPlaneEvents.class, "onPlaneDetected", plane);
             notifyPlaneStateChange(plane, SXRTrackingState.TRACKING);
         }
@@ -316,7 +302,6 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
         for (SXRMarker m : mMarkers)
         {
             CVLibraryMarker marker = (CVLibraryMarker) m;
-            marker.update(mVRScene.getMainCameraRig());
             if (m.getTrackingState() == SXRTrackingState.PAUSED)
             {
                 mContext.getEventManager().sendEvent(this, IMarkerEvents.class, "onMarkerDetected", m);
@@ -400,10 +385,6 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
         Vector3f pos = new Vector3f(t.getPositionX(),
                                     t.getPositionY(),
                                     t.getPositionZ());
-        Quaternionf q = new Quaternionf(t.getRotationX(),
-                                        t.getRotationY(),
-                                        t.getRotationZ(),
-                                        t.getRotationW());
         for (SXRPlane p : mPlanes)
         {
             CVLibraryPlane plane = (CVLibraryPlane)  p;
