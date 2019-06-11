@@ -116,7 +116,7 @@ public class SXRAnimationQueue implements SXRDrawFrameListener
     protected final List<SXRAnimator> mAnimations = new ArrayList<>();
     protected final List<SXRAnimator> mAnimQueue = new ArrayList<SXRAnimator>();
     protected int mRepeatMode = SXRRepeatMode.ONCE;
-    protected float mBlendFactor = 0.5f;
+    protected float mBlendFactor = 0;
     protected boolean mIsRunning = false;
     protected int mCurIndex = 0;
     private boolean reverse = false;
@@ -176,6 +176,56 @@ public class SXRAnimationQueue implements SXRDrawFrameListener
             for (SXRAnimator anim : mAnimations)
             {
                 start(anim);
+            }
+        }
+    }
+
+    /**
+     * Start all of the animations in the queue
+     * whose name contains the pattern string.
+     * The animations will play consecutively.
+     * They may overlap if blending is requested.
+     * @param pattern String to match
+     * @param repeatMode controls animation sequencing:
+     * <table>
+     *     <tr>
+     *         <td>SXRRepeatMode.ONCE</td>
+     *         <td>
+     *             Play the animations consecutively in the order they were added.
+     *             Stop after the last aniation.
+     *         </td>
+     *     </tr>
+     *     <tr>
+     *         <td>SXRRepeatMode.REPEATED</td>
+     *         <td>
+     *             Play the animations consecutively in the order they were added.
+     *             After the last aniation is played, start at the first
+     *             animation and play the sequence repeatedly.
+     *         </td>
+     *     </tr>
+     *     <tr>
+     *         <td>SXRRepeatMode.PINGPONG</td>
+     *         <td>
+     *             Play the animations consecutively in the order they were added.
+     *             After the last animation is played, start at the last
+     *             animation and play the backwards, running the animations
+     *             in reverse. Continue playing the sequence forward and
+     *             then backwards.
+     *         </td>
+     *     </tr>
+     * </table>
+     */
+    public void startAll(String pattern, int repeatMode)
+    {
+        synchronized (mAnimations)
+        {
+            mRepeatMode = repeatMode;
+            for (SXRAnimator anim : mAnimations)
+            {
+                if (anim.getName().contains(pattern))
+                {
+                    start(anim);
+                }
             }
         }
     }
@@ -303,6 +353,7 @@ public class SXRAnimationQueue implements SXRDrawFrameListener
         }
     }
 
+
     /**
      * Stop the animation with the given name.
      * The animation is removed from the sequence of
@@ -349,6 +400,33 @@ public class SXRAnimationQueue implements SXRDrawFrameListener
         synchronized (mAnimQueue)
         {
             mAnimQueue.add(animator);
+            Log.d("ANIMATION", "Added " + animator.getName());
+        }
+        onStart();
+    }
+
+    /**
+     * Start this animationimmediately after the currently playing animation.
+     * The animation is added in the middle of the sequence.
+     * @param name name of the animation to start.
+     */
+    public void startNext(String name)
+    {
+        synchronized (mAnimQueue)
+        {
+            SXRAnimator a = findAnimation(name);
+            int index = NextAnimIndex(mCurIndex);
+
+            if (index < 0)
+            {
+                index = mCurIndex;
+                if (mRepeatMode != SXRRepeatMode.PINGPONG)
+                {
+                    if (++index >= mAnimQueue.size()) index = 0;
+                }
+            }
+            mAnimQueue.add(index, a);
+            Log.d("ANIMATION", "Added " + name);
         }
         onStart();
     }
@@ -392,6 +470,7 @@ public class SXRAnimationQueue implements SXRDrawFrameListener
             anim.stop();
             mAnimQueue.remove(anim);
             mQueueListener.removeBlendAnimation(this, anim);
+            Log.d("ANIMATION", "Removed from queue " + anim.getName());
         }
     }
 
@@ -449,9 +528,11 @@ public class SXRAnimationQueue implements SXRDrawFrameListener
                 float timeleft = a.getDuration() - a.getElapsedTime();
                 if (mBlendFactor >= timeleft)
                 {
-                    mQueueListener.addBlendAnimation(this, animator2, animator, mBlendFactor);
-                    animator2.start();
-                    mQueueListener.onAnimationStarted(this, animator2);
+                    if (mQueueListener.addBlendAnimation(this, animator2, animator, timeleft) != null)
+                    {
+                        animator2.start();
+                        mQueueListener.onAnimationStarted(this, animator2);
+                    }
                 }
             }
             nextIndex = mCurIndex;

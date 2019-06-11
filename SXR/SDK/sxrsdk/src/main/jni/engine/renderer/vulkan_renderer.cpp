@@ -37,6 +37,8 @@
 
 #include <glslang/Include/Common.h>
 
+#include "util/sxr_log.h"
+
 namespace sxr {
 ShaderData* VulkanRenderer::createMaterial(const char* uniform_desc, const char* texture_desc)
 {
@@ -263,8 +265,11 @@ void VulkanRenderer::renderRenderDataVector(RenderState& rstate,std::vector<Rend
         }
     }
 }
+
 void VulkanRenderer::renderRenderTarget(Scene* scene, jobject javaNode, RenderTarget* renderTarget, ShaderManager* shader_manager,
-                                        RenderTexture* post_effect_render_texture_a, RenderTexture* post_effect_render_texture_b){
+                                        RenderTexture* post_effect_render_texture_a, RenderTexture* post_effect_render_texture_b,
+                                        std::vector<RenderData*>* render_data_vector)
+{
     std::vector<RenderData*> render_data_list;
     Camera* camera = renderTarget->getCamera();
     RenderState rstate = renderTarget->getRenderState();
@@ -281,7 +286,6 @@ void VulkanRenderer::renderRenderTarget(Scene* scene, jobject javaNode, RenderTa
     if(vulkanCore_->isSwapChainPresent())
         rstate.uniforms.u_proj = glm::mat4(1,0,0,0,  0,-1,0,0, 0,0,0.5,0, 0,0,0.5,1) * rstate.uniforms.u_proj;
 
-    std::vector<RenderData*>* render_data_vector = renderTarget->getRenderDataVector();
     LightList& lights = scene->getLights();
 
     int postEffectCount = 0;

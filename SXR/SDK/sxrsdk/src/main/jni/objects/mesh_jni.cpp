@@ -21,7 +21,6 @@
 #include "mesh.h"
 
 #include "util/sxr_log.h"
-#include "util/sxr_jni.h"
 #include "android/asset_manager_jni.h"
 
 namespace sxr {
@@ -42,7 +41,6 @@ namespace sxr {
     {
         VertexBuffer* vbuf = reinterpret_cast<VertexBuffer*>(jvertices);
         IndexBuffer* ibuf = reinterpret_cast<IndexBuffer*>(jindices);
-        LOGD("Mesh::ctorBuffer vertices = %p, indices = %p", vbuf, ibuf);
         Mesh* mesh = new Mesh(*vbuf);
         if (ibuf)
         {

@@ -17,6 +17,8 @@
 #include "objects/scene.h"
 #include "shaders/shader.h"
 
+#include "util/sxr_log.h"
+
 #define BATCH_SIZE 60
 namespace sxr {
 
@@ -117,7 +119,7 @@ void BatchManager::renderBatches(RenderState& rstate) {
 
         gRenderer->setRenderStates(renderdata, rstate);
 
-        if(use_multiview){
+        if(gUseMultiview){
            rstate.uniforms.u_view_[0] = rstate.scene->main_camera_rig()->left_camera()->getViewMatrix();
            rstate.uniforms.u_view_[1] = rstate.scene->main_camera_rig()->right_camera()->getViewMatrix();
         }
@@ -144,7 +146,7 @@ void BatchManager::renderBatches(RenderState& rstate) {
 void BatchManager::render_batch(const std::vector<glm::mat4>& model_matrix,
         RenderData* render_data, unsigned int indexCount)
 {
-    if(use_multiview)
+    if(gUseMultiview)
         glDrawElementsInstanced(render_data->draw_mode(),indexCount, GL_UNSIGNED_SHORT, NULL, 2 );
     else
         GL(glDrawElements(render_data->draw_mode(), indexCount, GL_UNSIGNED_SHORT,

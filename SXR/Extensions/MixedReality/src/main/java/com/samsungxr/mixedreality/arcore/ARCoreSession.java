@@ -17,6 +17,7 @@ package com.samsungxr.mixedreality.arcore;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
+import android.media.Image;
 import android.opengl.Matrix;
 import android.util.DisplayMetrics;
 import android.view.Surface;
@@ -36,11 +37,13 @@ import com.google.ar.core.Session;
 import com.google.ar.core.Trackable;
 import com.google.ar.core.TrackingState;
 import com.google.ar.core.exceptions.CameraNotAvailableException;
+import com.google.ar.core.exceptions.NotYetAvailableException;
 import com.google.ar.core.exceptions.UnavailableApkTooOldException;
 import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException;
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException;
 import com.google.ar.core.exceptions.UnavailableUserDeclinedInstallationException;
 
+import com.samsungxr.SXRCamera;
 import com.samsungxr.SXRCameraRig;
 import com.samsungxr.SXRContext;
 import com.samsungxr.SXRDrawFrameListener;
@@ -55,7 +58,6 @@ import com.samsungxr.SXRRenderData;
 import com.samsungxr.SXRScene;
 import com.samsungxr.SXRNode;
 import com.samsungxr.SXRTexture;
-import com.samsungxr.mixedreality.CameraPermissionHelper;
 import com.samsungxr.mixedreality.IMarkerEvents;
 import com.samsungxr.mixedreality.IMixedReality;
 import com.samsungxr.mixedreality.IMixedRealityEvents;
@@ -308,6 +310,11 @@ public class ARCoreSession implements IMixedReality
     }
 
     @Override
+    public Image acquireCameraImage() throws NotYetAvailableException {
+        return mLastARFrame.acquireCameraImage();
+    }
+
+    @Override
     public void setPlaneFindingMode(SXRMixedReality.PlaneFindingMode mode)
     {
         if (mConfig == null)
@@ -504,15 +511,6 @@ public class ARCoreSession implements IMixedReality
                 case INSTALLED:
                     break;
             }
-
-            // ARCore requires camera permissions to operate. If we did not yet obtain runtime
-            // permission on Android M and above, now is a good time to ask the user for it.
-            if (!CameraPermissionHelper.hasCameraPermission(activity))
-            {
-                CameraPermissionHelper.requestCameraPermission(activity);
-                return false;
-            }
-
             mSession = new Session(/* context= */ activity);
         }
         catch (UnavailableArcoreNotInstalledException |
@@ -753,14 +751,23 @@ public class ARCoreSession implements IMixedReality
     private static void setVRCameraFov(SXRCameraRig camRig, float degreesFov)
     {
         camRig.getCenterCamera().setFovY(degreesFov);
-        ((SXRPerspectiveCamera)camRig.getLeftCamera()).setFovY(degreesFov);
-        ((SXRPerspectiveCamera)camRig.getRightCamera()).setFovY(degreesFov);
+
+        final SXRCamera leftCamera = camRig.getLeftCamera();
+        if (leftCamera instanceof SXRPerspectiveCamera) {
+            ((SXRPerspectiveCamera)leftCamera).setFovY(degreesFov);
+        }
+
+        final SXRCamera rightCamera = camRig.getRightCamera();
+        if (rightCamera instanceof SXRPerspectiveCamera) {
+            ((SXRPerspectiveCamera)rightCamera).setFovY(degreesFov);
+        }
     }
 
     @Override
     public SXRNode getPassThroughObject() {
         return mARPassThroughObject;
     }
+
 
     @Override
     public ArrayList<SXRPlane> getAllPlanes()

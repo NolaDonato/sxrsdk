@@ -1,9 +1,19 @@
-/***************************************************************************
- * JNI
- ***************************************************************************/
-
+/* Copyright 2015 Samsung Electronics Co., LTD
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+#include <jni.h>
 #include "objects/components/render_target.h"
-#include "util/sxr_jni.h"
 
 namespace sxr {
 
@@ -39,8 +49,6 @@ extern "C" {
     Java_com_samsungxr_NativeRenderTarget_ctorViewport(JNIEnv *env, jobject obj, jlong jscene,
                                                      jint defaultViewportW, jint defaultViewportH);
     JNIEXPORT void JNICALL
-            Java_com_samsungxr_NativeRenderTarget_attachRenderTarget(JNIEnv *env, jobject obj, jlong jrendertarget, jlong jnextrendertarget);
-    JNIEXPORT void JNICALL
     Java_com_samsungxr_NativeRenderTarget_cullFromCamera(JNIEnv *env, jobject obj, jlong jscene, jobject javaNode, jlong ptr, jlong jcamera, jlong jshaderManager);
     JNIEXPORT void JNICALL
     Java_com_samsungxr_NativeRenderTarget_render(JNIEnv *env, jobject obj, jlong renderTarget, jlong camera,
@@ -59,7 +67,9 @@ Java_com_samsungxr_NativeRenderTarget_render(JNIEnv *env, jobject obj, jlong ren
     target->setCamera(reinterpret_cast<Camera*>(camera));
     javaNode = env->NewLocalRef(javaNode);
     gRenderer->getInstance()->renderRenderTarget(scene, javaNode, target, reinterpret_cast<ShaderManager*>(shader_manager),
-                                                 reinterpret_cast<RenderTexture*>(posteffectrenderTextureA), reinterpret_cast<RenderTexture*>(posteffectRenderTextureB));
+                                                 reinterpret_cast<RenderTexture*>(posteffectrenderTextureA),
+                                                 reinterpret_cast<RenderTexture*>(posteffectRenderTextureB),
+                                                 target->getRenderDataVector());
     env->DeleteLocalRef(javaNode);
 }
 
@@ -97,13 +107,6 @@ Java_com_samsungxr_NativeRenderTarget_setMainScene(JNIEnv *env, jobject obj, jlo
     RenderTarget* target = reinterpret_cast<RenderTarget*>(ptr);
     Scene* scene = reinterpret_cast<Scene*>(Sceneptr);
     target->setMainScene(scene);
-}
-
-JNIEXPORT void JNICALL
-Java_com_samsungxr_NativeRenderTarget_attachRenderTarget(JNIEnv *env, jobject obj, jlong jrendertarget, jlong jnextrendertarget){
-    RenderTarget* target = reinterpret_cast<RenderTarget*>(jrendertarget);
-    RenderTarget* nextrendertarget = reinterpret_cast<RenderTarget*>(jnextrendertarget);
-    target->attachNextRenderTarget(nextrendertarget);
 }
 
 JNIEXPORT void JNICALL
