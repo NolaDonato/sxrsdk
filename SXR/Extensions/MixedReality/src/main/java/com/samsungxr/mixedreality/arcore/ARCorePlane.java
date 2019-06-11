@@ -88,7 +88,6 @@ class ARCorePlane extends SXRPlane {
             throw new IllegalArgumentException("Array must be 16");
         }
         mARPlane.getCenterPose().toMatrix(poseOut, 0);
-        mSession.ar2gvr(poseOut);
     }
 
     @Override
@@ -100,7 +99,6 @@ class ARCorePlane extends SXRPlane {
     public float getHeight() {
         return mARPlane.getExtentZ() * mSession.getARToVRScale();
     }
-
 
     @Override
     public SXRAnchor createAnchor(final float[] pose, SXRNode owner)

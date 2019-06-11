@@ -55,7 +55,6 @@ public abstract class SXRPlane extends SXRBehavior
      */
     public abstract void getCenterPose(@NonNull float[] poseOut);
 
-
     public Type getPlaneType()
     {
         return mPlaneType;

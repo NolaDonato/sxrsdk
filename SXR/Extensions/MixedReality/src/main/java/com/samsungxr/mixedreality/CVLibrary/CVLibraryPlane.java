@@ -19,51 +19,41 @@ package com.samsungxr.mixedreality.CVLibrary;
 import com.google.ar.core.Pose;
 import android.support.annotation.NonNull;
 
+import com.samsungxr.SXRCameraRig;
 import com.samsungxr.SXRContext;
 import com.samsungxr.SXRNode;
+import com.samsungxr.SXRTransform;
 import com.samsungxr.mixedreality.SXRAnchor;
+import com.samsungxr.mixedreality.SXRHitResult;
 import com.samsungxr.mixedreality.SXRPlane;
 import com.samsungxr.mixedreality.SXRTrackingState;
+
+import org.joml.Intersectionf;
+import org.joml.Vector3f;
+
 
 import java.nio.FloatBuffer;
 
 
 class CVLibraryPlane extends SXRPlane {
-    private final CVLibraryPose mPose;
+    private final float[] mPose = new float[16];
     private final CVLibrarySession mSession;
+    private final Vector3f mPlaneNormal;
 
     protected CVLibraryPlane(SXRContext gvrContext, CVLibrarySession session) {
         super(gvrContext);
         mSession = session;
-        mPose = new CVLibraryPose();
+        mPose[0] = 1;
+        mPose[5] = 1;
+        mPose[10] = 1;
+        mPose[15] = 1;
+        mPlaneNormal = new Vector3f(0, 1, 0);
         mPlaneType = Type.HORIZONTAL_UPWARD_FACING;
     }
 
     public void getCenterPose(@NonNull float[] poseOut)
     {
-        System.arraycopy(mPose.getPoseMatrix(), 0, poseOut, 0, 16);
-    }
-
-    public Pose getCenterPose() {
-        return null;
-    }
-
-    /**
-     * Set the plane tracking state
-     *
-     * @param state
-     */
-    protected void setTrackingState(SXRTrackingState state) {
-        mTrackingState = state;
-    }
-
-    /**
-     * Set the parent plane (only when plane is merged)
-     *
-     * @param plane
-     */
-    protected void setParentPlane(SXRPlane plane) {
-        mParentPlane = plane;
+        System.arraycopy(mPose, 0, poseOut, 0, 16);
     }
 
     @Override
@@ -77,23 +67,23 @@ class CVLibraryPlane extends SXRPlane {
     }
 
     @Override
-    public float getWidth() {
-
-        //return mARPlane.getExtentX();
-        return 0.1f;
-    }
-
-    @Override
-    public float getHeight() {
-
-        //return mARPlane.getExtentZ();
-        return 0.1f;
+    public float getWidth()
+    {
+        return mSession.getARToVRScale();
     }
 
 
     @Override
-    public float[] get3dPolygonAsArray() {
-        return null;
+    public float getHeight()
+    {
+        return mSession.getARToVRScale();
+    }
+
+    @Override
+    public float[] get3dPolygonAsArray()
+    {
+        float s = mSession.getARToVRScale();
+        return new float[] { -s, 0, -s, s, 0, -s, s, 0, s, -s, 0, s };
     }
 
     @Override
@@ -101,26 +91,35 @@ class CVLibraryPlane extends SXRPlane {
         return mParentPlane;
     }
 
-    /**
-     * Update the plane based on arcore best knowledge of the world
-     *
-     * @param viewmtx
-     * @param gvrmatrix
-     * @param scale
-     */
-    protected void update(float[] viewmtx, float[] gvrmatrix, float scale) {
-//        // Updates only when the plane is in the scene
-//        if (getParent() == null || !isEnabled()) {
-//            return;
-//        }
-//
-//        convertFromARtoVRSpace(viewmtx, gvrmatrix, scale);
-//
-//        if (mNode != null) {
-//            mNode.getTransform().setScale(mARPlane.getExtentX() * 0.95f,
-//                    mARPlane.getExtentZ() * 0.95f, 1.0f);
-//        }
-        return;
+    SXRHitResult processHit(Vector3f rayStart, Vector3f rayDir)
+    {
+        float t = Intersectionf.intersectRayPlane(
+                rayStart.x, rayStart.y, rayStart.z,
+                rayDir.x, rayDir.y, rayDir.z,
+                0, 0, 0,
+                mPlaneNormal.x, mPlaneNormal.y, mPlaneNormal.z, 0.0001f);
+        if (t > 0)
+        {
+            SXRHitResult hit = new SXRHitResult();
+            float hitx = t * rayDir.x;
+            float hity = t * rayDir.y;
+            float hitz = t * rayDir.z;
+            float s = mSession.getARToVRScale();
+            float[] pose = new float[16];
+
+            double d = Math.sqrt(hitx * hitx + hity * hity + hitz * hitz);
+            hitx += rayStart.x;
+            hity += rayStart.y;
+            hitz += rayStart.z;
+            getCenterPose(pose);
+            pose[12] = s * hitx;
+            pose[13] = s * hity;
+            pose[14] = s * hitz;
+            hit.setPlane(this);
+            hit.setDistance((float) d * s);
+            return hit;
+        }
+        return null;
     }
 
     @Override
@@ -134,16 +133,17 @@ class CVLibraryPlane extends SXRPlane {
         return false;
     }
 
-    /**
-     * Converts from ARCore world space to SXRf's world space.
-     *
-     * @param arViewMatrix Phone's camera view matrix
-     * @param vrCamMatrix SXRf Camera matrix
-     * @param scale Scale from AR to SXRf world
-     */
-    private void convertFromARtoVRSpace(float[] arViewMatrix, float[] vrCamMatrix, float scale) {
-        //mPose.update(mARPlane.getCenterPose(), arViewMatrix, vrCamMatrix, scale);
-        //getTransform().setModelMatrix(mPose.getPoseMatrix());
-        return;
+    void update(SXRCameraRig rig)
+    {
+        SXRNode owner = getOwnerObject();
+        if (owner != null)
+        {
+            SXRTransform trig = rig.getHeadTransform();
+            SXRTransform tnode = owner.getTransform();
+            mPose[12] = -trig.getPositionX();
+            mPose[13] = -trig.getPositionY();
+            mPose[14] = -trig.getPositionZ();
+            tnode.setModelMatrix(mPose);
+        }
     }
 }
