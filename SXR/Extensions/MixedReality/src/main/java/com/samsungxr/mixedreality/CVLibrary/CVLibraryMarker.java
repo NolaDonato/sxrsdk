@@ -16,11 +16,15 @@
 package com.samsungxr.mixedreality.CVLibrary;
 
 //import com.google.ar.core.AugmentedImage;
+import com.samsungxr.SXRCameraRig;
 import com.samsungxr.SXRContext;
 import com.samsungxr.SXRNode;
+import com.samsungxr.SXRTransform;
 import com.samsungxr.mixedreality.SXRAnchor;
 import com.samsungxr.mixedreality.SXRMarker;
 import com.samsungxr.mixedreality.SXRTrackingState;
+
+import org.joml.Vector3f;
 
 /**
  * Represents an ARCore Augmented Image
@@ -29,13 +33,16 @@ public class CVLibraryMarker extends SXRMarker
 {
     private final CVLibrarySession mSession;
     private final String mName;
-
-    //private AugmentedImage mAugmentedImage;
+    private final float[] mPose = new float[16];
 
     protected CVLibraryMarker(CVLibrarySession session, String name) {
         super(session.getContext());
         mSession = session;
         mName = name;
+        mPose[0] = 1;
+        mPose[5] = 1;
+        mPose[10] = 1;
+        mPose[15] = 1;
         mTrackingState = SXRTrackingState.PAUSED;
     }
 
@@ -45,29 +52,27 @@ public class CVLibraryMarker extends SXRMarker
      * @return Returns the estimated width
      */
     @Override
-    public float getExtentX() {
-        //return mAugmentedImage.getExtentX();
-        return 1.0f;
+    public float getExtentX()
+    {
+        return 0.1f * mSession.getARToVRScale();
     }
 
     /**
      * @return Returns the estimated height
      */
     @Override
-    public float getExtentZ() {
-
-        return 1.0f;
-        //return mAugmentedImage.getExtentZ();
+    public float getExtentZ()
+    {
+        return 0.1f * mSession.getARToVRScale();
     }
 
     /**
      * @return The augmented image center pose
      */
     @Override
-    public float[] getCenterPose() {
-        float[] centerPose = new float[16];
-        //mAugmentedImage.getCenterPose().toMatrix(centerPose, 0);
-        return centerPose;
+    public final float[] getCenterPose()
+    {
+        return mPose;
     }
 
     @Override
@@ -84,6 +89,7 @@ public class CVLibraryMarker extends SXRMarker
     public SXRTrackingState getTrackingState() {
         return mTrackingState;
     }
+
 
     /**
      * Set the augmented image tracking state

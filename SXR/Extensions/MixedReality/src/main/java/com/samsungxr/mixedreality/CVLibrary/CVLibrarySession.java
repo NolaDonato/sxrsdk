@@ -52,13 +52,14 @@ import android.app.Activity;
 import com.google.ar.core.AugmentedImage;
 import com.google.ar.core.Camera;
 import com.google.ar.core.HitResult;
+import com.google.ar.core.Plane;
+import com.google.ar.core.Trackable;
 import com.google.ar.core.TrackingState;
 import com.google.ar.core.exceptions.NotYetAvailableException;
 import com.samsungxr.SXRCameraRig;
 import com.samsungxr.SXRContext;
 import com.samsungxr.SXRDrawFrameListener;
 import com.samsungxr.SXREventReceiver;
-import com.samsungxr.SXRExternalTexture;
 import com.samsungxr.SXRMaterial;
 import com.samsungxr.SXRMeshCollider;
 import com.samsungxr.SXRPerspectiveCamera;
@@ -95,7 +96,6 @@ import java.util.Map;
 
 public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
 {
-
     private SXRContext mContext;
     private float mARtoVRScale = 1;
     private SXREventReceiver    mListeners;
@@ -105,11 +105,10 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
     private ArrayList<SXRMarker> mMarkers = new ArrayList<>();
 
     /* From AR to SXR space matrices */
-    private float[] mARViewMatrix = new float[16];
-    private float[] mSXRCamMatrix = new float[16];
     private Vector2f mScreenToCamera = new Vector2f(1, 1);
-    private Vector3f mDisplayGeometry;
     private float mScreenDepth;
+    private boolean mIsRunning = false;
+    private boolean mTracking = false;
 
     //private final HashMap<Anchor, ICloudAnchorListener> pendingAnchors = new HashMap<>();
 
@@ -137,11 +136,13 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
     public void pause()
     {
         mContext.unregisterDrawFrameListener(this);
+        mIsRunning = false;
     }
 
     public void resume()
     {
         mContext.registerDrawFrameListener(this);
+        mIsRunning = true;
     }
 
     public float getScreenDepth() { return mScreenDepth; }
@@ -150,18 +151,30 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
 
     public void setARToVRScale(float scale) { mARtoVRScale = scale; }
 
+    public boolean isPaused()
+    {
+        return !mIsRunning;
+    }
+
     public void onDrawFrame(float time)
     {
-        SXRCameraRig rig = mVRScene.getMainCameraRig();
-        SXRTransform t = rig.getTransform();
-        float x = t.getPositionX();
-        float y = t.getPositionY();
-        float z = t.getPositionZ();
+        if (!mTracking)
+        {
+            SXRCameraRig rig = mVRScene.getMainCameraRig();
+            SXRTransform t = rig.getHeadTransform();
+            float x = t.getPositionX();
+            float y = t.getPositionY();
+            float z = t.getPositionZ();
 
-        Log.d("CVLIB", "campos %f, %f, %f", x, y, z);
-        updatePlanes();
-        updateMarkers();
-        updateAnchors();
+            //Log.v("CVLIB", "campos %f, %f, %f", x, y, z);
+            if ((x != 0) || (y != 0) || (z != 0))
+            {
+                mTracking = true;
+                updatePlanes();
+                updateMarkers();
+                updateAnchors();
+            }
+        }
     }
 
     @Override
@@ -188,6 +201,7 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
     @Override
     public void updateAnchorPose(SXRAnchor anchor, float[] pose)
     {
+        ((CVLibraryAnchor) anchor).update(pose);
     }
 
     @Override
@@ -287,10 +301,11 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
     {
         for (SXRMarker m : mMarkers)
         {
+            CVLibraryMarker marker = (CVLibraryMarker) m;
             if (m.getTrackingState() == SXRTrackingState.PAUSED)
             {
                 mContext.getEventManager().sendEvent(this, IMarkerEvents.class, "onMarkerDetected", m);
-                ((CVLibraryMarker) m).setTrackingState(SXRTrackingState.TRACKING);
+                marker.setTrackingState(SXRTrackingState.TRACKING);
                 notifyMarkerStateChange(m, SXRTrackingState.TRACKING);
             }
         }
@@ -300,9 +315,10 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
     {
         for (SXRAnchor a : mAnchors)
         {
+            CVLibraryAnchor anchor = (CVLibraryAnchor) a;
             if (a.getTrackingState() == SXRTrackingState.PAUSED)
             {
-                ((CVLibraryAnchor) a).setTrackingState(SXRTrackingState.TRACKING);
+                anchor.setTrackingState(SXRTrackingState.TRACKING);
                 notifyAnchorStateChange(a, SXRTrackingState.TRACKING);
             }
         }
@@ -337,13 +353,48 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
 
     public SXRHitResult hitTest(SXRPicker.SXRPickedObject pick)
     {
+        SXRTransform t = mVRScene.getMainCameraRig().getHeadTransform();
+        Vector3f pos = new Vector3f(t.getPositionX(),
+                t.getPositionY(),
+                t.getPositionZ());
+        Vector3f dir = new Vector3f(pick.hitLocation[0],
+                pick.hitLocation[1],
+                pick.hitLocation[2]);
+        dir.normalize();
+        for (SXRPlane p : mPlanes)
+        {
+            CVLibraryPlane plane = (CVLibraryPlane)  p;
+            SXRHitResult hitResult = plane.processHit(pos, dir);
+
+            if (hitResult != null)
+            {
+                return hitResult;
+            }
+        }
         return null;
     }
 
     public SXRHitResult hitTest(float x, float y)
     {
-        x *= mScreenToCamera.x; // screen -> camera space
-        y *= mScreenToCamera.y;
+        Vector3f dir = new Vector3f(
+                x * mScreenToCamera.x,
+                y * mScreenToCamera.y,
+                mScreenDepth);
+        dir.normalize();
+        SXRTransform t = mVRScene.getMainCameraRig().getHeadTransform();
+        Vector3f pos = new Vector3f(t.getPositionX(),
+                                    t.getPositionY(),
+                                    t.getPositionZ());
+        for (SXRPlane p : mPlanes)
+        {
+            CVLibraryPlane plane = (CVLibraryPlane)  p;
+            SXRHitResult hitResult = plane.processHit(pos, dir);
+
+            if (hitResult != null)
+            {
+                return hitResult;
+            }
+        }
         return null;
     }
 
