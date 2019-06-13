@@ -293,7 +293,6 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
         {
             SXRPlane plane = new CVLibraryPlane(mContext, this);
             mPlanes.add(plane);
-            ((CVLibraryPlane) plane).update(mVRScene.getMainCameraRig());
             mContext.getEventManager().sendEvent(this, IPlaneEvents.class, "onPlaneDetected", plane);
             notifyPlaneStateChange(plane, SXRTrackingState.TRACKING);
         }
