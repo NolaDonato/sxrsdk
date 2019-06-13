@@ -35,8 +35,6 @@ public class CVLibraryMarker extends SXRMarker
     private final String mName;
     private final float[] mPose = new float[16];
 
-    //private AugmentedImage mAugmentedImage;
-
     protected CVLibraryMarker(CVLibrarySession session, String name) {
         super(session.getContext());
         mSession = session;
@@ -92,19 +90,6 @@ public class CVLibraryMarker extends SXRMarker
         return mTrackingState;
     }
 
-    public void update(SXRCameraRig rig)
-    {
-        SXRNode owner = getOwnerObject();
-        if (owner != null)
-        {
-            SXRTransform trig = rig.getHeadTransform();
-            SXRTransform tnode = owner.getTransform();
-            mPose[12] = -trig.getPositionX();
-            mPose[13] = -trig.getPositionY();
-            mPose[14] = -trig.getPositionZ();
-            tnode.setModelMatrix(mPose);
-        }
-    }
 
     /**
      * Set the augmented image tracking state

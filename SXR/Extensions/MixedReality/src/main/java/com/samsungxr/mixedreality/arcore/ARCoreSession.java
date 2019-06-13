@@ -537,7 +537,6 @@ public class ARCoreSession implements IMixedReality
                 case INSTALLED:
                     break;
             }
-
             mSession = new Session(/* context= */ activity);
         }
         catch (UnavailableArcoreNotInstalledException |
@@ -815,8 +814,7 @@ public class ARCoreSession implements IMixedReality
     public SXRNode getPassThroughObject() {
         return mARPassThroughObject;
     }
-
-    @Override
+    
     public ArrayList<SXRPlane> getAllPlanes()
     {
         ArrayList<SXRPlane> allPlanes = new ArrayList<>();

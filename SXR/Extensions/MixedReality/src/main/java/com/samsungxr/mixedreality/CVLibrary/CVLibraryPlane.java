@@ -133,17 +133,4 @@ class CVLibraryPlane extends SXRPlane {
         return false;
     }
 
-    void update(SXRCameraRig rig)
-    {
-        SXRNode owner = getOwnerObject();
-        if (owner != null)
-        {
-            SXRTransform trig = rig.getHeadTransform();
-            SXRTransform tnode = owner.getTransform();
-            mPose[12] = -trig.getPositionX();
-            mPose[13] = -trig.getPositionY();
-            mPose[14] = -trig.getPositionZ();
-            tnode.setModelMatrix(mPose);
-        }
-    }
 }
