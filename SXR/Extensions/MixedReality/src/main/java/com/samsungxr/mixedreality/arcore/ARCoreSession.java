@@ -27,6 +27,7 @@ import com.google.ar.core.AugmentedImage;
 import com.google.ar.core.AugmentedImageDatabase;
 import com.google.ar.core.Camera;
 import com.google.ar.core.Config;
+import com.google.ar.core.Coordinates2d;
 import com.google.ar.core.Frame;
 import com.google.ar.core.HitResult;
 import com.google.ar.core.LightEstimate;
