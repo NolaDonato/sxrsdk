@@ -64,7 +64,7 @@ public class WidgetLib {
      * Initialize an instance of Widget Lib. It has to be done before any usage of library.
      * The application needs to hold onto the returned WidgetLib reference for as long as the
      * library is going to be used.
-     * @param node {@link SXRNode} to put the widget
+     * @param node {@link SXRNode} to put the widgets under
      * @param customPropertiesAsset An optional asset JSON file containing custom and overridden
      *                              properties for the application
      * @return Instance of Widget library

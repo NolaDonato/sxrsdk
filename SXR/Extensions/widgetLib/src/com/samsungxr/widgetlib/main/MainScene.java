@@ -89,6 +89,19 @@ public class MainScene {
         public void onFrontRotationChanged(MainScene mainScene, float newRotation, float oldRotation);
     }
 
+    /**
+     * Construct a MainScene instance.
+     * <p>
+     * The underlying SXRScene is obtained using
+     * {@link SXRContext#getMainScene()} and frustum culling is
+     * {@linkplain SXRScene#setFrustumCulling(boolean) enabled}.
+     *
+     * @param sxrContext A valid SXRContext instance.
+     */
+    public MainScene(final SXRContext sxrContext) {
+        this(new SXRNode(sxrContext));
+        mMainScene.addNode(mSceneRootObject);
+    }
 
     /**
      * Construct a MainScene instance.
