@@ -176,8 +176,7 @@ class AnimatedCursorAsset extends MeshCursorAsset {
             animationTextures = texturesForAnimation;
         }
 
-        public SXRImageFrameAnimation copy()
-        {
+        public SXRAnimation copy() {
             return new SXRImageFrameAnimation((SXRMaterial) getTarget(), getDuration(), animationTextures);
         }
 
