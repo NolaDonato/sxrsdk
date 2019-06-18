@@ -31,6 +31,7 @@ public final class SXRMorphAnimation extends SXRAnimation implements PrettyPrint
     protected float[] mKeys;
     protected SXRFloatAnimation mKeyInterpolator;
     protected float[] mCurrentValues;
+    protected float[] mMorphWeights;
 
     /**
      * Creates a morph animation for the given mesh morph.
@@ -116,8 +117,10 @@ public final class SXRMorphAnimation extends SXRAnimation implements PrettyPrint
 
         if (morph != null)
         {
+            int n = Math.min(mCurrentValues.length, mMorphWeights.length);
             mKeyInterpolator.animate(timeInSec, mCurrentValues);
-            morph.setWeights(mCurrentValues);
+            System.arraycopy(mCurrentValues, 0, mMorphWeights, 0, n);
+            morph.setWeights(mMorphWeights);
         }
     }
 
@@ -128,11 +131,11 @@ public final class SXRMorphAnimation extends SXRAnimation implements PrettyPrint
      */
     public void setTarget(SXRMeshMorph morph)
     {
-        int numweightsTarget = morph.getBlendShapeCount();
-        int numWeightsAnim = mKeyInterpolator.getKeySize() - 1;
-        if (numweightsTarget != numWeightsAnim)
+        int numweights = morph.getBlendShapeCount();
+        mMorphWeights = new float[numweights];
+        if (numweights != mKeyInterpolator.getKeySize() - 1)
         {
-            throw new IllegalArgumentException("The number blend weights on the target morph must match the animation");
+            Log.w(TAG,"The number blend weights on the target morph do not match the animation");
         }
         mTarget = morph;
     }
