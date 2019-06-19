@@ -96,20 +96,6 @@ public class MainScene {
      * {@link SXRContext#getMainScene()} and frustum culling is
      * {@linkplain SXRScene#setFrustumCulling(boolean) enabled}.
      *
-     * @param sxrContext A valid SXRContext instance.
-     */
-    public MainScene(final SXRContext sxrContext) {
-        this(new SXRNode(sxrContext));
-        mMainScene.addNode(mSceneRootObject);
-    }
-
-    /**
-     * Construct a MainScene instance.
-     * <p>
-     * The underlying SXRScene is obtained using
-     * {@link SXRContext#getMainScene()} and frustum culling is
-     * {@linkplain SXRScene#setFrustumCulling(boolean) enabled}.
-     *
      * @param root root node widgets are put under
      */
     public MainScene(final SXRNode root) {
@@ -133,7 +119,6 @@ public class MainScene {
         mRightCameraRootWidget.applyLayout(new AbsoluteLayout());
 
         mMainScene = mContext.getMainScene();
-        mMainScene.addNode(mSceneRootObject);
 
         getMainCameraRig().addChildObject(mMainCameraRootObject);
         getLeftCamera().addChildObject(mLeftCameraRootObject);

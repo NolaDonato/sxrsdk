@@ -197,7 +197,6 @@ public class WidgetLib {
         return get().mCommandBuffer;
     }
 
-
     private WidgetLib(SXRNode root, String customPropertiesAsset)
         throws InterruptedException, JSONException, NoSuchMethodException {
         mInstance = new WeakReference<>(this);
