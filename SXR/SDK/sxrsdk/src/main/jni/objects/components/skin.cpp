@@ -133,8 +133,11 @@ namespace sxr
                 if (skinOwner != nullptr)
                 {
                     Node* parent = findCommonParent(skelOwner, skinOwner);
-                    glm::mat4 parentMtx(parent->transform()->getModelMatrix(true));
-                    skelMtx = glm::inverse(parentMtx) * skelMtx;
+                    if (parent != nullptr)
+                    {
+                        glm::mat4 parentMtx(parent->transform()->getModelMatrix(true));
+                        skelMtx = glm::inverse(parentMtx) * skelMtx;
+                    }
                 }
                 mBonesBuffer->setRange(0, &skelMtx, 1);
             }
