@@ -131,9 +131,9 @@ public final class SXRMorphAnimation extends SXRAnimation implements PrettyPrint
      */
     public void setTarget(SXRMeshMorph morph)
     {
-        int numweightsTarget = morph.getBlendShapeCount();
-        int numWeightsAnim = mKeyInterpolator.getKeySize() - 1;
-        if (numweightsTarget != numWeightsAnim)
+        int numweights = morph.getBlendShapeCount();
+        mMorphWeights = new float[numweights];
+        if (numweights != mKeyInterpolator.getKeySize() - 1)
         {
             Log.w(TAG,"The number blend weights on the target morph do not match the animation");
         }
