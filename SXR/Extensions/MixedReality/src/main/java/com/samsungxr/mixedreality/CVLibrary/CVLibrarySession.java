@@ -66,6 +66,7 @@ import com.samsungxr.SXRScene;
 import com.samsungxr.SXRNode;
 import com.samsungxr.SXRTexture;
 import com.samsungxr.mixedreality.IMixedReality;
+import com.samsungxr.mixedreality.IMixedRealityEvents;
 import com.samsungxr.mixedreality.IPlaneEvents;
 import com.samsungxr.mixedreality.SXRAnchor;
 import com.samsungxr.mixedreality.SXRHitResult;
@@ -126,6 +127,19 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
     public void pause() { }
 
     public void resume() { }
+
+    public void resume()
+    {
+        if (!mIsRunning)
+        {
+            mContext.getEventManager().sendEvent(this,
+                                                 IMixedRealityEvents.class,
+                                                 "onMixedRealityStart",
+                                                 this);
+            mContext.registerDrawFrameListener(this);
+            mIsRunning = true;
+        }
+    }
 
     public float getScreenDepth() { return mScreenDepth; }
 
