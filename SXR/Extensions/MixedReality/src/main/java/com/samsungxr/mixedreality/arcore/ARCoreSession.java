@@ -92,7 +92,7 @@ public class ARCoreSession implements IMixedReality
 {
     private final SXRContext mContext;
     private static final String TAG = "ARCORE";
-    private static float mARtoVRScale = 100.0f;
+    private static float mARtoVRScale = 1.0f;
     protected SXREventReceiver mListeners;
     private Session mSession;
     private boolean mInstallRequested;
