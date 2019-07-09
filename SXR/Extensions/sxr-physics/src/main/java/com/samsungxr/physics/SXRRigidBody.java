@@ -70,13 +70,28 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * Constructs new instance to simulate a rigid body in {@link SXRWorld}.
      *
      * @param gvrContext The context of the app.
+     * @param mass The mass of this rigid body.\
+     * @param link   link number identifying this body in a hierarchy,
+     *               defaults to 0.
+     */
+    public SXRRigidBody(SXRContext gvrContext, float mass, int link) {
+        super(gvrContext, NativeRigidBody.ctor(mass, link));
+        mCollisionGroup = -1;
+        mPhysicsContext = SXRPhysicsContext.getInstance();
+        mLoaded = false;
+    }
+
+    /**
+     * Constructs new instance to simulate a rigid body in {@link SXRWorld}.
+     *
+     * @param gvrContext The context of the app.
      * @param mass The mass of this rigid body.
      * @param collisionGroup The id of the collision's group that this rigid body belongs to
      *                       in the {@link SXRCollisionMatrix}. The rigid body collides with
      *                       everyone if {#collisionGroup} is out of the range 0...15.
      */
-    public SXRRigidBody(SXRContext gvrContext, float mass, int collisionGroup) {
-        super(gvrContext, Native3DRigidBody.ctor(mass));
+    public SXRRigidBody(SXRContext gvrContext, float mass, int collisionGroup, int link) {
+        super(gvrContext, NativeRigidBody.ctor(mass, link));
         mCollisionGroup = collisionGroup;
         mPhysicsContext = SXRPhysicsContext.getInstance();
         mLoaded = false;
@@ -91,7 +106,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
     }
 
     static public long getComponentType() {
-        return Native3DRigidBody.getComponentType();
+        return NativeRigidBody.getComponentType();
     }
 
     /**
@@ -142,7 +157,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      */
     public void setSimulationType(int type)
     {
-        Native3DRigidBody.setSimulationType(getNative(), type);
+        NativeRigidBody.setSimulationType(getNative(), type);
     }
 
     /**
@@ -157,7 +172,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      */
     public int getSimulationType()
     {
-       return Native3DRigidBody.getSimulationType(getNative());
+       return NativeRigidBody.getSimulationType(getNative());
     }
 
     /**
@@ -166,7 +181,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @return The mass of the body.
      */
     public float getMass() {
-        return Native3DRigidBody.getMass(getNative());
+        return NativeRigidBody.getMass(getNative());
     }
 
     /**
@@ -179,9 +194,10 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
     public void applyCentralForce(final float x, final float y, final float z) {
                 mPhysicsContext.runOnPhysicsThread(new Runnable() {
             @Override
-           public void run() {
-                                Native3DRigidBody.applyCentralForce(getNative(), x, y, z);
-                           }
+           public void run()
+           {
+               NativeRigidBody.applyCentralForce(getNative(), x, y, z);
+           }
         });
     }
 
@@ -201,8 +217,8 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
         mPhysicsContext.runOnPhysicsThread(new Runnable() {
             @Override
             public void run() {
-                Native3DRigidBody.applyForce(getNative(), forceX, forceY, forceZ,
-                        relX, relY, relZ);
+                NativeRigidBody.applyForce(getNative(), forceX, forceY, forceZ,
+                                           relX, relY, relZ);
             }
         });
     }
@@ -218,7 +234,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
         mPhysicsContext.runOnPhysicsThread(new Runnable() {
             @Override
             public void run() {
-                Native3DRigidBody.applyCentralImpulse(getNative(), x, y, z);
+                NativeRigidBody.applyCentralImpulse(getNative(), x, y, z);
             }
         });
     }
@@ -239,8 +255,8 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
         mPhysicsContext.runOnPhysicsThread(new Runnable() {
             @Override
             public void run() {
-                Native3DRigidBody.applyImpulse(getNative(), impulseX, impulseY, impulseZ,
-                        relX, relY, relZ);
+                NativeRigidBody.applyImpulse(getNative(), impulseX, impulseY, impulseZ,
+                                             relX, relY, relZ);
             }
         });
     }
@@ -256,7 +272,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
                 mPhysicsContext.runOnPhysicsThread(new Runnable() {
             @Override
             public void run() {
-                                Native3DRigidBody.applyTorque(getNative(), x, y, z);
+                                NativeRigidBody.applyTorque(getNative(), x, y, z);
                             }
         });
     }
@@ -272,7 +288,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
         mPhysicsContext.runOnPhysicsThread(new Runnable() {
             @Override
             public void run() {
-                Native3DRigidBody.applyTorqueImpulse(getNative(), x, y, z);
+                NativeRigidBody.applyTorqueImpulse(getNative(), x, y, z);
             }
         });
     }
@@ -285,7 +301,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @param z factor on the 'Z' axis.
      */
     public void setGravity(float x, float y, float z) {
-        Native3DRigidBody.setGravity(getNative(), x, y, z);
+        NativeRigidBody.setGravity(getNative(), x, y, z);
     }
 
     /**
@@ -295,7 +311,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @param angular factor on how much the rigid body resists rotation.
      */
     public void setDamping(float linear, float angular) {
-        Native3DRigidBody.setDamping(getNative(), linear, angular);
+        NativeRigidBody.setDamping(getNative(), linear, angular);
     }
 
     /**
@@ -306,7 +322,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @param z factor on the 'Z' axis.
      */
     public void setLinearVelocity(float x, float y, float z) {
-        Native3DRigidBody.setLinearVelocity(getNative(), x, y, z);
+        NativeRigidBody.setLinearVelocity(getNative(), x, y, z);
     }
 
     /**
@@ -317,7 +333,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @param z factor on the 'Z' axis.
      */
     public void setAngularVelocity(float x, float y, float z) {
-        Native3DRigidBody.setAngularVelocity(getNative(), x, y, z);
+        NativeRigidBody.setAngularVelocity(getNative(), x, y, z);
     }
 
     /**
@@ -328,7 +344,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @param z factor on the 'Z' axis.
      */
     public void setAngularFactor(float x, float y, float z) {
-        Native3DRigidBody.setAngularFactor(getNative(), x, y, z);
+        NativeRigidBody.setAngularFactor(getNative(), x, y, z);
     }
 
     /**
@@ -339,7 +355,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @param z factor on the 'Z' axis.
      */
     public void setLinearFactor(float x, float y, float z) {
-        Native3DRigidBody.setLinearFactor(getNative(), x, y, z);
+        NativeRigidBody.setLinearFactor(getNative(), x, y, z);
     }
 
     /**
@@ -349,7 +365,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @param angular factor for the angularVelocity
      */
     public void setSleepingThresholds(float linear, float angular) {
-        Native3DRigidBody.setSleepingThresholds(getNative(), linear, angular);
+        NativeRigidBody.setSleepingThresholds(getNative(), linear, angular);
     }
 
     /**
@@ -359,7 +375,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @param ignore boolean to indicate if the specified object will be ignored or not
      */
     public void setIgnoreCollisionCheck(SXRRigidBody collisionObject, boolean ignore) {
-        Native3DRigidBody.setIgnoreCollisionCheck(getNative(), collisionObject.getNative(), ignore);
+        NativeRigidBody.setIgnoreCollisionCheck(getNative(), collisionObject.getNative(), ignore);
     }
 
     /**
@@ -368,7 +384,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @return The gravity acceleration vector as a float array
      */
     public float[] getGravity() {
-        return Native3DRigidBody.getGravity(getNative());
+        return NativeRigidBody.getGravity(getNative());
     }
 
     /**
@@ -377,7 +393,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @return The linear velocity vector as a float array
      */
     public float[] getLinearVelocity() {
-        return Native3DRigidBody.getLinearVelocity(getNative());
+        return NativeRigidBody.getLinearVelocity(getNative());
     }
 
     /**
@@ -386,7 +402,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @return The angular velocity vector as a float array
      */
     public float[] getAngularVelocity() {
-        return Native3DRigidBody.getAngularVelocity(getNative());
+        return NativeRigidBody.getAngularVelocity(getNative());
     }
 
     /**
@@ -395,7 +411,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @return The angular factor vector as a float array
      */
     public float[] getAngularFactor() {
-        return Native3DRigidBody.getAngularFactor(getNative());
+        return NativeRigidBody.getAngularFactor(getNative());
     }
 
     /**
@@ -404,7 +420,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @return The linear factor vector as a float array
      */
     public float[] getLinearFactor() {
-        return Native3DRigidBody.getLinearFactor(getNative());
+        return NativeRigidBody.getLinearFactor(getNative());
     }
 
     /**
@@ -413,7 +429,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @return The damping factors as a float array
      */
     public float[] getDamping() {
-        return Native3DRigidBody.getDamping(getNative());
+        return NativeRigidBody.getDamping(getNative());
     }
 
     /**
@@ -422,7 +438,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @return The friction factor scalar as a float
      */
     public float getFriction() {
-        return Native3DRigidBody.getFriction(getNative());
+        return NativeRigidBody.getFriction(getNative());
     }
 
     /**
@@ -431,7 +447,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @param n the friction factor
      */
     public void setFriction(float n) {
-        Native3DRigidBody.setFriction(getNative(), n);
+        NativeRigidBody.setFriction(getNative(), n);
     }
 
     /**
@@ -440,7 +456,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @return The restitution factor scalar as a float
      */
     public float getRestitution() {
-        return Native3DRigidBody.getRestitution(getNative());
+        return NativeRigidBody.getRestitution(getNative());
     }
 
     /**
@@ -449,7 +465,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @param n the restitution factor
      */
     public void setRestitution(float n) {
-        Native3DRigidBody.setRestitution(getNative(), n);
+        NativeRigidBody.setRestitution(getNative(), n);
     }
 
     /**
@@ -458,7 +474,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @return The continuous collision detection motion threshold factor scalar as a float
      */
     public float getCcdMotionThreshold() {
-        return Native3DRigidBody.getCcdMotionThreshold(getNative());
+        return NativeRigidBody.getCcdMotionThreshold(getNative());
     }
 
     /**
@@ -467,7 +483,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @param n the continuous collision detection motion threshold factor
      */
     public void setCcdMotionThreshold(float n) {
-        Native3DRigidBody.setCcdMotionThreshold(getNative(), n);
+        NativeRigidBody.setCcdMotionThreshold(getNative(), n);
     }
 
     /**
@@ -476,7 +492,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @return The contact processing threshold factor scalar as a float
      */
     public float getContactProcessingThreshold() {
-        return Native3DRigidBody.getContactProcessingThreshold(getNative());
+        return NativeRigidBody.getContactProcessingThreshold(getNative());
     }
 
     /**
@@ -485,7 +501,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @return The radius of sphere to continuous collision detection.
      */
     public float getCcdSweptSphereRadius() {
-        return Native3DRigidBody.getCcdSweptSphereRadius(getNative());
+        return NativeRigidBody.getCcdSweptSphereRadius(getNative());
     }
 
     /**
@@ -494,7 +510,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @param n Radius of sphere to continuous collision detection.
      */
     public void setCcdSweptSphereRadius(float n) {
-        Native3DRigidBody.setCcdSweptSphereRadius(getNative(), n);
+        NativeRigidBody.setCcdSweptSphereRadius(getNative(), n);
     }
 
     /**
@@ -503,7 +519,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      * @param n the contact processing threshold factor
      */
     public void setContactProcessingThreshold(float n) {
-        Native3DRigidBody.setContactProcessingThreshold(getNative(), n);
+        NativeRigidBody.setContactProcessingThreshold(getNative(), n);
     }
 
     /**
@@ -526,7 +542,7 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
         mPhysicsContext.runOnPhysicsThread(new Runnable() {
             @Override
             public void run() {
-                Native3DRigidBody.reset(getNative(), rebuildCollider);
+                NativeRigidBody.reset(getNative(), rebuildCollider);
             }
         });
     }
@@ -565,8 +581,8 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
     }
 }
 
-class Native3DRigidBody {
-    static native long ctor(float mass);
+class NativeRigidBody {
+    static native long ctor(float mass, int link);
 
     static native long getComponentType();
 

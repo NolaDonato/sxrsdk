@@ -30,7 +30,7 @@
 class btDynamicsWorld;
 class btCollisionConfiguration;
 class btCollisionDispatcher;
-class btSequentialImpulseConstraintSolver;
+class btConstraintSolver;
 class btBroadphaseInterface;
 
 namespace sxr {
@@ -40,9 +40,11 @@ class PhysicsRigidBody;
 
 class BulletWorld : public PhysicsWorld {
  public:
-    BulletWorld();
+    BulletWorld(bool isMultiBody);
 
     virtual ~BulletWorld();
+
+    bool isMultiBody();
 
     void addConstraint(PhysicsConstraint *constraint);
 
@@ -58,6 +60,10 @@ class BulletWorld : public PhysicsWorld {
     void addRigidBody(PhysicsRigidBody *body, int collisiontype, int collidesWith);
 
     void removeRigidBody(PhysicsRigidBody *body);
+
+    void addMultiBody(PhysicsJoint* body);
+
+    void removeMultiBody(PhysicsJoint* body);
 
     void step(float timeStep, int maxSubSteps);
 
@@ -76,25 +82,22 @@ class BulletWorld : public PhysicsWorld {
     btDynamicsWorld* getPhysicsWorld() const;
 
  private:
-    void initialize();
+    void initialize(bool isMultiBody);
 
     void finalize();
 
  private:
     std::map<std::pair <long,long>, ContactPoint> prevCollisions;
-    btDynamicsWorld *mPhysicsWorld;
-    btCollisionConfiguration *mCollisionConfiguration;
-    btCollisionDispatcher *mDispatcher;
-    btSequentialImpulseConstraintSolver *mSolver;
-    btBroadphaseInterface *mOverlappingPairCache;
-    btPoint2PointConstraint *mDraggingConstraint;
+    btDynamicsWorld* mPhysicsWorld;
+    btCollisionConfiguration* mCollisionConfiguration;
+    btCollisionDispatcher* mDispatcher;
+    btConstraintSolver* mSolver;
+    btBroadphaseInterface* mOverlappingPairCache;
+    btPoint2PointConstraint* mDraggingConstraint;
     Node *mPivotObject;
     int mActivationState;
+    bool mIsMultiBody;
     std::vector<PhysicsRigidBody*> mBodiesChanged;
-
-    //void (*gTmpFilter)(); // btNearCallback
-    //int gNearCallbackCount = 0;
-    //void *gUserData = 0;
 };
 
 }

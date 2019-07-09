@@ -23,8 +23,7 @@
 
 #include "bullet/bullet_world.h"
 #include "physics_world.h"
-#include "physics_rigidbody.h"
-#include "physics_constraint.h"
+#include "physics_joint.h"
 
 static char tag[] = "PhysWorldJNI";
 
@@ -32,7 +31,7 @@ namespace sxr {
 extern "C" {
 
     JNIEXPORT jlong JNICALL
-    Java_com_samsungxr_physics_NativePhysics3DWorld_ctor(JNIEnv * env, jobject obj);
+    Java_com_samsungxr_physics_NativePhysics3DWorld_ctor(JNIEnv * env, jobject obj, jboolean isMultiBody);
 
     JNIEXPORT jlong JNICALL
     Java_com_samsungxr_physics_NativePhysics3DWorld_getComponentType(JNIEnv * env, jobject obj);
@@ -58,6 +57,12 @@ extern "C" {
     Java_com_samsungxr_physics_NativePhysics3DWorld_addRigidBody(JNIEnv * env, jobject obj,
             jlong jworld, jlong jrigid_body);
 
+    JNIEXPORT void JNICALL
+    Java_com_samsungxr_physics_NativePhysics3DWorld_addMultiBody(JNIEnv * env, jobject obj,
+                                                                 jlong jworld, jlong jmulti_body);
+    JNIEXPORT void JNICALL
+    Java_com_samsungxr_physics_NativePhysics3DWorld_removeMultiBody(JNIEnv * env, jobject obj,
+                                                                jlong jworld, jlong jmulti_body);
     JNIEXPORT void JNICALL
     Java_com_samsungxr_physics_NativePhysics3DWorld_addRigidBodyWithMask(JNIEnv* env, jobject obj,
             jlong jworld, jlong jrigid_body, jlong collisionType, jlong collidesWith);
@@ -88,8 +93,8 @@ extern "C" {
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_samsungxr_physics_NativePhysics3DWorld_ctor(JNIEnv * env, jobject obj) {
-    return reinterpret_cast<jlong>(new BulletWorld());
+Java_com_samsungxr_physics_NativePhysics3DWorld_ctor(JNIEnv * env, jobject obj, jboolean isMultiBody) {
+    return reinterpret_cast<jlong>(new BulletWorld(isMultiBody));
 }
 
 JNIEXPORT jlong JNICALL
@@ -113,6 +118,24 @@ Java_com_samsungxr_physics_NativePhysics3DWorld_removeConstraint(JNIEnv * env, j
     PhysicsConstraint* constraint = reinterpret_cast<PhysicsConstraint*>(jconstraint);
 
     world->removeConstraint(constraint);
+}
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativePhysics3DWorld_addMultiBody(JNIEnv * env, jobject obj,
+                                                             jlong jworld, jlong jmulti_body)
+{
+    PhysicsWorld *world = reinterpret_cast<PhysicsWorld*>(jworld);
+    PhysicsJoint* body = reinterpret_cast<PhysicsJoint*>(body);
+    world->addMultiBody(body);
+}
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativePhysics3DWorld_removeMultiBody(JNIEnv * env, jobject obj,
+                                                             jlong jworld, jlong jmulti_body)
+{
+    PhysicsWorld *world = reinterpret_cast<PhysicsWorld*>(jworld);
+    PhysicsJoint* body = reinterpret_cast<PhysicsJoint*>(body);
+    world->removeMultiBody(body);
 }
 
 JNIEXPORT void JNICALL

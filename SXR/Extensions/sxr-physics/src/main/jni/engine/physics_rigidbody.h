@@ -25,6 +25,7 @@
 #include "objects/components/transform.h"
 
 namespace sxr {
+class PhysicsWorld;
 
 class PhysicsRigidBody : public Component {
  public:
@@ -45,6 +46,7 @@ class PhysicsRigidBody : public Component {
 
 	virtual void setSimulationType(SimulationType t) = 0;
 	virtual SimulationType getSimulationType() const = 0;
+	virtual int getLink() = 0;
 	virtual float getMass() = 0;
 	virtual void setMass(float mass) = 0;
     virtual void setCenterOfMass(Transform* t) = 0;

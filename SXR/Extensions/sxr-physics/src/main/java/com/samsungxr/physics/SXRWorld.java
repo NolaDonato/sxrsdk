@@ -20,7 +20,6 @@ import android.util.LongSparseArray;
 
 import com.samsungxr.SXRComponent;
 import com.samsungxr.SXRComponentGroup;
-import com.samsungxr.SXRContext;
 import com.samsungxr.SXREventReceiver;
 import com.samsungxr.SXRNode;
 import com.samsungxr.SXRNode.ComponentVisitor;
@@ -28,7 +27,6 @@ import com.samsungxr.SXRScene;
 import com.samsungxr.SXRTransform;
 import com.samsungxr.IEventReceiver;
 import com.samsungxr.IEvents;
-import com.samsungxr.INodeEvents;
 import com.samsungxr.animation.SXRSkeleton;
 
 import org.joml.Quaternionf;
@@ -65,6 +63,20 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
      */
     public interface IPhysicsEvents extends IEvents
     {
+        /**
+         * Called when a multi body root is added to a physics world.
+         * @param world physics world the body is added to.
+         * @param body  rigid body added.
+         */
+        public void onAddMultiBody(final SXRWorld world, final SXRPhysicsJoint body);
+
+        /**
+         * Called when a multi body root is removed from a physics world.
+         * @param world physics world the body is removed from.
+         * @param body  rigid body removed.
+         */
+        public void onRemoveMultiBody(final SXRWorld world, final SXRPhysicsJoint body);
+
         /**
          * Called when a rigid body is added to a physics world.
          * @param world physics world the body is added to.
@@ -104,8 +116,18 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
      * @param scene The {@link SXRScene} this world belongs to.
      */
     public SXRWorld(SXRScene scene) {
-        this(scene, null);
+        this(scene, null, false);
     }
+
+    /**
+     * Constructs new instance to simulate the Physics World of the Scene.
+     *
+     * @param scene The {@link SXRScene} this world belongs to.
+     */
+    public SXRWorld(SXRScene scene, boolean isMultiBody) {
+        this(scene, null, isMultiBody);
+    }
+
 
     /**
      * Constructs new instance to simulate the Physics World of the Scene.
@@ -114,29 +136,33 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
      * @param interval interval (in milliseconds) at which the collisions will be updated.
      */
     public SXRWorld(SXRScene scene, long interval) {
-        this(scene, null, interval);
+        this(scene, null, interval, false);
     }
 
     /**
      * Constructs new instance to simulate the Physics World of the Scene. Defaults to a 15ms
      * update interval.
      *
-     * @param scene The {@link SXRScene} this world belongs to.
+     * @param scene           The {@link SXRScene} this world belongs to.
      * @param collisionMatrix a matrix that represents the collision relations of the bodies on the scene
+     * @param isMultiBody     use MultiBody dynamics
      */
-    public SXRWorld(SXRScene scene, SXRCollisionMatrix collisionMatrix) {
-        this(scene, collisionMatrix, DEFAULT_INTERVAL);
+    public SXRWorld(SXRScene scene, SXRCollisionMatrix collisionMatrix, boolean isMultiBody) {
+        this(scene, collisionMatrix, DEFAULT_INTERVAL, isMultiBody);
     }
 
     /**
      * Constructs new instance to simulate the Physics World of the Scene.
      *
-     * @param scene The {@link SXRScene} this world belongs to.
-     * @param collisionMatrix a matrix that represents the collision relations of the bodies on the scene
-     * @param interval interval (in milliseconds) at which the collisions will be updated.
+     * @param scene           The {@link SXRScene} this world belongs to.
+     * @param collisionMatrix a matrix that represents the collision relations of the bodies on the scene.
+     * @param interval        interval (in milliseconds) at which the collisions will be updated.
+     * @param isMultiBody     use MultiBody dynamics
      */
-    public SXRWorld(SXRScene scene, SXRCollisionMatrix collisionMatrix, long interval) {
-        super(scene.getSXRContext(), NativePhysics3DWorld.ctor());
+    public SXRWorld(SXRScene scene, SXRCollisionMatrix collisionMatrix, long interval, boolean isMultiBody)
+    {
+        super(scene.getSXRContext(), NativePhysics3DWorld.ctor(isMultiBody));
+        mIsEnabled = false;
         mListeners = new SXREventReceiver(this);
         mPhysicsDragger = new PhysicsDragger(scene.getSXRContext());
         mCollisionMatrix = collisionMatrix;
@@ -291,6 +317,28 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
     }
 
     /**
+     * Add a {@link SXRPhysicsJoint} root to this physics world.
+     *
+     * @param body The {@link SXRPhysicsJoint} to add.
+     */
+    public void addBody(final SXRPhysicsJoint body)
+    {
+        mPhysicsContext.runOnPhysicsThread(new Runnable() {
+            @Override
+            public void run()
+            {
+                if (contains(body))
+                {
+                    return;
+                }
+                NativePhysics3DWorld.addMultiBody(getNative(), body.getNative());
+                mPhysicsObject.put(body.getNative(), body);
+                getSXRContext().getEventManager().sendEvent(SXRWorld.this, IPhysicsEvents.class, "onAddMultiBody", SXRWorld.this, body);
+            }
+        });
+    }
+
+    /**
      * Remove a {@link SXRRigidBody} from this physics world.
      *
      * @param gvrBody the {@link SXRRigidBody} to remove.
@@ -303,6 +351,24 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
                     NativePhysics3DWorld.removeRigidBody(getNative(), gvrBody.getNative());
                     mPhysicsObject.remove(gvrBody.getNative());
                     getSXRContext().getEventManager().sendEvent(SXRWorld.this, IPhysicsEvents.class, "onRemoveRigidBody", SXRWorld.this, gvrBody);
+                }
+            }
+        });
+    }
+
+    /**
+     * Remove a {@link SXRRigidBody} from this physics world.
+     *
+     * @param body the {@link SXRPhysicsJoint} to remove.
+     */
+    public void removeBody(final SXRPhysicsJoint body) {
+        mPhysicsContext.runOnPhysicsThread(new Runnable() {
+            @Override
+            public void run() {
+                if (contains(body)) {
+                    NativePhysics3DWorld.removeRigidBody(getNative(), body.getNative());
+                    mPhysicsObject.remove(body.getNative());
+                    getSXRContext().getEventManager().sendEvent(SXRWorld.this, IPhysicsEvents.class, "onRemoveMultiBody", SXRWorld.this, body);
                 }
             }
         });
@@ -565,7 +631,7 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
 }
 
 class NativePhysics3DWorld {
-    static native long ctor();
+    static native long ctor(boolean isMultiBody);
 
     static native long getComponentType();
 
@@ -577,6 +643,8 @@ class NativePhysics3DWorld {
                                  float relX, float relY, float relZ);
 
     static native void stopDrag(long jphysics_world);
+
+    static native void addMultiBody(long jphysics_world, long jmulti_body);
 
     static native void addRigidBody(long jphysics_world, long jrigid_body);
 

@@ -32,9 +32,10 @@
 
 namespace sxr {
 
-BulletRigidBody::BulletRigidBody()
+BulletRigidBody::BulletRigidBody(int link)
         : mConstructionInfo(btScalar(0.0f), nullptr, new btEmptyShape()),
           mRigidBody(new btRigidBody(mConstructionInfo)),
+          mLink(link),
           m_centerOfMassOffset(btTransform::getIdentity()),
           mScale(1.0f, 1.0f, 1.0f),
           mSimType(SimulationType::DYNAMIC)
@@ -230,6 +231,10 @@ void BulletRigidBody::setWorldTransform(const btTransform &centerOfMassWorldTran
             trans->set_position(pos.getX(), pos.getY(), pos.getZ());
             trans->set_rotation(rot.getW(), rot.getX(), rot.getY(), rot.getZ());
         }
+        float x = pos.getX();
+        float y = pos.getY() + 5;
+        float z = pos.getZ() + 15;
+        float d = sqrt(x * x + y * y + z * z);
         prevPos = physicBody;
     }
     if (mSimType == DYNAMIC)
