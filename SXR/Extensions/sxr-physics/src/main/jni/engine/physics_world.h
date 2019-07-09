@@ -62,9 +62,9 @@ public:
 
     virtual void addRigidBody(PhysicsRigidBody *body) = 0;
 
-    virtual void addMultiBody(PhysicsJoint *body) = 0;
+    virtual void addRootJoint(PhysicsJoint* body) = 0;
 
-    virtual void removeMultiBody(PhysicsJoint *body) = 0;
+    virtual void removeRootJoint(PhysicsJoint* body) = 0;
 
     virtual void addRigidBody(PhysicsRigidBody *body, int collisiontype, int collidesWith) = 0;
 
@@ -76,7 +76,7 @@ public:
 
     virtual void setGravity(float gx, float gy, float gz) = 0;
 
-    virtual int getUpdated(std::vector<PhysicsRigidBody*>& bodies) = 0;
+    virtual int getUpdated(std::vector<Component*>& bodies) = 0;
 
     virtual PhysicsVec3 getGravity() const = 0;
 };

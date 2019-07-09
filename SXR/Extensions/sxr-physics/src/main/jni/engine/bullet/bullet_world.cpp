@@ -107,7 +107,7 @@ btDynamicsWorld* BulletWorld::getPhysicsWorld() const {
     return mPhysicsWorld;
 }
 
-int BulletWorld::getUpdated(std::vector<PhysicsRigidBody*>& updated) {
+int BulletWorld::getUpdated(std::vector<Component*>& updated) {
     int n = mBodiesChanged.size();
 
     if (n > 0)
@@ -122,6 +122,9 @@ void BulletWorld::markUpdated(PhysicsRigidBody* body) {
     mBodiesChanged.push_back(body);
 }
 
+void BulletWorld::markUpdated(PhysicsJoint* joint) {
+    mBodiesChanged.push_back(joint);
+}
 
 void BulletWorld::addConstraint(PhysicsConstraint *constraint) {
     constraint->updateConstructionInfo();
@@ -175,7 +178,7 @@ void BulletWorld::removeRigidBody(PhysicsRigidBody *body) {
     mPhysicsWorld->removeRigidBody((static_cast<BulletRigidBody *>(body))->getRigidBody());
 }
 
-void BulletWorld::addMultiBody(PhysicsJoint *body) {
+void BulletWorld::addRootJoint(PhysicsJoint* body) {
     if (isMultiBody())
     {
         btMultiBodyDynamicsWorld* world = static_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld);
@@ -184,7 +187,7 @@ void BulletWorld::addMultiBody(PhysicsJoint *body) {
     }
 }
 
-void BulletWorld::removeMultiBody(PhysicsJoint *body)
+void BulletWorld::removeRootJoint(PhysicsJoint* body)
 {
     if (isMultiBody())
     {

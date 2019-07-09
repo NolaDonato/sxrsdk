@@ -32,10 +32,9 @@
 
 namespace sxr {
 
-BulletRigidBody::BulletRigidBody(int link)
+BulletRigidBody::BulletRigidBody()
         : mConstructionInfo(btScalar(0.0f), nullptr, new btEmptyShape()),
           mRigidBody(new btRigidBody(mConstructionInfo)),
-          mLink(link),
           m_centerOfMassOffset(btTransform::getIdentity()),
           mScale(1.0f, 1.0f, 1.0f),
           mSimType(SimulationType::DYNAMIC)
@@ -126,7 +125,7 @@ void BulletRigidBody::updateConstructionInfo() {
             mRigidBody->setCollisionShape(mConstructionInfo.m_collisionShape);
             mRigidBody->setMassProps(getMass(), mConstructionInfo.m_localInertia);
             mRigidBody->updateInertiaTensor();
-            updateColisionShapeLocalScaling();
+            updateCollisionShapeLocalScaling();
         }
         else
         {
@@ -341,10 +340,10 @@ void  BulletRigidBody::set_scale(float x, float y, float z) {
     mScale.setValue(x, y, z);
 
     //TODO: verify scaling upon graphic object update & diminish dependency
-    updateColisionShapeLocalScaling();
+    updateCollisionShapeLocalScaling();
 }
 
-void  BulletRigidBody::updateColisionShapeLocalScaling() {
+void  BulletRigidBody::updateCollisionShapeLocalScaling() {
     btVector3 ownerScale;
     Node* owner = owner_object();
     if (owner) {
@@ -505,7 +504,7 @@ void BulletRigidBody::reset(bool rebuildCollider)
         mRigidBody->updateInertiaTensor();
     }
 
-    updateColisionShapeLocalScaling();
+    updateCollisionShapeLocalScaling();
     mRigidBody->setMotionState(this);
     getWorldTransform(prevPos);
     mWorld->getPhysicsWorld()->addRigidBody(mRigidBody, collisionFilterGroup, collisionFilterMask);

@@ -13,10 +13,9 @@
  * limitations under the License.
  */
 #include "bullet_world.h"
-#include "bullet_rigidbody.h"
+#include "bullet_joint.h"
 #include "bullet_sxr_utils.h"
 #include "objects/node.h"
-#include "objects/components/sphere_collider.h"
 #include "util/sxr_log.h"
 
 #include <BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h>
@@ -26,38 +25,45 @@
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
 #include <BulletCollision/CollisionShapes/btEmptyShape.h>
 #include <LinearMath/btDefaultMotionState.h>
+#include <LinearMath/btScalar.h>
 #include <LinearMath/btTransform.h>
+
 #include <math.h>
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_inverse.hpp"
-#include "bullet_joint.h"
 #include <glm/gtx/quaternion.hpp>
 #include <contrib/glm/gtc/type_ptr.hpp>
 
 namespace sxr {
 
-BulletJoint::BulletJoint(float mass, int boneID, PhysicsJoint* parent)
-        : PhysicsJoint(mass, boneID, parent),
+BulletJoint::BulletJoint(float mass, int numBones)
+        : PhysicsJoint(mass, numBones),
           mMultiBody(nullptr),
-          mBoneID(boneID),
-          mLink(nullptr)
+          mCollider(nullptr),
+          mBoneID(0)
 {
-    if (parent == nullptr)
-    {
-        mMultiBody = new btMultiBody(0, mass, btVector3(0, 0, 0), true, false);
-        mMultiBody->setUserPointer(this);
-    }
-    else
-    {
-        mMultiBody = static_cast<BulletJoint*>(parent)->getMultiBody();
-        mLink = new btMultibodyLink();
-        mLink->m_mass = mass;
-    }
+    mMultiBody = new btMultiBody(numBones, mass, btVector3(0, 0, 0), true, false);
+    mMultiBody->setUserPointer(this);
+    mMultiBody->setBaseMass(mass);
+    mWorld = nullptr;
+}
+
+BulletJoint::BulletJoint(BulletJoint* parent, int boneID, float mass)
+        : PhysicsJoint(parent, boneID, mass),
+          mMultiBody(nullptr),
+          mCollider(nullptr),
+          mBoneID(boneID)
+{
+    mMultiBody = static_cast<BulletJoint*>(parent)->getMultiBody();
+    mLink = new btMultibodyLink();
+    mLink->m_mass = mass;
+    mMultiBody->getLink(boneID) = mLink;
+    mCollider = new btMultiBodyLinkCollider(mMultiBody, boneID);
     mWorld = nullptr;
 }
 
 BulletJoint::BulletJoint(btMultiBody* multiBody)
-        : PhysicsJoint(multiBody->getBaseMass(), 0, nullptr),
+        : PhysicsJoint(multiBody->getNumLinks(), multiBody->getBaseMass()),
           mMultiBody(multiBody),
           mLink(nullptr)
 {
@@ -67,22 +73,40 @@ BulletJoint::BulletJoint(btMultiBody* multiBody)
 
 BulletJoint::BulletJoint(btMultibodyLink* link)
         : PhysicsJoint(link->m_mass, 0),
-          mMultiBody(link),
-          mLink(nullptr)
+          mMultiBody(nullptr),
+          mLink(link)
 {
-    mMultiBody->setUserPointer(this);
+    mLink->setUserPointer(this);
     mWorld = nullptr;
 }
-
 
 BulletJoint::~BulletJoint() {
     finalize();
 }
 
-void BulletJoint::setMass(float mass) {  mMultiBody->setBaseMass(btScalar(mass)); }
+void BulletJoint::setMass(float mass)
+{
+    if (mLink != nullptr)
+    {
+        mLink->m_mass = btScalar(mass));
+    }
+    else
+    {
+        mMultiBody->setBaseMass(btScalar(mass));
+    }
+}
 
 float BulletJoint::getMass() {return mMultiBody->getBaseMass(); }
 
+void BulletJoint::setName(const char* name)
+{
+    mName = name;
+    if (mLink)
+    {
+        mLink->m_linkName = mName.c_str();
+        mLink->m_jointName = mName.c_str();
+    }
+}
 
 void BulletJoint::finalize()
 {
@@ -90,22 +114,21 @@ void BulletJoint::finalize()
     {
         if (mLink != nullptr)
         {
-            btMultiBodyLinkCollider* lc = mMultiBody->getLinkCollider(mBoneID);
-            if (lc != nullptr)
+            if (mCollider != nullptr)
             {
                 mMultiBody->setLinkCollider(mBoneID, nullptr);
-                delete lc;
+                delete mCollider;
             }
+            mMultiBody->getLink(mBoneID) = nullptr;
             delete mLink;
             mLink = nullptr;
         }
         else
         {
-            btMultiBodyLinkCollider* bc = mMultiBody->getBaseCollider();
-            if (bc != nullptr)
+            if (mCollider != nullptr)
             {
                 mMultiBody->setBaseCollider(nullptr);
-                delete bc;
+                delete mCollider;
             }
             delete mMultiBody;
             mMultiBody = nullptr;
@@ -123,45 +146,78 @@ void BulletJoint::setWorldTransform(const btTransform &centerOfMassWorldTrans) {
     Node* owner = owner_object();
     Transform* trans = owner->transform();
     btTransform aux; getWorldTransform(aux);
+    btTransform physicBody = centerOfMassWorldTrans;
+    btVector3 pos = physicBody.getOrigin();
+    btQuaternion rot = physicBody.getRotation();
+    Node* parent = owner->parent();
+    float matrixData[16];
 
-    if(std::abs(aux.getOrigin().getX() - prevPos.getOrigin().getX()) >= 0.1f ||
-       std::abs(aux.getOrigin().getY() - prevPos.getOrigin().getY()) >= 0.1f ||
-       std::abs(aux.getOrigin().getZ() - prevPos.getOrigin().getZ()) >= 0.1f)
+    physicBody.getOpenGLMatrix(matrixData);
+    glm::mat4 worldMatrix(glm::make_mat4(matrixData));
+    if ((parent != nullptr) && (parent->parent() != nullptr))
     {
-        mMultBody->setWorldTransform(aux);
-        prevPos = aux;
-        //TODO: incomplete solution
+        glm::mat4 parentWorld(parent->transform()->getModelMatrix(true));
+        glm::mat4 parentInverseWorld(glm::inverse(parentWorld));
+        glm::mat4 localMatrix;
+
+        localMatrix = parentInverseWorld * worldMatrix;
+        trans->setModelMatrix(localMatrix);
     }
     else
     {
-        btTransform physicBody = centerOfMassWorldTrans;
-        btVector3 pos = physicBody.getOrigin();
-        btQuaternion rot = physicBody.getRotation();
-        Node* parent = owner->parent();
-        float matrixData[16];
-
-        physicBody.getOpenGLMatrix(matrixData);
-        glm::mat4 worldMatrix(glm::make_mat4(matrixData));
-        if ((parent != nullptr) && (parent->parent() != nullptr))
-        {
-            glm::mat4 parentWorld(parent->transform()->getModelMatrix(true));
-            glm::mat4 parentInverseWorld(glm::inverse(parentWorld));
-            glm::mat4 localMatrix;
-
-            localMatrix = parentInverseWorld * worldMatrix;
-            trans->setModelMatrix(localMatrix);
-        }
-        else
-        {
-            trans->set_position(pos.getX(), pos.getY(), pos.getZ());
-            trans->set_rotation(rot.getW(), rot.getX(), rot.getY(), rot.getZ());
-        }
-        prevPos = physicBody;
+        trans->set_position(pos.getX(), pos.getY(), pos.getZ());
+        trans->set_rotation(rot.getW(), rot.getX(), rot.getY(), rot.getZ());
     }
     mWorld->markUpdated(this);
 }
 
+    void  BulletJoint::updateCollisionShapeLocalScaling()
+    {
+        btVector3 ownerScale;
+        Node* owner = owner_object();
+        if (owner)
+        {
+            Transform* trans = owner->transform();
+            ownerScale.setValue(trans->scale_x(),
+                                trans->scale_y(),
+                                trans->scale_z());
+        }
+        else
+        {
+            ownerScale.setValue(1.0f, 1.0f, 1.0f);
+        }
+        mCollider->m_collisionShape->setLocalScaling(ownerScale);
+    }
 
-
+    void BulletJoint::updateConstructionInfo()
+    {
+        if (mCollider == nullptr)
+        {
+            // This rigid body was not loaded so its construction must be finished
+            Collider *collider = (Collider*) owner_object()->getComponent(COMPONENT_TYPE_COLLIDER);
+            if (collider)
+            {
+                mCollider = new btMultiBodyLinkCollider(mMultiBody, mBoneID);
+                mCollider->setMotionState(this);
+                mCollider->m_collisionShape = convertCollider2CollisionShape(collider);
+                mCollider->m_collisionShape->calculateLocalInertia(getMass(), mLink->m_inertiaLocal);
+                updateCollisionShapeLocalScaling();
+                if (mLink == nullptr)
+                {
+                    mMultiBody->setBaseCollider(mCollider);
+                }
+                else
+                {
+                    mLink->m_collider = mCollider;
+                }
+            }
+            else
+            {
+                LOGE("PHYSICS: joint %s does not have collider", getName());
+            }
+        }
+        btTransform t;
+        getWorldTransform(&t);
+    }
 
 }

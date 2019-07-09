@@ -32,7 +32,7 @@ class BulletRigidBody : public PhysicsRigidBody,
                                BulletObject,
                                btMotionState {
  public:
-    BulletRigidBody(int link = 0);
+    BulletRigidBody();
 
     BulletRigidBody(btRigidBody *rigidBody);
 
@@ -52,8 +52,6 @@ class BulletRigidBody : public PhysicsRigidBody,
     float getMass() {
         return mConstructionInfo.m_mass;
     }
-
-    virtual int getLink() { return mLink; }
 
     void setCenterOfMass(Transform *t);
 
@@ -161,7 +159,7 @@ private:
 
     void finalize();
 
-    void updateColisionShapeLocalScaling();
+    void updateCollisionShapeLocalScaling();
 
 
 private:
@@ -172,7 +170,6 @@ private:
     btVector3 mScale;
     SimulationType mSimType;
     BulletWorld *mWorld;
-    int mLink;
 
     friend class BulletWorld;
 };

@@ -33,7 +33,9 @@ class Node;
 class BulletJoint : public PhysicsJoint, BulletObject, btMotionState
 {
  public:
-    BulletJoint(float mass, int boneID, BulletJoint* parent = nullptr);
+    BulletJoint(float mass, int numBones);
+
+    BulletJoint(BulletJoint* parent, int boneID, float mass);
 
     BulletJoint(btMultiBody* multibody);
 
@@ -41,9 +43,11 @@ class BulletJoint : public PhysicsJoint, BulletObject, btMotionState
 
     virtual ~BulletJoint();
 
-    btMultiBody *getMultiBody() const {
-        return mMultiBody;
-    }
+    btMultiBody *getMultiBody() const {return mMultiBody;}
+
+    virtual const char* getName() { return mName.c_str(); }
+
+    virtual void setName(const char* name);
 
     void setMass(float mass) {  mMultiBody->setBaseMass(btScalar(mass)); }
 
@@ -55,15 +59,19 @@ class BulletJoint : public PhysicsJoint, BulletObject, btMotionState
 
     void setWorldTransform(const btTransform &worldTrans);
 
+    virtual void updateConstructionInfo();
+
 private:
     void finalize();
-
+    void updateCollisionShapeLocalScaling();
 
 private:
-    btMultiBody*     mMultiBody;
-    btMultibodyLink* mLink;
-    BulletWorld*     mWorld;
-    int              mBoneID;
+    btMultiBody*             mMultiBody;
+    btMultibodyLink*         mLink;
+    btMultiBodyLinkCollider* mCollider;
+    BulletWorld*             mWorld;
+    int                      mBoneID;
+    std::string              mName;
     friend class BulletWorld;
 };
 

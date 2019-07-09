@@ -58,10 +58,10 @@ extern "C" {
             jlong jworld, jlong jrigid_body);
 
     JNIEXPORT void JNICALL
-    Java_com_samsungxr_physics_NativePhysics3DWorld_addMultiBody(JNIEnv * env, jobject obj,
+    Java_com_samsungxr_physics_NativePhysics3DWorld_addRootJoint(JNIEnv * env, jobject obj,
                                                                  jlong jworld, jlong jmulti_body);
     JNIEXPORT void JNICALL
-    Java_com_samsungxr_physics_NativePhysics3DWorld_removeMultiBody(JNIEnv * env, jobject obj,
+    Java_com_samsungxr_physics_NativePhysics3DWorld_removeRootJoint(JNIEnv * env, jobject obj,
                                                                 jlong jworld, jlong jmulti_body);
     JNIEXPORT void JNICALL
     Java_com_samsungxr_physics_NativePhysics3DWorld_addRigidBodyWithMask(JNIEnv* env, jobject obj,
@@ -121,21 +121,21 @@ Java_com_samsungxr_physics_NativePhysics3DWorld_removeConstraint(JNIEnv * env, j
 }
 
 JNIEXPORT void JNICALL
-Java_com_samsungxr_physics_NativePhysics3DWorld_addMultiBody(JNIEnv * env, jobject obj,
+Java_com_samsungxr_physics_NativePhysics3DWorld_addRootJoint(JNIEnv * env, jobject obj,
                                                              jlong jworld, jlong jmulti_body)
 {
     PhysicsWorld *world = reinterpret_cast<PhysicsWorld*>(jworld);
     PhysicsJoint* body = reinterpret_cast<PhysicsJoint*>(body);
-    world->addMultiBody(body);
+    world->addRootJoint(body);
 }
 
 JNIEXPORT void JNICALL
-Java_com_samsungxr_physics_NativePhysics3DWorld_removeMultiBody(JNIEnv * env, jobject obj,
+Java_com_samsungxr_physics_NativePhysics3DWorld_removeRootJoint(JNIEnv * env, jobject obj,
                                                              jlong jworld, jlong jmulti_body)
 {
     PhysicsWorld *world = reinterpret_cast<PhysicsWorld*>(jworld);
     PhysicsJoint* body = reinterpret_cast<PhysicsJoint*>(body);
-    world->removeMultiBody(body);
+    world->removeRootJoint(body);
 }
 
 JNIEXPORT void JNICALL
@@ -249,7 +249,7 @@ Java_com_samsungxr_physics_NativePhysics3DWorld_getUpdated(JNIEnv* env, jobject 
                                                            jlong jworld)
 {
     PhysicsWorld* world = reinterpret_cast <PhysicsWorld*>(jworld);
-    std::vector<PhysicsRigidBody*> updated;
+    std::vector<Component*> updated;
     int n = world->getUpdated(updated);
     if (n > 0)
     {

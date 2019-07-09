@@ -61,21 +61,23 @@ class BulletWorld : public PhysicsWorld {
 
     void removeRigidBody(PhysicsRigidBody *body);
 
-    void addMultiBody(PhysicsJoint* body);
+    void addRootJoint(PhysicsJoint* body);
 
-    void removeMultiBody(PhysicsJoint* body);
+    void removeRootJoint(PhysicsJoint* body);
 
     void step(float timeStep, int maxSubSteps);
 
     void listCollisions(std::list <ContactPoint> &contactPoints);
 
-    int getUpdated(std::vector<PhysicsRigidBody*>& bodies);
+    int getUpdated(std::vector<Component*>& bodies);
 
     void setGravity(float x, float y, float z);
 
     void setGravity(glm::vec3 gravity);
 
     void markUpdated(PhysicsRigidBody* body);
+
+    void markUpdated(PhysicsJoint* body);
 
     PhysicsVec3 getGravity() const;
 
@@ -97,7 +99,7 @@ class BulletWorld : public PhysicsWorld {
     Node *mPivotObject;
     int mActivationState;
     bool mIsMultiBody;
-    std::vector<PhysicsRigidBody*> mBodiesChanged;
+    std::vector<Component*> mBodiesChanged;
 };
 
 }

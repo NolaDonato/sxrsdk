@@ -21,7 +21,7 @@
 namespace sxr {
 extern "C" {
     JNIEXPORT jlong JNICALL
-    Java_com_samsungxr_physics_NativeRigidBody_ctor(JNIEnv * env, jobject obj, jfloat mass, int link);
+    Java_com_samsungxr_physics_NativeRigidBody_ctor(JNIEnv * env, jobject obj, jfloat mass);
 
     JNIEXPORT jlong JNICALL
     Java_com_samsungxr_physics_NativeRigidBody_getComponentType(JNIEnv * env, jobject obj);
@@ -165,7 +165,7 @@ extern "C" {
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_samsungxr_physics_NativeRigidBody_ctor(JNIEnv * env, jobject obj, jfloat mass, int link) {
+Java_com_samsungxr_physics_NativeRigidBody_ctor(JNIEnv * env, jobject obj, jfloat mass) {
     BulletRigidBody *rb = new BulletRigidBody();
     rb->setMass(mass);
     return reinterpret_cast<jlong>(rb);

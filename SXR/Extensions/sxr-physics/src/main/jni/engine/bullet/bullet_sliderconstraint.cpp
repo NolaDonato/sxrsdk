@@ -151,35 +151,17 @@ void BulletSliderConstraint::updateConstructionInfo()
     {
         return;
     }
-
-    BulletJoint* multiBodyA = (BulletJoint*) this->owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_MULTI_BODY);
     BulletRigidBody* rigidBodyA = (BulletRigidBody*) this->owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY);
     btRigidBody* rbA = rigidBodyA->getRigidBody();
     btRigidBody* rbB = mRigidBodyB->getRigidBody();
-
-    if (multiBodyA != nullptr)
-    {
-        btMultiBody* mbA = multiBodyA->getMultiBody();
-        btMatrix3x3 frameInA = btMatrix3x3::getIdentity();
-        btMatrix3x3 frameInB = btMatrix3x3::getIdentity();
-        btVector3 pivotA(mbA->getBasePos());
-        btVector3 pivotB(rbB->getCenterOfMassPosition());
-        btVector3 jointAxis(pivotB - pivotA);
-        mSliderConstraint = nullptr;
-        mMBSliderConstraint = new btMultiBodySliderConstraint(mbA, mRigidBodyB->getLink(), rbB, pivotA, pivotB, frameInA, frameInB, jointAxis);
-    }
-    else
-    {
-        btTransform frameInA = btTransform::getIdentity();
-        btTransform frameInB = btTransform::getIdentity();
-        mMBSliderConstraint = nullptr;
-        mSliderConstraint = new btSliderConstraint(*rbA, *rbB, frameInA, frameInB, true);
-        mSliderConstraint->setLowerAngLimit(mLowerAngularLimit);
-        mSliderConstraint->setUpperAngLimit(mUpperAngularLimit);
-        mSliderConstraint->setLowerLinLimit(mLowerLinearLimit);
-        mSliderConstraint->setUpperLinLimit(mUpperLinearLimit);
-        mSliderConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
-    }
+    btTransform frameInA = btTransform::getIdentity();
+    btTransform frameInB = btTransform::getIdentity();
+    mSliderConstraint = new btSliderConstraint(*rbA, *rbB, frameInA, frameInB, true);
+    mSliderConstraint->setLowerAngLimit(mLowerAngularLimit);
+    mSliderConstraint->setUpperAngLimit(mUpperAngularLimit);
+    mSliderConstraint->setLowerLinLimit(mLowerLinearLimit);
+    mSliderConstraint->setUpperLinLimit(mUpperLinearLimit);
+    mSliderConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
 }
 
 }

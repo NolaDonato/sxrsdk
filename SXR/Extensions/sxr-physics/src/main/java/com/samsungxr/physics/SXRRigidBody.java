@@ -19,6 +19,7 @@ import com.samsungxr.SXRComponent;
 import com.samsungxr.SXRContext;
 import com.samsungxr.SXRRenderData;
 import com.samsungxr.SXRNode;
+import com.samsungxr.animation.SXRSkeleton;
 
 /**
  * Represents a rigid body that can be static or dynamic. You can set a mass and apply some
@@ -56,26 +57,15 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
         this(gvrContext, 0.0f);
     }
 
-    /**
-     * Constructs new instance to simulate a rigid body in {@link SXRWorld}.
-     *
-     * @param gvrContext The context of the app.
-     * @param mass The mass of this rigid body.
-     */
-    public SXRRigidBody(SXRContext gvrContext, float mass) {
-        this(gvrContext, mass, -1);
-    }
 
     /**
      * Constructs new instance to simulate a rigid body in {@link SXRWorld}.
      *
      * @param gvrContext The context of the app.
      * @param mass The mass of this rigid body.\
-     * @param link   link number identifying this body in a hierarchy,
-     *               defaults to 0.
      */
-    public SXRRigidBody(SXRContext gvrContext, float mass, int link) {
-        super(gvrContext, NativeRigidBody.ctor(mass, link));
+    public SXRRigidBody(SXRContext gvrContext, float mass) {
+        super(gvrContext, NativeRigidBody.ctor(mass));
         mCollisionGroup = -1;
         mPhysicsContext = SXRPhysicsContext.getInstance();
         mLoaded = false;
@@ -90,8 +80,8 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
      *                       in the {@link SXRCollisionMatrix}. The rigid body collides with
      *                       everyone if {#collisionGroup} is out of the range 0...15.
      */
-    public SXRRigidBody(SXRContext gvrContext, float mass, int collisionGroup, int link) {
-        super(gvrContext, NativeRigidBody.ctor(mass, link));
+    public SXRRigidBody(SXRContext gvrContext, float mass, int collisionGroup) {
+        super(gvrContext, NativeRigidBody.ctor(mass));
         mCollisionGroup = collisionGroup;
         mPhysicsContext = SXRPhysicsContext.getInstance();
         mLoaded = false;
@@ -567,22 +557,27 @@ public class SXRRigidBody extends SXRPhysicsWorldObject {
     }
 
     @Override
-    protected void addToWorld(SXRWorld world) {
-        if (world != null) {
+    protected void addToWorld(SXRWorld world)
+    {
+        if (world != null)
+        {
             world.addBody(this);
         }
     }
 
     @Override
-    protected void removeFromWorld(SXRWorld world) {
-        if (world != null) {
+    protected void removeFromWorld(SXRWorld world)
+    {
+        if (world != null)
+        {
             world.removeBody(this);
         }
     }
+
 }
 
 class NativeRigidBody {
-    static native long ctor(float mass, int link);
+    static native long ctor(float mass);
 
     static native long getComponentType();
 

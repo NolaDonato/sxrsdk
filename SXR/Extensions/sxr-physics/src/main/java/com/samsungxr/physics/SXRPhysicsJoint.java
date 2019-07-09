@@ -18,6 +18,7 @@ package com.samsungxr.physics;
 import com.samsungxr.SXRComponent;
 import com.samsungxr.SXRContext;
 import com.samsungxr.SXRNode;
+import com.samsungxr.animation.SXRSkeleton;
 
 /**
  * Represents a joint in a multibody chain like a ragdoll.
@@ -26,22 +27,40 @@ import com.samsungxr.SXRNode;
 public class SXRPhysicsJoint extends SXRPhysicsWorldObject
 {
     /**
-     * Constructs new instance to simulate a rigid body in {@link SXRWorld}.
+     * Constructs the root joint of a multibody chain.
      *
-     * @param gvrContext The context of the app.
+     * @param ctx   The context of the app.
+     * @param mass  mass of the root joint.
+     */
+    public SXRPhysicsJoint(SXRContext ctx, float mass, int numBones)
+    {
+        super(ctx, NativePhysicsJoint.ctorRoot(mass, numBones));
+    }
+
+    /**
+     * Constructs a multibody joint in a chain.
+     * <p>
+     * This joint is linked to the parent joint in the physics world.
+     * This parent should be consistent with the node hierarchy
+     * the joints are attached to.
+     * @param parent   The parent joint of this one.
      * @param boneID   0 based bone ID indicating which bone of the skeleton
      *                 this joint belongs to
      */
-    public SXRPhysicsJoint(SXRContext gvrContext, float baseMass, int boneID)
+    public SXRPhysicsJoint(SXRPhysicsJoint parent, float mass, int boneID)
     {
-        super(gvrContext, NativePhysicsJoint.ctor(baseMass, boneID));
+        super(parent.getSXRContext(), NativePhysicsJoint.ctorLink(parent.getNative(), boneID, mass));
     }
 
+    public void setName(String name)
+    {
+        NativePhysicsJoint.setName(getNative(), name);
+    }
 
     /** Used only by {@link SXRPhysicsLoader} */
-    SXRPhysicsJoint(SXRContext gvrContext, long nativeJoint)
+    SXRPhysicsJoint(SXRContext ctx, long nativeJoint)
     {
-        super(gvrContext, nativeJoint);
+        super(ctx, nativeJoint);
     }
 
     static public long getComponentType() {
@@ -109,27 +128,68 @@ public class SXRPhysicsJoint extends SXRPhysicsWorldObject
     }
 
     @Override
-    protected void addToWorld(SXRWorld world) {
-        if (world != null) {
+    protected void addToWorld(SXRWorld world)
+    {
+        if (world != null)
+        {
             world.addBody(this);
         }
     }
 
     @Override
-    protected void removeFromWorld(SXRWorld world) {
-        if (world != null) {
+    protected void removeFromWorld(SXRWorld world)
+    {
+        if (world != null)
+        {
             world.removeBody(this);
+        }
+    }
+
+    protected void attachSkeleton(SXRSkeleton skel, float defaultMass)
+    {
+        setName(skel.getBoneName(0));
+        for (int i = 1; i < skel.getNumBones(); ++i)
+        {
+            SXRNode bone = skel.getBone(i);
+            if (bone != null)
+            {
+                SXRPhysicsJoint joint = (SXRPhysicsJoint) bone.getComponent(SXRPhysicsJoint.getComponentType());
+                if (joint == null)
+                {
+                    SXRNode parent = skel.getBone(skel.getParentBoneIndex(i));
+                    SXRPhysicsJoint parentJoint = this;
+
+                    if (parent != null)
+                    {
+                        SXRPhysicsJoint pj = (SXRPhysicsJoint) parent.getComponent(SXRPhysicsJoint.getComponentType());
+
+                        if (pj != null)
+                        {
+                            parentJoint = pj;
+                        }
+                    }
+                    joint = new SXRPhysicsJoint(parentJoint, defaultMass, i);
+                    joint.setName(skel.getBoneName(i));
+                    bone.attachComponent(joint);
+                }
+            }
         }
     }
 }
 
 class NativePhysicsJoint
 {
-    static native long ctor(float mass, int link);
+    static native long ctorRoot(float mass, int numBones);
+
+    static native long ctorLink(long joint, int boneid, float mass);
 
     static native long getComponentType();
 
     static native float getMass(long joint);
 
     static native int getBoneID(long joint);
+
+    static native String getName(long joint);
+
+    static native void setName(long joint, String name);
 }
