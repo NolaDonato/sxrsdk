@@ -20,7 +20,6 @@ import android.util.Log;
 
 import com.samsungxr.SXRAndroidResource;
 import com.samsungxr.SXRCollider;
-import com.samsungxr.SXRComponent;
 import com.samsungxr.SXRComponentGroup;
 import com.samsungxr.SXRContext;
 import com.samsungxr.SXRMeshCollider;
@@ -42,13 +41,12 @@ public class SXRPhysicsLoader {
     /**
      * Loads a physics settings file.
      *
-     * @param gvrContext The context of the app.
      * @param fileName Physics settings file name.
      * @param scene The scene containing the objects to attach physics components.
      */
-    public static void loadPhysicsFile(SXRContext gvrContext, String fileName, SXRScene scene) throws IOException
+    public static void loadPhysicsFile(SXRScene scene, String fileName) throws IOException
     {
-        loadPhysicsFile(gvrContext, fileName, false, scene);
+        loadPhysicsFile(scene, fileName, false);
     }
 
     /**
@@ -56,31 +54,58 @@ public class SXRPhysicsLoader {
      *
      * Use this if you want the up-axis information from physics file to be ignored.
      *
-     * @param gvrContext The context of the app.
      * @param fileName Physics settings file name.
      * @param ignoreUpAxis Set to true if up-axis information from file must be ignored.
      * @param scene The scene containing the objects to attach physics components.
      */
-    public static void loadPhysicsFile(SXRContext gvrContext, String fileName, boolean ignoreUpAxis, SXRScene scene) throws IOException
+    public static void loadPhysicsFile(SXRScene scene, String fileName, boolean ignoreUpAxis) throws IOException
     {
-        byte[] inputData = null;
-        try {
-            inputData = toByteArray(toAndroidResource(gvrContext, fileName));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        SXRAndroidResource resource = toAndroidResource(scene.getSXRContext(), fileName);
+        loadPhysicsFile(resource, scene.getRoot(), ignoreUpAxis);
+    }
 
-        if (inputData == null || inputData.length == 0) {
-            throw new IOException("Fail to load bullet file " + fileName);
-        }
+    public static void loadPhysicsFile(SXRAndroidResource resource, SXRNode sceneRoot, boolean ignoreUpAxis) throws IOException
+    {
+        String filename = resource.getResourceFilename();
+        int i = filename.lastIndexOf('.');
+        byte[] inputData = toByteArray(resource);
 
+        if (inputData == null || inputData.length == 0)
+        {
+            throw new IOException("Failed to load physics file " + filename);
+        }
+        if (i > 0)
+        {
+            String ext = filename.substring(i);
+            if (ext.toLowerCase().equals(".bullet"))
+            {
+                loadBulletFile(inputData, sceneRoot, ignoreUpAxis);
+            }
+            else if (ext.equals(".avt"))
+            {
+                PhysicsAVTLoader loader = new PhysicsAVTLoader(sceneRoot);
+                loader.parse(inputData);
+            }
+            else
+            {
+                throw new IOException(ext + "is not a supported physics file format");
+            }
+        }
+        else
+        {
+            throw new IOException("Cannot determine file extension");
+        }
+    }
+
+    private static void loadBulletFile(byte[] inputData, SXRNode sceneRoot, boolean ignoreUpAxis) throws IOException
+    {
         long loader = NativePhysics3DLoader.ctor(inputData, inputData.length, ignoreUpAxis);
 
-        if (loader == 0) {
-            throw new IOException("Fail to parse bullet file " + fileName);
+        if (loader == 0)
+        {
+            throw new IOException("Failed to parse bullet file");
         }
-
-        SXRNode sceneRoot = scene.getRoot();
+        SXRContext ctx = sceneRoot.getSXRContext();
         ArrayMap<Long, SXRNode> rbObjects = new ArrayMap<>();
 
         long nativeRigidBody;
@@ -93,20 +118,11 @@ public class SXRPhysicsLoader {
             }
 
             if (sceneObject.getComponent(SXRCollider.getComponentType()) == null) {
-                SXRMeshCollider collider = new SXRMeshCollider(gvrContext, true);
+                SXRMeshCollider collider = new SXRMeshCollider(ctx, true);
                 // Collider for picking.
                 sceneObject.attachComponent(collider);
             }
-
-            if (sceneObject.getParent() != sceneRoot) {
-                // Rigid bodies must be at scene root.
-                float[] modelmtx = sceneObject.getTransform().getModelMatrix();
-                sceneObject.getParent().removeChildObject(sceneObject);
-                sceneObject.getTransform().setModelMatrix(modelmtx);
-                sceneRoot.addChildObject(sceneObject);
-            }
-
-            SXRRigidBody rigidBody = new SXRRigidBody(gvrContext, nativeRigidBody);
+            SXRRigidBody rigidBody = new SXRRigidBody(ctx, nativeRigidBody);
             sceneObject.attachComponent(rigidBody);
             rbObjects.put(nativeRigidBody, sceneObject);
         }
@@ -130,32 +146,30 @@ public class SXRPhysicsLoader {
             SXRConstraint constraint = null;
 
             if (constraintType == SXRConstraint.fixedConstraintId) {
-                constraint = new SXRFixedConstraint(gvrContext, nativeConstraint);
+                constraint = new SXRFixedConstraint(ctx, nativeConstraint);
             } else if (constraintType == SXRConstraint.point2pointConstraintId) {
-                constraint = new SXRPoint2PointConstraint(gvrContext, nativeConstraint);
+                constraint = new SXRPoint2PointConstraint(ctx, nativeConstraint);
             } else if (constraintType == SXRConstraint.sliderConstraintId) {
-                constraint = new SXRSliderConstraint(gvrContext, nativeConstraint);
+                constraint = new SXRSliderConstraint(ctx, nativeConstraint);
             } else if (constraintType == SXRConstraint.hingeConstraintId) {
-                constraint = new SXRHingeConstraint(gvrContext, nativeConstraint);
+                constraint = new SXRHingeConstraint(ctx, nativeConstraint);
             } else if (constraintType == SXRConstraint.coneTwistConstraintId) {
-                constraint = new SXRConeTwistConstraint(gvrContext, nativeConstraint);
+                constraint = new SXRConeTwistConstraint(ctx, nativeConstraint);
             } else if (constraintType == SXRConstraint.genericConstraintId) {
-                constraint = new SXRGenericConstraint(gvrContext, nativeConstraint);
+                constraint = new SXRGenericConstraint(ctx, nativeConstraint);
             }
 
             if (constraint != null) {
                 SXRComponentGroup<SXRConstraint> group;
                 group = (SXRComponentGroup)sceneObject.getComponent(SXRConstraint.getComponentType());
                 if (group == null) {
-                    group = new SXRComponentGroup<>(gvrContext, SXRConstraint.getComponentType());
+                    group = new SXRComponentGroup<>(ctx, SXRConstraint.getComponentType());
                     sceneObject.attachComponent(group);
                 }
-
                 group.addChildComponent(constraint);
                 constraint.setOwnerObject(sceneObject);
             }
         }
-
         NativePhysics3DLoader.delete(loader);
     }
 

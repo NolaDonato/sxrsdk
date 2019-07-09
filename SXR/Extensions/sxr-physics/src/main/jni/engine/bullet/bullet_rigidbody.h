@@ -23,6 +23,7 @@
 #include <LinearMath/btMotionState.h>
 
 class btDynamicsWorld;
+class BulletWorld;
 
 namespace sxr {
 class Node;
@@ -31,7 +32,7 @@ class BulletRigidBody : public PhysicsRigidBody,
                                BulletObject,
                                btMotionState {
  public:
-    BulletRigidBody();
+    BulletRigidBody(int link = 0);
 
     BulletRigidBody(btRigidBody *rigidBody);
 
@@ -52,7 +53,9 @@ class BulletRigidBody : public PhysicsRigidBody,
         return mConstructionInfo.m_mass;
     }
 
-    void setCenterOfMass(const Transform *t);
+    virtual int getLink() { return mLink; }
+
+    void setCenterOfMass(Transform *t);
 
     void getRotation(float &w, float &x, float &y, float &z);
 
@@ -163,13 +166,13 @@ private:
 
 private:
     btRigidBody::btRigidBodyConstructionInfo mConstructionInfo;
-    btRigidBody *mRigidBody;
+    btRigidBody* mRigidBody;
     btTransform m_centerOfMassOffset;
     btTransform prevPos;
     btVector3 mScale;
     SimulationType mSimType;
-
-    btDynamicsWorld *mWorld;
+    BulletWorld *mWorld;
+    int mLink;
 
     friend class BulletWorld;
 };

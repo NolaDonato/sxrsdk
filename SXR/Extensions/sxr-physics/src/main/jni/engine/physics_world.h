@@ -22,6 +22,7 @@
 
 #include "physics_common.h"
 #include "physics_rigidbody.h"
+#include "physics_joint.h"
 #include "physics_constraint.h"
 #include "../objects/node.h"
 #include <list>
@@ -38,7 +39,10 @@ struct ContactPoint {
 
 class PhysicsWorld : public Component {
 public:
-    PhysicsWorld() : Component(PhysicsWorld::getComponentType()){}
+    PhysicsWorld() : Component(PhysicsWorld::getComponentType())
+    {
+
+    }
 
     virtual ~PhysicsWorld() {}
 
@@ -46,6 +50,7 @@ public:
         return COMPONENT_TYPE_PHYSICS_WORLD;
     }
 
+    virtual bool isMultiBody() = 0;
     virtual void addConstraint(PhysicsConstraint *constraint) = 0;
 
     virtual void removeConstraint(PhysicsConstraint *constraint) = 0;
@@ -57,6 +62,10 @@ public:
 
     virtual void addRigidBody(PhysicsRigidBody *body) = 0;
 
+    virtual void addMultiBody(PhysicsJoint *body) = 0;
+
+    virtual void removeMultiBody(PhysicsJoint *body) = 0;
+
     virtual void addRigidBody(PhysicsRigidBody *body, int collisiontype, int collidesWith) = 0;
 
     virtual void removeRigidBody(PhysicsRigidBody *body) = 0;
@@ -66,6 +75,8 @@ public:
     virtual void listCollisions(std::list<ContactPoint>& contactPoints) = 0;
 
     virtual void setGravity(float gx, float gy, float gz) = 0;
+
+    virtual int getUpdated(std::vector<PhysicsRigidBody*>& bodies) = 0;
 
     virtual PhysicsVec3 getGravity() const = 0;
 };

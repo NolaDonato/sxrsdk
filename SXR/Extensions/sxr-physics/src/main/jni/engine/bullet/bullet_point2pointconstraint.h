@@ -27,8 +27,8 @@ namespace sxr {
     class PhysicsRigidBody;
     class BulletRigidBody;
 
-    class BulletPoint2PointConstraint : public PhysicsPoint2pointConstraint,
-                                               BulletObject {
+    class BulletPoint2PointConstraint : public PhysicsPoint2pointConstraint, BulletObject
+    {
 
     public:
         explicit BulletPoint2PointConstraint(PhysicsRigidBody* rigidBodyB, float pivotInA[],

@@ -15,27 +15,35 @@
 #include <algorithm>
 #include "bullet_world.h"
 #include "bullet_rigidbody.h"
+#include "bullet_joint.h"
 
 #include <BulletCollision/CollisionDispatch/btDefaultCollisionConfiguration.h>
 #include <BulletCollision/BroadphaseCollision/btDbvtBroadphase.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-
 #include <BulletDynamics/Dynamics/btDynamicsWorld.h>
 #include <BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.h>
+#include <BulletDynamics/Featherstone/btMultiBodyConstraintSolver.h>
+#include <BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h>
 
 #include <android/log.h>
 
 namespace sxr {
 
-BulletWorld::BulletWorld() {
-    initialize();
+BulletWorld::BulletWorld(bool isMultiBody)
+{
+    initialize(isMultiBody);
 }
 
 BulletWorld::~BulletWorld() {
     finalize();
 }
 
-void BulletWorld::initialize() {
+bool BulletWorld::isMultiBody() { return mIsMultiBody; }
+
+void BulletWorld::initialize(bool isMultiBody)
+{
+    mIsMultiBody = isMultiBody;
+
     // Default setup for memory, collision setup.
     mCollisionConfiguration = new btDefaultCollisionConfiguration();
 
@@ -46,13 +54,23 @@ void BulletWorld::initialize() {
     mOverlappingPairCache = new btDbvtBroadphase();
 
     ///the default constraint solver. For parallel processing you can use a different solver (see Extras/BulletMultiThreaded)
-    mSolver = new btSequentialImpulseConstraintSolver;
-
-    mPhysicsWorld = new btDiscreteDynamicsWorld(mDispatcher, mOverlappingPairCache, mSolver,
-                                                mCollisionConfiguration);
-
+    if (isMultiBody)
+    {
+        mSolver = new btMultiBodyConstraintSolver();
+        mPhysicsWorld = new btMultiBodyDynamicsWorld(mDispatcher,
+                mOverlappingPairCache,
+                (btMultiBodyConstraintSolver*) mSolver,
+                mCollisionConfiguration);
+    }
+    else
+    {
+        mSolver = new btSequentialImpulseConstraintSolver();
+        mPhysicsWorld = new btDiscreteDynamicsWorld(mDispatcher,
+                mOverlappingPairCache,
+                mSolver,
+                mCollisionConfiguration);
+    }
     mPhysicsWorld->setGravity(btVector3(0, -10, 0));
-
     mDraggingConstraint = nullptr;
 }
 
@@ -84,6 +102,26 @@ void BulletWorld::finalize() {
 
     delete mCollisionConfiguration;
 }
+
+btDynamicsWorld* BulletWorld::getPhysicsWorld() const {
+    return mPhysicsWorld;
+}
+
+int BulletWorld::getUpdated(std::vector<PhysicsRigidBody*>& updated) {
+    int n = mBodiesChanged.size();
+
+    if (n > 0)
+    {
+        copy(mBodiesChanged.begin(), mBodiesChanged.end(), back_inserter(updated));
+        mBodiesChanged.clear();
+    }
+    return n;
+}
+
+void BulletWorld::markUpdated(PhysicsRigidBody* body) {
+    mBodiesChanged.push_back(body);
+}
+
 
 void BulletWorld::addConstraint(PhysicsConstraint *constraint) {
     constraint->updateConstructionInfo();
@@ -123,18 +161,37 @@ void BulletWorld::addRigidBody(PhysicsRigidBody *body) {
     BulletRigidBody *rb = static_cast<BulletRigidBody *>(body);
     body->updateConstructionInfo();
     mPhysicsWorld->addRigidBody(rb->getRigidBody());
-    rb->mWorld = mPhysicsWorld;
+    rb->mWorld = this;
 }
 
 void BulletWorld::addRigidBody(PhysicsRigidBody *body, int collisiontype, int collidesWith) {
     BulletRigidBody *rb = static_cast<BulletRigidBody *>(body);
     body->updateConstructionInfo();
     mPhysicsWorld->addRigidBody(rb->getRigidBody(), collidesWith, collisiontype);
-    rb->mWorld = mPhysicsWorld;
+    rb->mWorld = this;
 }
 
 void BulletWorld::removeRigidBody(PhysicsRigidBody *body) {
     mPhysicsWorld->removeRigidBody((static_cast<BulletRigidBody *>(body))->getRigidBody());
+}
+
+void BulletWorld::addMultiBody(PhysicsJoint *body) {
+    if (isMultiBody())
+    {
+        btMultiBodyDynamicsWorld* world = static_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld);
+        btMultiBody* mb = static_cast<BulletJoint*>(body)->getMultiBody();
+        world->addMultiBody(mb);
+    }
+}
+
+void BulletWorld::removeMultiBody(PhysicsJoint *body)
+{
+    if (isMultiBody())
+    {
+        btMultiBodyDynamicsWorld* world = static_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld);
+        btMultiBody* mb = static_cast<BulletJoint*>(body)->getMultiBody();
+        world->removeMultiBody(mb);
+    }
 }
 
 void BulletWorld::step(float timeStep, int maxSubSteps) {

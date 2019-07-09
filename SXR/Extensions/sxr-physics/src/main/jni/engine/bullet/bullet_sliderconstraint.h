@@ -24,14 +24,15 @@
 #include "bullet_object.h"
 
 class btSliderConstraint;
+class btMultiBodySliderConstraint;
 
 namespace sxr {
 
     class PhysicsRigidBody;
     class BulletRigidBody;
 
-    class BulletSliderConstraint : public PhysicsSliderConstraint,
-                                          BulletObject {
+    class BulletSliderConstraint : public PhysicsSliderConstraint, BulletObject
+    {
     public:
         explicit BulletSliderConstraint(PhysicsRigidBody *rigidBodyB);
 
@@ -64,8 +65,9 @@ namespace sxr {
         void updateConstructionInfo();
 
     private:
-        btSliderConstraint *mSliderConstraint;
-        BulletRigidBody *mRigidBodyB;
+        btSliderConstraint* mSliderConstraint;
+        btMultiBodySliderConstraint* mMBSliderConstraint;
+        BulletRigidBody* mRigidBodyB;
 
         float mBreakingImpulse;
         float mLowerAngularLimit;
