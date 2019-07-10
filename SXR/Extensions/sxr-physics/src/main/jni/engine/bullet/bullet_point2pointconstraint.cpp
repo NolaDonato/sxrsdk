@@ -4,10 +4,11 @@
 
 #include "bullet_point2pointconstraint.h"
 #include <BulletDynamics/ConstraintSolver/btPoint2PointConstraint.h>
+#include "bullet_joint.h"
 #include "bullet_rigidbody.h"
 #include "bullet_world.h"
 
-static const char tag[] = "BulletP2pConstrN";
+static const char tag[] = "PHYSICS";
 
 namespace sxr {
 
@@ -68,20 +69,21 @@ namespace sxr {
     }
 
 
-void BulletPoint2PointConstraint::updateConstructionInfo() {
-//    if (mPoint2PointConstraint != 0) {
-//        delete (mPoint2PointConstraint);
-//    }
-
-    if (mPoint2PointConstraint == nullptr) {
+void BulletPoint2PointConstraint::updateConstructionInfo()
+{
+    if (mPoint2PointConstraint == nullptr)
+    {
         btVector3 pivotInA(mPivotInA.x, mPivotInA.y, mPivotInA.z);
         btVector3 pivotInB(mPivotInB.x, mPivotInB.y, mPivotInB.z);
-        btRigidBody *rbA = ((BulletRigidBody *) owner_object()->
-                getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY))->getRigidBody();
+        BulletRigidBody* bodyA = (BulletRigidBody *) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY);
+        if (bodyA)
+        {
+            btRigidBody *rbA = bodyA->getRigidBody();
+            btRigidBody *rbB = mRigidBodyB->getRigidBody();
 
-        mPoint2PointConstraint = new btPoint2PointConstraint(*rbA, *mRigidBodyB->getRigidBody(),
-                                                             pivotInA, pivotInB);
-        mPoint2PointConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
+            mPoint2PointConstraint = new btPoint2PointConstraint(*rbA, *rbB, pivotInA, pivotInB);
+            mPoint2PointConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
+        }
     }
 }
 

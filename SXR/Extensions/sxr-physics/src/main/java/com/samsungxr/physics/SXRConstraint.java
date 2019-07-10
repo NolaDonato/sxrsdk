@@ -15,9 +15,12 @@
 
 package com.samsungxr.physics;
 
+import com.samsungxr.IComponentGroup;
 import com.samsungxr.SXRContext;
 import com.samsungxr.SXRNode;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -28,8 +31,8 @@ import java.util.List;
  * {@linkplain com.samsungxr.SXRNode node} containing a rigid body that will become
  * the owner of this constraint (body A).
  */
-abstract class SXRConstraint extends SXRPhysicsWorldObject {
-
+abstract class SXRConstraint extends SXRPhysicsWorldObject implements IComponentGroup<SXRConstraint>
+{
     static final int fixedConstraintId = 1;
     static final int point2pointConstraintId = 2;
     static final int sliderConstraintId = 3;
@@ -39,6 +42,7 @@ abstract class SXRConstraint extends SXRPhysicsWorldObject {
 
     protected SXRPhysicsWorldObject mBodyA = null;
     protected SXRPhysicsWorldObject mBodyB = null;
+    protected SXRConstraint.Group<SXRConstraint> mGroup = new SXRConstraint.Group<>();
 
     protected SXRConstraint(SXRContext gvrContext, long nativePointer) {
         super(gvrContext, nativePointer);
@@ -48,26 +52,90 @@ abstract class SXRConstraint extends SXRPhysicsWorldObject {
         super(gvrContext, nativePointer, cleanupHandlers);
     }
 
-    @Override
-    public void onAttach(SXRNode newOwner) {
-        mBodyA = (SXRRigidBody)newOwner.getComponent(SXRRigidBody.getComponentType());
-        if (mBodyA == null) {
-            throw new UnsupportedOperationException("There is no rigid body attached to owner object.");
+    /**
+     * Default implementation for IComponentGroup that
+     * maintains an iterable list of components.
+     *
+     * @param <T> class of component in the group
+     */
+    private final static class Group<T extends SXRConstraint> implements Iterable<T>
+    {
+        List<T> mComponents = new ArrayList<T>();
+
+        public Iterator<T> iterator()
+        {
+            Iterator<T> iter = new Iterator<T>()
+            {
+                int mIndex = 0;
+
+                public boolean hasNext()
+                {
+                    return mIndex < getSize();
+                }
+
+                public T next()
+                {
+                    if (mIndex < getSize())
+                    {
+                        return mComponents.get(mIndex++);
+                    }
+                    return null;
+                }
+            };
+            return iter;
         }
 
+        public void addChild(T child)
+        {
+            mComponents.add(child);
+        }
+
+        public void removeChild(T child)
+        {
+            mComponents.remove(child);
+        }
+
+        public int getSize()
+        {
+            return mComponents.size();
+        }
+
+        public T getChildAt(int index)
+        {
+            return mComponents.get(index);
+        }
+    };
+
+
+    @Override
+    public void onAttach(SXRNode newOwner)
+    {
+        mBodyA = (SXRRigidBody)newOwner.getComponent(SXRRigidBody.getComponentType());
+        if (mBodyA == null)
+        {
+            mBodyA = (SXRPhysicsJoint) newOwner.getComponent(SXRPhysicsJoint.getComponentType());
+            if (mBodyA == null)
+            {
+                throw new UnsupportedOperationException("There is no rigid body attached to owner object.");
+            }
+        }
         super.onAttach(newOwner);
     }
 
     @Override
-    protected void addToWorld(SXRWorld world) {
-        if (world != null) {
+    protected void addToWorld(SXRWorld world)
+    {
+        if (world != null)
+        {
             world.addConstraint(this);
         }
     }
 
     @Override
-    protected void removeFromWorld(SXRWorld world) {
-        if (world != null) {
+    protected void removeFromWorld(SXRWorld world)
+    {
+        if (world != null)
+        {
             world.removeConstraint(this);
         }
     }
@@ -77,7 +145,8 @@ abstract class SXRConstraint extends SXRPhysicsWorldObject {
      *
      * @param impulse the breaking impulse value.
      */
-    public void setBreakingImpulse(float impulse) {
+    public void setBreakingImpulse(float impulse)
+    {
         Native3DConstraint.setBreakingImpulse(getNative(), impulse);
     }
 
@@ -86,16 +155,46 @@ abstract class SXRConstraint extends SXRPhysicsWorldObject {
      *
      * @return the breaking impulse value for the constraint.
      */
-    public float getBreakingImpulse() {
+    public float getBreakingImpulse()
+    {
         return Native3DConstraint.getBreakingImpulse(getNative());
     }
 
-    static public long getComponentType() {
+    static public long getComponentType()
+    {
         return Native3DConstraint.getComponentType();
+    }
+
+    public int getSize()
+    {
+        return mGroup.getSize();
+    }
+
+    public SXRConstraint getChildAt(int index)
+    {
+        return mGroup.getChildAt(index);
+    }
+
+    public Iterator<SXRConstraint> iterator()
+    {
+        return mGroup.iterator();
+    }
+
+    public void addChildComponent(SXRConstraint child)
+    {
+        mGroup.addChild(child);
+        Native3DConstraint.addChildComponent(getNative(), child.getNative());
+    }
+
+    public void removeChildComponent(SXRConstraint child)
+    {
+        mGroup.removeChild(child);
+        Native3DConstraint.removeChildComponent(getNative(), child.getNative());
     }
 }
 
-class Native3DConstraint {
+class Native3DConstraint
+{
     static native long getComponentType();
 
     static native int getConstraintType(long nativeConstraint);
@@ -103,4 +202,8 @@ class Native3DConstraint {
     static native void setBreakingImpulse(long nativeConstraint, float impulse);
 
     static native float getBreakingImpulse(long nativeConstraint);
+
+    static native void addChildComponent(long nativeConstraint, long nativeChild);
+
+    static native void removeChildComponent(long nativeConstraint, long nativeChild);
 }

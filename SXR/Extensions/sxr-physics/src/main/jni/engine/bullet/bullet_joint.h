@@ -17,7 +17,6 @@
 #define BULLET_JOINT_H_
 
 #include "../physics_joint.h"
-#include "bullet_joint.h"
 #include "bullet_object.h"
 
 #include <BulletDynamics/Featherstone/btMultiBody.h>
@@ -43,7 +42,9 @@ class BulletJoint : public PhysicsJoint, BulletObject, btMotionState
 
     virtual ~BulletJoint();
 
-    btMultiBody *getMultiBody() const {return mMultiBody;}
+    btMultiBody* getMultiBody() const {return mMultiBody;}
+
+    btMultibodyLink* getLink() const { return mLink; }
 
     virtual const char* getName() { return mName.c_str(); }
 
@@ -51,7 +52,11 @@ class BulletJoint : public PhysicsJoint, BulletObject, btMotionState
 
     void setMass(float mass) {  mMultiBody->setBaseMass(btScalar(mass)); }
 
-    float getMass() {return mMultiBody->getBaseMass(); }
+    float getMass() { return mMultiBody->getBaseMass(); }
+
+    float getFriction() { return mLink ? mLink->m_jointFriction : 0; }
+
+    void setFriction(float f);
 
     int getBoneID();
 

@@ -113,6 +113,26 @@ public class SXRPhysicsJoint extends SXRPhysicsWorldObject
     }
 
     /**
+     * Set the friction for this joint.
+     * @param friction  friction value
+     * @see #getFriction()
+     */
+    public void setFriction(float friction)
+    {
+        NativePhysicsJoint.setFriction(getNative(), friction);
+    }
+
+    /**
+     * Get the friction for this joint.
+     * @return friction value
+     * @see #setFriction(float)
+     */
+    public float getFriction()
+    {
+        return NativePhysicsJoint.getFriction(getNative());
+    }
+
+    /**
      * Returns the bone ID of this joint.
      */
     public int getBoneID() { return NativePhysicsJoint.getBoneID(getNative()); }
@@ -192,4 +212,8 @@ class NativePhysicsJoint
     static native String getName(long joint);
 
     static native void setName(long joint, String name);
+
+    static native void setFriction(long joint, float friction);
+
+    static native float getFriction(long joint);
 }

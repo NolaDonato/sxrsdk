@@ -57,6 +57,7 @@ BulletJoint::BulletJoint(BulletJoint* parent, int boneID, float mass)
     mMultiBody = static_cast<BulletJoint*>(parent)->getMultiBody();
     mLink = new btMultibodyLink();
     mLink->m_mass = mass;
+    mLink->m_parent = parent->getBoneID();
     mMultiBody->getLink(boneID) = mLink;
     mCollider = new btMultiBodyLinkCollider(mMultiBody, boneID);
     mWorld = nullptr;
@@ -96,7 +97,18 @@ void BulletJoint::setMass(float mass)
     }
 }
 
-float BulletJoint::getMass() {return mMultiBody->getBaseMass(); }
+void BulletJoint::setFriction(float friction)
+{
+    if (mLink != nullptr)
+    {
+        mLink->m_jointFriction = btScalar(friction));
+    }
+}
+
+float BulletJoint::getMass()
+{
+    return mLink ? mLink->m_mass :  mMultiBody->getBaseMass();
+}
 
 void BulletJoint::setName(const char* name)
 {
@@ -136,11 +148,12 @@ void BulletJoint::finalize()
     }
 }
 
-void BulletJoint::getWorldTransform(btTransform &centerOfMassWorldTrans) const {
+void BulletJoint::getWorldTransform(btTransform &centerOfMassWorldTrans) const
+{
     Transform* trans = owner_object()->transform();
-
     centerOfMassWorldTrans = convertTransform2btTransform(trans);
 }
+
 
 void BulletJoint::setWorldTransform(const btTransform &centerOfMassWorldTrans) {
     Node* owner = owner_object();

@@ -26,21 +26,23 @@ public class SXRFixedConstraint extends SXRConstraint {
     /**
      * Constructs new instance of fixed constraint.
      *
-     * @param gvrContext the context of the app
-     * @param rigidBodyB the second rigid body (not the owner) in this constraint
+     * @param ctx   the context of the app
+     * @param bodyB the second rigid body (not the owner) in this constraint
      */
-    public SXRFixedConstraint(SXRContext gvrContext, SXRRigidBody rigidBodyB) {
-        this(gvrContext, Native3DFixedConstraint.ctor(rigidBodyB.getNative()));
+    public SXRFixedConstraint(SXRContext ctx, SXRPhysicsWorldObject bodyB) {
+        this(ctx, Native3DFixedConstraint.ctor(bodyB.getNative()));
 
-        mBodyB = rigidBodyB;
+        mBodyB = bodyB;
     }
 
     /** Used only by {@link SXRPhysicsLoader} */
-    SXRFixedConstraint(SXRContext gvrContext, long nativeConstraint) {
+    SXRFixedConstraint(SXRContext gvrContext, long nativeConstraint)
+    {
         super(gvrContext, nativeConstraint);
     }
 }
 
-class Native3DFixedConstraint {
+class Native3DFixedConstraint
+{
     static native long ctor( long rbB);
 }

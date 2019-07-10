@@ -23,13 +23,14 @@
 #include <BulletDynamics/ConstraintSolver/btConeTwistConstraint.h>
 #include <LinearMath/btScalar.h>
 
-const char tag[] = "BulletConeTwistConstrN";
+const char tag[] = "PHYSICS";
 
 namespace sxr {
     BulletConeTwistConstraint::BulletConeTwistConstraint(PhysicsRigidBody *rigidBodyB,
                                                          PhysicsVec3 pivot,
                                                          PhysicsMat3x3 const &bodyRotation,
-                                                         PhysicsMat3x3 const &coneRotation) {
+                                                         PhysicsMat3x3 const &coneRotation)
+    {
         mConeTwistConstraint = 0;
         mRigidBodyB = reinterpret_cast<BulletRigidBody*>(rigidBodyB);
 

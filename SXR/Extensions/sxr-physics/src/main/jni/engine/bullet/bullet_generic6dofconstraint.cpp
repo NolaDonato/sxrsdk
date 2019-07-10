@@ -18,13 +18,14 @@
 //
 
 #include "bullet_generic6dofconstraint.h"
+#include "bullet_joint.h"
 #include "bullet_rigidbody.h"
 #include "bullet_sxr_utils.h"
 
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <BulletDynamics/ConstraintSolver/btGeneric6DofConstraint.h>
 
-static const char tag[] = "BulletGenericConstrN";
+static const char tag[] = "PHYSICS";
 
 namespace sxr {
 
@@ -152,34 +153,67 @@ namespace sxr {
         }
     }
 
-void BulletGeneric6dofConstraint::updateConstructionInfo() {
-    if (mGeneric6DofConstraint != nullptr) {
+void BulletGeneric6dofConstraint::updateConstructionInfo()
+{
+    if (mGeneric6DofConstraint != nullptr)
+    {
         return;
     }
+    BulletRigidBody* bodyA = ((BulletRigidBody *) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
 
-    btRigidBody *rbA = ((BulletRigidBody*)owner_object()->
-            getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY))->getRigidBody();
+    if (bodyA)
+    {
+        btRigidBody* rbA = bodyA->getRigidBody();
+        btRigidBody* rbB = mRigidBodyB->getRigidBody();
+        btVector3 p(mPosition.x, mPosition.y, mPosition.z);
+        btMatrix3x3 m(mRotationA.vec[0], mRotationA.vec[1], mRotationA.vec[2],
+                      mRotationA.vec[3], mRotationA.vec[4], mRotationA.vec[5],
+                      mRotationA.vec[6], mRotationA.vec[7], mRotationA.vec[8]);
+        btTransform fA(m, p);
 
-    btVector3 p(mPosition.x, mPosition.y, mPosition.z);
-    btMatrix3x3 m(mRotationA.vec[0], mRotationA.vec[1], mRotationA.vec[2], mRotationA.vec[3],
-                  mRotationA.vec[4], mRotationA.vec[5], mRotationA.vec[6], mRotationA.vec[7],
-                  mRotationA.vec[8]);
-    btTransform fA(m, p);
+        p += rbA->getWorldTransform().getOrigin();
+        p -= rbB->getWorldTransform().getOrigin();
+        m.setValue(mRotationB.vec[0], mRotationB.vec[1], mRotationB.vec[2],
+                   mRotationB.vec[3], mRotationB.vec[4], mRotationB.vec[5],
+                   mRotationB.vec[6], mRotationB.vec[7], mRotationB.vec[8]);
+        btTransform fB(m, p);
 
-    p = rbA->getWorldTransform().getOrigin() + p;
-    p -= mRigidBodyB->getRigidBody()->getWorldTransform().getOrigin();
-    m.setValue(mRotationB.vec[0], mRotationB.vec[1], mRotationB.vec[2], mRotationB.vec[3],
-               mRotationB.vec[4], mRotationB.vec[5], mRotationB.vec[6], mRotationB.vec[7],
-               mRotationB.vec[8]);
-    btTransform fB(m, p);
+        mGeneric6DofConstraint = new btGeneric6DofConstraint(*rbA, *rbB, fA, fB, false);
+        mGeneric6DofConstraint->setLinearLowerLimit(Common2Bullet(mLinearLowerLimits));
+        mGeneric6DofConstraint->setLinearUpperLimit(Common2Bullet(mLinearLowerLimits));
+        mGeneric6DofConstraint->setAngularLowerLimit(Common2Bullet(mAngularLowerLimits));
+        mGeneric6DofConstraint->setAngularUpperLimit(Common2Bullet(mAngularUpperLimits));
+        mGeneric6DofConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
+    }
+    else
+    {
+        BulletJoint* jointA = (BulletJoint*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT);
+        if (jointA)
+        {
+            btMultibodyLink* link = jointA->getLink();
+            BulletJoint* jointB = (BulletJoint*) mRigidBodyB;
+            btVector3 axis0(mRotationB.vec[0], mRotationB.vec[1], mRotationB.vec[2]);
+            btVector3 axis1(mRotationB.vec[3], mRotationB.vec[4], mRotationB.vec[5]);
+            btVector3 axis2(mRotationB.vec[6], mRotationB.vec[7], mRotationB.vec[8]);
+            btTransform tA;
+            btTransform tB;
 
-    mGeneric6DofConstraint =
-            new btGeneric6DofConstraint(*rbA, *mRigidBodyB->getRigidBody(), fA, fB, false);
+            jointA->getWorldTransform(tA);
+            jointB->getWorldTransform(tB);
+            btVector3 posA(tA.getOrigin());
+            btVector3 posB(tB.getOrigin());
 
-    mGeneric6DofConstraint->setLinearLowerLimit(Common2Bullet(mLinearLowerLimits));
-    mGeneric6DofConstraint->setLinearUpperLimit(Common2Bullet(mLinearUpperLimits));
-    mGeneric6DofConstraint->setAngularLowerLimit(Common2Bullet(mAngularLowerLimits));
-    mGeneric6DofConstraint->setAngularUpperLimit(Common2Bullet(mAngularUpperLimits));
-    mGeneric6DofConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
+            link->m_jointType = btMultibodyLink::eSpherical;
+            link->m_dVector = posB.normalize();
+            link->m_eVector = posA.normalize();
+            link->setAxisTop(0, axis0);
+            link->setAxisTop(1, axis1);
+            link->setAxisTop(2, axis2);
+            link->setAxisBottom(0, link->m_dVector.cross(axis0));
+            link->setAxisBottom(1, link->m_dVector.cross(axis1));
+            link->setAxisBottom(2, link->m_dVector.cross(axis2));
+            link->m_dofCount = 3;
+        }
+    }
 }
 }

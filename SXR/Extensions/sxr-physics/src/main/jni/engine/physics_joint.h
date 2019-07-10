@@ -38,8 +38,10 @@ class PhysicsJoint : public Component {
 	static long long getComponentType() {return COMPONENT_TYPE_PHYSICS_JOINT; }
 
 	virtual float getMass() = 0;
+	virtual float getFriction() = 0;
 	virtual int getBoneID() = 0;
 	virtual void setMass(float mass) = 0;
+	virtual void setFriction(float friction) = 0;
 	virtual const char* getName() = 0;
 	virtual void setName(const char*) = 0;
 	virtual void updateConstructionInfo() = 0;

@@ -152,16 +152,50 @@ void BulletSliderConstraint::updateConstructionInfo()
         return;
     }
     BulletRigidBody* rigidBodyA = (BulletRigidBody*) this->owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY);
-    btRigidBody* rbA = rigidBodyA->getRigidBody();
-    btRigidBody* rbB = mRigidBodyB->getRigidBody();
     btTransform frameInA = btTransform::getIdentity();
     btTransform frameInB = btTransform::getIdentity();
-    mSliderConstraint = new btSliderConstraint(*rbA, *rbB, frameInA, frameInB, true);
-    mSliderConstraint->setLowerAngLimit(mLowerAngularLimit);
-    mSliderConstraint->setUpperAngLimit(mUpperAngularLimit);
-    mSliderConstraint->setLowerLinLimit(mLowerLinearLimit);
-    mSliderConstraint->setUpperLinLimit(mUpperLinearLimit);
-    mSliderConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
+
+    if (rigidBodyA)
+    {
+        btRigidBody* rbA = rigidBodyA->getRigidBody();
+        btRigidBody* rbB = mRigidBodyB->getRigidBody();
+        mSliderConstraint = new btSliderConstraint(*rbA, *rbB, frameInA, frameInB, true);
+        mSliderConstraint->setLowerAngLimit(mLowerAngularLimit);
+        mSliderConstraint->setUpperAngLimit(mUpperAngularLimit);
+        mSliderConstraint->setLowerLinLimit(mLowerLinearLimit);
+        mSliderConstraint->setUpperLinLimit(mUpperLinearLimit);
+        mSliderConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
+    }
+    else
+    {
+        BulletJoint* jointA = (BulletJoint*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT);
+        if (jointA)
+        {
+            BulletJoint* jointB = (BulletJoint*) mRigidBodyB;
+            Transform* transA = owner_object()->transform();
+            Transform* transB = jointB->owner_object()->transform();
+            btMultibodyLink* link = jointA->getLink();
+            glm::vec3 jointAxis = findJointAxis(transA, transB);
+            btTransform tA;
+            btTransform tB;
+
+            jointA->getWorldTransform(tA);
+            jointB->getWorldTransform(tB);
+            btVector3 posA(tA.getOrigin());
+            btVector3 posB(tB.getOrigin());
+
+            link->m_jointType = btMultibodyLink::ePrismatic;
+            link->m_dVector = posB.normalize();
+            link->m_eVector = posA.normalize();
+            link->setAxisTop(0, 0, 0, 0);
+            link->setAxisBottom(0, jointAxis.x, jointAxis.y, jointAxis.z);
+            link->m_jointLowerLimit = mLowerLinearLimit;
+            link->m_jointUpperLimit = mUpperLinearLimit;
+            link->m_dofCount = 1;
+        }
+    }
+
+
 }
 
 }
