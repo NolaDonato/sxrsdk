@@ -13,11 +13,7 @@
  * limitations under the License.
  */
 
-#include "physics_world.h"
-#include "physics_joint.h"
 #include "bullet/bullet_joint.h"
-#include "bullet/bullet_world.h"
-#include "jni_utils.h"
 
 namespace sxr {
 extern "C"
@@ -29,7 +25,7 @@ extern "C"
     Java_com_samsungxr_physics_NativePhysicsJoint_ctorLink(JNIEnv* env, jclass obj, jobject jparent, jint boneID, jfloat mass);
 
     JNIEXPORT jlong JNICALL
-    Java_com_samsungxr_physics_NativePhysicsJoint_getComponentType(JNIEnv* env, jobject obj);
+    Java_com_samsungxr_physics_NativePhysicsJoint_getComponentType(JNIEnv* env, jclass obj);
 
     JNIEXPORT jint JNICALL
     Java_com_samsungxr_physics_NativePhysicsJoint_getBoneID(JNIEnv* env, jclass obj, jlong jjoint);
@@ -50,24 +46,24 @@ extern "C"
     Java_com_samsungxr_physics_NativePhysicsJoint_getName(JNIEnv* env, jclass obj, jlong jjoint);
 
     JNIEXPORT void JNICALL
-    Java_com_samsungxr_physics_NativePhysicsJoint_setName(JNIEnv* env, jclass obj, jlong jjoint, jobject jname);
+    Java_com_samsungxr_physics_NativePhysicsJoint_setName(JNIEnv* env, jclass obj, jlong jjoint, jstring jname);
 }
 
     JNIEXPORT jlong JNICALL
     Java_com_samsungxr_physics_NativePhysicsJoint_ctorRoot(JNIEnv* env, jclass obj, jfloat mass, jint numBones)
     {
-        return reinterpret_cast<jlong>(new PhysicsJoint(mass, numBones));
+        return reinterpret_cast<jlong>(new BulletJoint(mass, numBones));
     }
 
     JNIEXPORT jlong JNICALL
-    Java_com_samsungxr_physics_NativePhysicsJoint_ctorLink(JNIEnv* env, jclass obj, jobject jparent, jfloat mass, jint boneID)
+    Java_com_samsungxr_physics_NativePhysicsJoint_ctorLink(JNIEnv* env, jclass obj, jobject jparent, jint boneID, jfloat mass)
     {
-        PhysicsJoint* parent = reinterpret_cast<PhysicsJoint*>(jparent);
-        return reinterpret_cast<jlong>(new PhysicsJoint(parent, boneID, mass));
+        BulletJoint* parent = reinterpret_cast<BulletJoint*>(jparent);
+        return reinterpret_cast<jlong>(new BulletJoint(parent, boneID, mass));
     }
 
     JNIEXPORT jlong JNICALL
-    Java_com_samsungxr_physics_NativePhysicsJoint_getComponentType(JNIEnv * env, jobject obj)
+    Java_com_samsungxr_physics_NativePhysicsJoint_getComponentType(JNIEnv* env, jclass obj)
     {
         return PhysicsJoint::getComponentType();
     }
@@ -97,14 +93,7 @@ extern "C"
     Java_com_samsungxr_physics_NativePhysicsJoint_setFriction(JNIEnv* env, jclass obj, jlong jjoint, jfloat friction)
     {
         PhysicsJoint* mb = reinterpret_cast<PhysicsJoint*>(jjoint);
-        mb->setFriction(friction())
-    }
-
-    JNIEXPORT jint JNICALL
-    Java_com_samsungxr_physics_NativePhysicsJoint_getBoneID(JNIEnv* env, jclass obj, jlong jjoint)
-    {
-        PhysicsJoint* mb = reinterpret_cast<PhysicsJoint*>(jjoint);
-        return mb->getBoneID();
+        mb->setFriction(friction);
     }
 
     JNIEXPORT jint JNICALL
@@ -123,7 +112,7 @@ extern "C"
     }
 
     JNIEXPORT void JNICALL
-    Java_com_samsungxr_physics_NativePhysicsJoint_setName(JNIEnv* env, jclass obj, jlong jjoint, jobject jname)
+    Java_com_samsungxr_physics_NativePhysicsJoint_setName(JNIEnv* env, jclass obj, jlong jjoint, jstring jname)
     {
         PhysicsJoint* mb = reinterpret_cast<PhysicsJoint*>(jjoint);
         const char* name = env->GetStringUTFChars(jname, 0);

@@ -199,7 +199,7 @@ class PhysicsAVTLoader
         {
             return null;
         }
-        SXRPhysicsJoint joint = new SXRPhysicsJoint(parentJoint, mass, boneID);
+        SXRPhysicsJoint joint = new SXRPhysicsJoint(parentJoint, boneID, mass);
 ;
         parseBone(link, joint);
         mTargetBones.put(name, link);

@@ -12,10 +12,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#include <math.h>
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_inverse.hpp"
+#include <glm/gtx/quaternion.hpp>
+#include <contrib/glm/gtc/type_ptr.hpp>
+
 #include "bullet_world.h"
 #include "bullet_rigidbody.h"
 #include "bullet_sxr_utils.h"
-#include "objects/node.h"
 #include "objects/components/sphere_collider.h"
 #include "util/sxr_log.h"
 
@@ -24,11 +29,7 @@
 #include <BulletCollision/CollisionShapes/btEmptyShape.h>
 #include <LinearMath/btDefaultMotionState.h>
 #include <LinearMath/btTransform.h>
-#include <math.h>
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_inverse.hpp"
-#include <glm/gtx/quaternion.hpp>
-#include <contrib/glm/gtc/type_ptr.hpp>
+
 
 namespace sxr {
 

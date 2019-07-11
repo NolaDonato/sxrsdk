@@ -27,7 +27,8 @@
 namespace sxr {
 class PhysicsWorld;
 
-class PhysicsRigidBody : public Component {
+class PhysicsRigidBody : public Component
+		{
  public:
 	enum SimulationType
 	{
@@ -40,9 +41,7 @@ class PhysicsRigidBody : public Component {
 
 	virtual ~PhysicsRigidBody() {}
 
-	static long long getComponentType() {
-	    return COMPONENT_TYPE_PHYSICS_RIGID_BODY;
-	}
+	static long long getComponentType() { return COMPONENT_TYPE_PHYSICS_RIGID_BODY; }
 
 	virtual void setSimulationType(SimulationType t) = 0;
 	virtual SimulationType getSimulationType() const = 0;

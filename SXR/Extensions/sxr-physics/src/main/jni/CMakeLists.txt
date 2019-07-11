@@ -5,6 +5,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fexceptions")
 add_library(sxr-physics SHARED
     engine/bullet/bullet_sxr_utils.cpp
     engine/bullet/bullet_rigidbody.cpp
+    engine/bullet/bullet_joint.cpp
     engine/bullet/bullet_world.cpp
     engine/bullet/bullet_fileloader.cpp
     engine/bullet/bullet_fixedconstraint.cpp
@@ -16,6 +17,7 @@ add_library(sxr-physics SHARED
     engine/physics_world_jni.cpp
     engine/physics_loader_jni.cpp
     engine/physics_rigidbody_jni.cpp
+    engine/physics_joint_jni.cpp
     engine/physics_constraint_jni.cpp
     engine/physics_fixedconstraint_jni.cpp
     engine/physics_point2pointconstraint_jni.cpp

@@ -30,7 +30,8 @@ class Node;
 
 class BulletRigidBody : public PhysicsRigidBody,
                                BulletObject,
-                               btMotionState {
+                               btMotionState
+ {
  public:
     BulletRigidBody();
 

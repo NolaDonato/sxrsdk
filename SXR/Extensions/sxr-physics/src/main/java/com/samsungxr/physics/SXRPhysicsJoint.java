@@ -47,7 +47,7 @@ public class SXRPhysicsJoint extends SXRPhysicsWorldObject
      * @param boneID   0 based bone ID indicating which bone of the skeleton
      *                 this joint belongs to
      */
-    public SXRPhysicsJoint(SXRPhysicsJoint parent, float mass, int boneID)
+    public SXRPhysicsJoint(SXRPhysicsJoint parent, int boneID, float mass)
     {
         super(parent.getSXRContext(), NativePhysicsJoint.ctorLink(parent.getNative(), boneID, mass));
     }
@@ -188,7 +188,7 @@ public class SXRPhysicsJoint extends SXRPhysicsWorldObject
                             parentJoint = pj;
                         }
                     }
-                    joint = new SXRPhysicsJoint(parentJoint, defaultMass, i);
+                    joint = new SXRPhysicsJoint(parentJoint, i, defaultMass);
                     joint.setName(skel.getBoneName(i));
                     bone.attachComponent(joint);
                 }
@@ -201,7 +201,7 @@ class NativePhysicsJoint
 {
     static native long ctorRoot(float mass, int numBones);
 
-    static native long ctorLink(long joint, int boneid, float mass);
+    static native long ctorLink(long parent_joint, int boneid, float mass);
 
     static native long getComponentType();
 

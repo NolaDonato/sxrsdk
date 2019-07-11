@@ -42,7 +42,7 @@ class BulletJoint : public PhysicsJoint, BulletObject, btMotionState
 
     virtual ~BulletJoint();
 
-    btMultiBody* getMultiBody() const {return mMultiBody;}
+    btMultiBody* getMultiBody() const { return mMultiBody; }
 
     btMultibodyLink* getLink() const { return mLink; }
 
@@ -50,15 +50,15 @@ class BulletJoint : public PhysicsJoint, BulletObject, btMotionState
 
     virtual void setName(const char* name);
 
-    void setMass(float mass) {  mMultiBody->setBaseMass(btScalar(mass)); }
+    void setMass(float mass);
 
-    float getMass() { return mMultiBody->getBaseMass(); }
+    float getMass();
 
     float getFriction() { return mLink ? mLink->m_jointFriction : 0; }
 
     void setFriction(float f);
 
-    int getBoneID();
+    int getBoneID() { return mBoneID; }
 
     void getWorldTransform(btTransform &worldTrans) const;
 
