@@ -24,6 +24,9 @@
 
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <BulletDynamics/ConstraintSolver/btGeneric6DofConstraint.h>
+#include <glm/glm.hpp>
+#include <glm/vec3.hpp>
+#include "glm/gtc/type_ptr.hpp"
 
 static const char tag[] = "PHYSICS";
 
@@ -37,9 +40,11 @@ namespace sxr {
         mRigidBodyA = reinterpret_cast<BulletRigidBody*>(rigidBodyA);
 
         mBreakingImpulse = SIMD_INFINITY;
-        mPosition.set(joint);
-        mRotationA.set(rotationA);
-        mRotationB.set(rotationB);
+        mPosition.x = joint[0];
+        mPosition.y = joint[1];
+        mPosition.z = joint[2];
+        mRotationA = glm::make_mat3(rotationA);
+        mRotationB = glm::make_mat3(rotationB);
     }
 
     BulletGeneric6dofConstraint::BulletGeneric6dofConstraint(btGeneric6DofConstraint *constraint)
@@ -63,50 +68,42 @@ namespace sxr {
         {
             mGeneric6DofConstraint->setLinearLowerLimit(btVector3(limitX, limitY, limitZ));
         }
-        else
-        {
-            mLinearLowerLimits.set(limitX, limitY, limitZ);
-        }
+        mLinearLowerLimits = glm::vec3(limitX, limitY, limitZ);
     }
 
-    PhysicsVec3 BulletGeneric6dofConstraint::getLinearLowerLimits() const
+    const glm::vec3& BulletGeneric6dofConstraint::getLinearLowerLimits() const
     {
         if (mGeneric6DofConstraint)
         {
             btVector3 t;
             mGeneric6DofConstraint->getLinearLowerLimit(t);
-            return PhysicsVec3(t.x(), t.y(), t.z());
+            mLinearLowerLimits.x = t.x();
+            mLinearLowerLimits.y = t.y();
+            mLinearLowerLimits.z = t.z();
         }
-        else
-        {
-            return mLinearLowerLimits;
-        }
+        return mLinearLowerLimits;
     }
 
     void BulletGeneric6dofConstraint::setLinearUpperLimits(float limitX, float limitY, float limitZ)
     {
-        if (0 != mGeneric6DofConstraint)
+        if (mGeneric6DofConstraint)
         {
             mGeneric6DofConstraint->setLinearUpperLimit(btVector3(limitX, limitY, limitZ));
         }
-        else
-        {
-            mLinearUpperLimits.set(limitX, limitY, limitZ);
-        }
+        mLinearUpperLimits = glm::vec3(limitX, limitY, limitZ);
     }
 
-    PhysicsVec3 BulletGeneric6dofConstraint::getLinearUpperLimits() const
+    const glm::vec3& BulletGeneric6dofConstraint::getLinearUpperLimits() const
     {
         if (mGeneric6DofConstraint)
         {
             btVector3 t;
             mGeneric6DofConstraint->getLinearUpperLimit(t);
-            return PhysicsVec3(t.x(), t.y(), t.z());
+            mLinearUpperLimits.x = t.x();
+            mLinearUpperLimits.y = t.y();
+            mLinearUpperLimits.z = t.z();
         }
-        else
-        {
-            return mLinearUpperLimits;
-        }
+        return mLinearUpperLimits;
     }
 
     void BulletGeneric6dofConstraint::setAngularLowerLimits(float limitX, float limitY, float limitZ)
@@ -115,24 +112,20 @@ namespace sxr {
         {
             mGeneric6DofConstraint->setAngularLowerLimit(btVector3(limitX, limitY, limitZ));
         }
-        else
-        {
-            mAngularLowerLimits.set(limitX, limitY, limitZ);
-        }
+        mAngularLowerLimits = glm::vec3(limitX, limitY, limitZ);
     }
 
-    PhysicsVec3 BulletGeneric6dofConstraint::getAngularLowerLimits() const
+    const glm::vec3&  BulletGeneric6dofConstraint::getAngularLowerLimits() const
     {
         if (mGeneric6DofConstraint)
         {
             btVector3 t;
             mGeneric6DofConstraint->getAngularLowerLimit(t);
-            return PhysicsVec3(t.x(), t.y(), t.z());
+            mAngularLowerLimits.x = t.x();
+            mAngularLowerLimits.y = t.y();
+            mAngularLowerLimits.z = t.z();
         }
-        else
-        {
-            return mAngularLowerLimits;
-        }
+        return mAngularLowerLimits;
     }
 
     void BulletGeneric6dofConstraint::setAngularUpperLimits(float limitX, float limitY, float limitZ)
@@ -141,24 +134,20 @@ namespace sxr {
         {
             mGeneric6DofConstraint->setAngularUpperLimit(btVector3(limitX, limitY, limitZ));
         }
-        else
-        {
-            mAngularUpperLimits.set(limitX, limitY, limitZ);
-        }
+        mAngularUpperLimits = glm::vec3(limitX, limitY, limitZ);
     }
 
-    PhysicsVec3 BulletGeneric6dofConstraint::getAngularUpperLimits() const
+    const glm::vec3& BulletGeneric6dofConstraint::getAngularUpperLimits() const
     {
         if (mGeneric6DofConstraint)
         {
             btVector3 t;
             mGeneric6DofConstraint->getAngularUpperLimit(t);
-            return PhysicsVec3(t.x(), t.y(), t.z());
+            mAngularUpperLimits.x = t.x();
+            mAngularUpperLimits.y = t.y();
+            mAngularUpperLimits.z = t.z();
         }
-        else
-        {
-            return mAngularUpperLimits;
-        }
+        return mAngularUpperLimits;
     }
 
     void BulletGeneric6dofConstraint::setBreakingImpulse(float impulse)
@@ -198,16 +187,16 @@ void BulletGeneric6dofConstraint::updateConstructionInfo()
         btRigidBody* rbB = bodyB->getRigidBody();
         btRigidBody* rbA = mRigidBodyA->getRigidBody();
         btVector3    p(mPosition.x, mPosition.y, mPosition.z);
-        btMatrix3x3  m(mRotationA.vec[0], mRotationA.vec[1], mRotationA.vec[2],
-                       mRotationA.vec[3], mRotationA.vec[4], mRotationA.vec[5],
-                       mRotationA.vec[6], mRotationA.vec[7], mRotationA.vec[8]);
+        btMatrix3x3  m(mRotationA[0][0], mRotationA[0][1], mRotationA[0][2],
+                       mRotationA[1][0], mRotationA[1][1], mRotationA[1][2],
+                       mRotationA[2][0], mRotationA[2][1], mRotationA[2][2]);
         btTransform  fA(m, p);
 
         p = rbA->getWorldTransform().getOrigin() + p;
         p -= rbB->getWorldTransform().getOrigin();
-        m.setValue(mRotationB.vec[0], mRotationB.vec[1], mRotationB.vec[2],
-                   mRotationB.vec[3], mRotationB.vec[4], mRotationB.vec[5],
-                   mRotationB.vec[6], mRotationB.vec[7], mRotationB.vec[8]);
+        m.setValue(mRotationB[0][0], mRotationB[0][1], mRotationB[0][2],
+                   mRotationB[1][0], mRotationB[1][1], mRotationB[1][2],
+                   mRotationB[2][0], mRotationB[2][1], mRotationB[2][2]);
         btTransform fB(m, p);
 
         mGeneric6DofConstraint = new btGeneric6DofConstraint(*rbA, *rbB, fA, fB, false);
@@ -224,9 +213,9 @@ void BulletGeneric6dofConstraint::updateConstructionInfo()
         {
             btMultibodyLink* link = jointB->getLink();
             BulletJoint* jointA = (BulletJoint*) mRigidBodyA;
-            btVector3 axis0(mRotationB.vec[0], mRotationB.vec[1], mRotationB.vec[2]);
-            btVector3 axis1(mRotationB.vec[3], mRotationB.vec[4], mRotationB.vec[5]);
-            btVector3 axis2(mRotationB.vec[6], mRotationB.vec[7], mRotationB.vec[8]);
+            btVector3 axis0(mRotationB[0][0], mRotationB[0][1], mRotationB[0][2]);
+            btVector3 axis1(mRotationB[1][0], mRotationB[1][1], mRotationB[1][2]);
+            btVector3 axis2(mRotationB[2][0], mRotationB[2][1], mRotationB[2][2]);
             btTransform tA;
             btTransform tB;
 

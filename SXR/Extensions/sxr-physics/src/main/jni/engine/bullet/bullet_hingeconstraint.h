@@ -22,6 +22,7 @@
 
 #include "../physics_hingeconstraint.h"
 #include "bullet_object.h"
+#include <glm/vec3.hpp>
 
 class btHingeConstraint;
 
@@ -63,10 +64,10 @@ namespace sxr {
         float mTempLower;
         float mTempUpper;
 
-        PhysicsVec3 mPivotInA;
-        PhysicsVec3 mPivotInB;
-        PhysicsVec3 mAxisInA;
-        PhysicsVec3 mAxisInB;
+        glm::vec3 mPivotInA;
+        glm::vec3 mPivotInB;
+        glm::vec3 mAxisInA;
+        glm::vec3 mAxisInB;
     };
 }
 #endif //EXTENSIONS_BULLET_HINGECONSTRAINT_H

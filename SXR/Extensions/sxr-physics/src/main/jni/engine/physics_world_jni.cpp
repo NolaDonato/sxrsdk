@@ -24,8 +24,11 @@
 #include "bullet/bullet_world.h"
 #include "physics_world.h"
 #include "physics_joint.h"
+#include "glm/glm.hpp"
+#include "glm/gtc/type_ptr.hpp"
+#include <glm/vec3.hpp>
 
-static char tag[] = "PhysWorldJNI";
+static char tag[] = "PHYSICS";
 
 namespace sxr {
 extern "C" {
@@ -240,8 +243,8 @@ Java_com_samsungxr_physics_NativePhysics3DWorld_getGravity(JNIEnv* env, jobject 
         jlong jworld, jfloatArray jgravity)
 {
     PhysicsWorld* world = reinterpret_cast <PhysicsWorld*> (jworld);
-    PhysicsVec3 gravity = world->getGravity();
-    env->SetFloatArrayRegion(jgravity, 0, 3, gravity.vec);
+    const glm::vec3& gravity = world->getGravity();
+    env->SetFloatArrayRegion(jgravity, 0, 3, glm::value_ptr(gravity));
 }
 
 JNIEXPORT jlongArray JNICALL

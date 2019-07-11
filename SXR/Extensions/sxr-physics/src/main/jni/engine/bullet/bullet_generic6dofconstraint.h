@@ -20,9 +20,10 @@
 #ifndef EXTENSIONS_BULLET_GENERIC6DOFCONSTRAINT_H
 #define EXTENSIONS_BULLET_GENERIC6DOFCONSTRAINT_H
 
-#include "../physics_common.h"
 #include "../physics_genericconstraint.h"
 #include "bullet_object.h"
+#include <glm/vec3.hpp>
+#include <glm/mat3x3.hpp>
 
 class btGeneric6DofConstraint;
 namespace sxr {
@@ -41,19 +42,19 @@ namespace sxr {
 
         void setLinearLowerLimits(float limitX, float limitY, float limitZ);
 
-        PhysicsVec3 getLinearLowerLimits() const;
+        const glm::vec3& getLinearLowerLimits() const;
 
         void setLinearUpperLimits(float limitX, float limitY, float limitZ);
 
-        PhysicsVec3 getLinearUpperLimits() const;
+        const glm::vec3& getLinearUpperLimits() const;
 
         void setAngularLowerLimits(float limitX, float limitY, float limitZ);
 
-        PhysicsVec3 getAngularLowerLimits() const;
+        const glm::vec3& getAngularLowerLimits() const;
 
         void setAngularUpperLimits(float limitX, float limitY, float limitZ);
 
-        PhysicsVec3 getAngularUpperLimits() const;
+        const glm::vec3& getAngularUpperLimits() const;
 
         void *getUnderlying() { return mGeneric6DofConstraint;}
 
@@ -69,14 +70,13 @@ namespace sxr {
         BulletRigidBody *mRigidBodyA;
 
         float mBreakingImpulse;
-        PhysicsVec3 mLinearLowerLimits;
-        PhysicsVec3 mLinearUpperLimits;
-        PhysicsVec3 mAngularLowerLimits;
-        PhysicsVec3 mAngularUpperLimits;
-
-        PhysicsVec3 mPosition;
-        PhysicsMat3x3 mRotationA;
-        PhysicsMat3x3 mRotationB;
+        mutable glm::vec3 mLinearLowerLimits;
+        mutable glm::vec3 mLinearUpperLimits;
+        mutable glm::vec3 mAngularLowerLimits;
+        mutable glm::vec3 mAngularUpperLimits;
+        glm::vec3 mPosition;
+        glm::mat3 mRotationA;
+        glm::mat3 mRotationB;
     };
 
 }

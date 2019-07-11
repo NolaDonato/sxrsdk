@@ -20,7 +20,6 @@
 #ifndef BULLET_WORLD_H_
 #define BULLET_WORLD_H_
 
-#include "../physics_common.h"
 #include "../physics_world.h"
 
 #include <utility>
@@ -79,7 +78,7 @@ class BulletWorld : public PhysicsWorld {
 
     void markUpdated(PhysicsJoint* body);
 
-    PhysicsVec3 getGravity() const;
+    const glm::vec3& getGravity() const;
 
     btDynamicsWorld* getPhysicsWorld() const;
 
@@ -99,6 +98,7 @@ class BulletWorld : public PhysicsWorld {
     Node *mPivotObject;
     int mActivationState;
     bool mIsMultiBody;
+    mutable glm::vec3 mGravity;
     std::vector<Component*> mBodiesChanged;
 };
 

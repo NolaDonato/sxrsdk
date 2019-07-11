@@ -20,7 +20,6 @@
 #ifndef EXTENSIONS_PHYSICS_HINGECONSTRAINT_H
 #define EXTENSIONS_PHYSICS_HINGECONSTRAINT_H
 
-#include "physics_common.h"
 #include "physics_constraint.h"
 
 namespace sxr {

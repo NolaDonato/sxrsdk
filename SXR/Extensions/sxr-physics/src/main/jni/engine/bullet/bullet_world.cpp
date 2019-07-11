@@ -279,16 +279,14 @@ void BulletWorld::setGravity(glm::vec3 gravity) {
     mPhysicsWorld->setGravity(btVector3(gravity.x, gravity.y, gravity.z));
 }
 
-PhysicsVec3 BulletWorld::getGravity() const
+const glm::vec3& BulletWorld::getGravity() const
 {
     btVector3 g = mPhysicsWorld->getGravity();
 
-    PhysicsVec3 gravity;
-    gravity.x = g.getX();
-    gravity.y = g.getY();
-    gravity.z = g.getZ();
-
-    return gravity;
+    mGravity.x = g.getX();
+    mGravity.y = g.getY();
+    mGravity.z = g.getZ();
+    return mGravity;
 }
 
 }

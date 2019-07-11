@@ -16,6 +16,9 @@
 #include "physics_point2pointconstraint.h"
 #include "physics_rigidbody.h"
 #include "bullet/bullet_point2pointconstraint.h"
+#include "glm/glm.hpp"
+#include "glm/gtc/type_ptr.hpp"
+#include <glm/vec3.hpp>
 
 namespace sxr {
     extern "C" {
@@ -70,17 +73,16 @@ namespace sxr {
                                                                        jlong jp2p_constraint,
                                                                        jfloat x, jfloat y,
                                                                        jfloat z) {
-        PhysicsVec3 v(x, y, z);
+        glm::vec3 v(x, y, z);
         reinterpret_cast<PhysicsPoint2pointConstraint*>(jp2p_constraint)->setPivotInA(v);
     }
 
     JNIEXPORT jfloatArray JNICALL
     Java_com_samsungxr_physics_Native3DPoint2PointConstraint_getPivotInA(JNIEnv* env, jclass obj,
                                                                        jlong jp2p_constraint) {
-        PhysicsVec3 v =
-                reinterpret_cast<PhysicsPoint2pointConstraint*>(jp2p_constraint)->getPivotInA();
+        glm::vec3 v =reinterpret_cast<PhysicsPoint2pointConstraint*>(jp2p_constraint)->getPivotInA();
         jfloatArray result = env->NewFloatArray(3);
-        env->SetFloatArrayRegion(result, 0, 3, v.vec);
+        env->SetFloatArrayRegion(result, 0, 3, glm::value_ptr(v));
 
         return result;
     }
@@ -90,17 +92,16 @@ namespace sxr {
                                                                        jlong jp2p_constraint,
                                                                        jfloat x, jfloat y,
                                                                        jfloat z) {
-        PhysicsVec3 v(x, y, z);
+        glm::vec3 v(x, y, z);
         reinterpret_cast<PhysicsPoint2pointConstraint*>(jp2p_constraint)->setPivotInB(v);
     }
 
     JNIEXPORT jfloatArray JNICALL
     Java_com_samsungxr_physics_Native3DPoint2PointConstraint_getPivotInB(JNIEnv* env, jclass obj,
                                                                        jlong jp2p_constraint) {
-        PhysicsVec3 v =
-                reinterpret_cast<PhysicsPoint2pointConstraint*>(jp2p_constraint)->getPivotInB();
+        glm::vec3 v = reinterpret_cast<PhysicsPoint2pointConstraint*>(jp2p_constraint)->getPivotInB();
         jfloatArray result = env->NewFloatArray(3);
-        env->SetFloatArrayRegion(result, 0, 3, v.vec);
+        env->SetFloatArrayRegion(result, 0, 3, glm::value_ptr(v));
 
         return result;
     }

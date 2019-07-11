@@ -22,14 +22,16 @@
 
 #include <BulletDynamics/ConstraintSolver/btConeTwistConstraint.h>
 #include <LinearMath/btScalar.h>
+#include <glm/glm.hpp>
+#include <glm/mat3x3.hpp>
 
 const char tag[] = "PHYSICS";
 
 namespace sxr {
     BulletConeTwistConstraint::BulletConeTwistConstraint(PhysicsRigidBody* bodyA,
-                                                         PhysicsVec3 pivot,
-                                                         PhysicsMat3x3 const &bodyRotation,
-                                                         PhysicsMat3x3 const &coneRotation)
+                                                         const glm::vec3& pivot,
+                                                         const glm::mat3& bodyRotation,
+                                                         const glm::mat3& coneRotation)
     {
         mConeTwistConstraint = 0;
         mRigidBodyA = reinterpret_cast<BulletRigidBody*>(bodyA);
@@ -142,14 +144,14 @@ void BulletConeTwistConstraint::updateConstructionInfo()
     // Original pivot is relative to body A (the one that swings)
     btVector3 p(mPivot.x, mPivot.y, mPivot.z);
 
-    btMatrix3x3 m(mBodyRotation.vec[0], mBodyRotation.vec[1], mBodyRotation.vec[2],
-                  mBodyRotation.vec[3], mBodyRotation.vec[4], mBodyRotation.vec[5],
-                  mBodyRotation.vec[6], mBodyRotation.vec[7], mBodyRotation.vec[8]);
+    btMatrix3x3 m((btScalar) mBodyRotation[0][0], (btScalar) mBodyRotation[0][1], (btScalar) mBodyRotation[0][2],
+                  (btScalar) mBodyRotation[1][0], (btScalar) mBodyRotation[1][1], (btScalar) mBodyRotation[1][2],
+                  (btScalar) mBodyRotation[2][0], (btScalar) mBodyRotation[2][1], (btScalar) mBodyRotation[2][2]);
     btTransform fA(m, p);
 
-    m.setValue(mConeRotation.vec[0], mConeRotation.vec[1], mConeRotation.vec[2],
-               mConeRotation.vec[3], mConeRotation.vec[4], mConeRotation.vec[5],
-               mConeRotation.vec[6], mConeRotation.vec[7], mConeRotation.vec[8]);
+    m.setValue((btScalar) mConeRotation[0][0], (btScalar) mConeRotation[0][1], (btScalar) mConeRotation[0][2],
+               (btScalar) mConeRotation[1][0], (btScalar) mConeRotation[1][1], (btScalar) mConeRotation[1][2],
+               (btScalar) mConeRotation[2][0], (btScalar) mConeRotation[2][1], (btScalar) mConeRotation[2][2]);
 
     // Pivot for body B must be calculated
     p = rbA->getWorldTransform().getOrigin() + p;

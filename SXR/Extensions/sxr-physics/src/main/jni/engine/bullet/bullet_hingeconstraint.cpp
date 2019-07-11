@@ -32,10 +32,18 @@ namespace sxr {
         mHingeConstraint = 0;
         mRigidBodyA = reinterpret_cast<BulletRigidBody*>(rigidBodyA);
         mBreakingImpulse = SIMD_INFINITY;
-        mPivotInA.set(pivotInA);
-        mPivotInB.set(pivotInB);
-        mAxisInA.set(axisInA);
-        mAxisInB.set(axisInB);
+        mPivotInA.x = pivotInA[0];
+        mPivotInA.y = pivotInA[1];
+        mPivotInA.z = pivotInA[2];
+        mPivotInB.x = pivotInB[0];
+        mPivotInB.y = pivotInB[1];
+        mPivotInB.z = pivotInB[2];
+        mAxisInA.x = axisInA[0];
+        mAxisInA.y = axisInA[1];
+        mAxisInA.z = axisInA[2];
+        mAxisInB.x = axisInB[0];
+        mAxisInB.y = axisInB[1];
+        mAxisInB.z = axisInB[2];
 
         // By default angular limit is inactive
         mTempLower = 2.0f;
@@ -51,7 +59,7 @@ namespace sxr {
 
     BulletHingeConstraint::~BulletHingeConstraint()
     {
-        if (0 != mHingeConstraint)
+        if (mHingeConstraint)
         {
             delete mHingeConstraint;
         }
@@ -59,44 +67,41 @@ namespace sxr {
 
     void BulletHingeConstraint::setLimits(float lower, float upper)
     {
-        if (0 == mHingeConstraint)
-        {
-            mTempLower = lower;
-            mTempUpper = upper;
-        }
-        else
+        if (mHingeConstraint)
         {
             mHingeConstraint->setLimit(lower, upper);
         }
+        mTempLower = lower;
+        mTempUpper = upper;
     }
 
     float BulletHingeConstraint::getLowerLimit() const
     {
-        if (0 == mHingeConstraint)
+        if (mHingeConstraint)
         {
-            return mTempLower;
+            return mHingeConstraint->getLowerLimit();
         }
         else
         {
-            return mHingeConstraint->getLowerLimit();
+            return mTempLower;
         }
     }
 
     float BulletHingeConstraint::getUpperLimit() const
     {
-        if (0 == mHingeConstraint)
+        if (mHingeConstraint)
         {
-            return mTempUpper;
+            return mHingeConstraint->getUpperLimit();
         }
         else
         {
-            return mHingeConstraint->getUpperLimit();
+            return mTempUpper;
         }
     }
 
     void BulletHingeConstraint::setBreakingImpulse(float impulse)
     {
-        if (0 != mHingeConstraint)
+        if (mHingeConstraint)
         {
             mHingeConstraint->setBreakingImpulseThreshold(impulse);
         }
@@ -108,7 +113,7 @@ namespace sxr {
 
     float BulletHingeConstraint::getBreakingImpulse() const
     {
-        if (0 != mHingeConstraint)
+        if (mHingeConstraint)
         {
             return mHingeConstraint->getBreakingImpulseThreshold();
         }

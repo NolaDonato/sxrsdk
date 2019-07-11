@@ -18,8 +18,12 @@ namespace sxr {
         mPoint2PointConstraint = 0;
         mRigidBodyA = reinterpret_cast<BulletRigidBody*>(rigidBodyA);
         mBreakingImpulse = SIMD_INFINITY;
-        mPivotInA.set(pivotInA);
-        mPivotInB.set(pivotInB);
+        mPivotInA.x = pivotInA[0];
+        mPivotInA.y = pivotInA[1];
+        mPivotInA.z = pivotInA[2];
+        mPivotInB.x = pivotInB[0];
+        mPivotInB.y = pivotInB[1];
+        mPivotInB.z = pivotInB[2];
     };
 
     // This constructor is only used when loading physics from bullet file
@@ -38,7 +42,7 @@ namespace sxr {
         }
     };
 
-    void BulletPoint2PointConstraint::setPivotInA(PhysicsVec3 pivot)
+    void BulletPoint2PointConstraint::setPivotInA(const glm::vec3& pivot)
     {
         mPivotInA = pivot;
 
@@ -46,7 +50,7 @@ namespace sxr {
         mPoint2PointConstraint->setPivotA(p);
     }
 
-    void BulletPoint2PointConstraint::setPivotInB(PhysicsVec3 pivot)
+    void BulletPoint2PointConstraint::setPivotInB(const glm::vec3&  pivot)
     {
         mPivotInB = pivot;
 

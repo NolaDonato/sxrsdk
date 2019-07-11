@@ -19,6 +19,7 @@
 
 #include "../physics_point2pointconstraint.h"
 #include "bullet_object.h"
+#include <glm/vec3.hpp>
 
 class btPoint2PointConstraint;
 
@@ -47,13 +48,13 @@ namespace sxr {
 
         float getBreakingImpulse() const;
 
-        void setPivotInA(PhysicsVec3 pivot);
+        void setPivotInA(const glm::vec3& pivot);
 
-        PhysicsVec3 getPivotInA() const { return mPivotInA; }
+        const glm::vec3& getPivotInA() const { return mPivotInA; }
 
-        void setPivotInB(PhysicsVec3 pivot);
+        void setPivotInB(const glm::vec3& pivot);
 
-        PhysicsVec3 getPivotInB() const { return mPivotInB; }
+        const glm::vec3& getPivotInB() const { return mPivotInB; }
 
         void updateConstructionInfo();
 
@@ -62,8 +63,8 @@ namespace sxr {
         BulletRigidBody* mRigidBodyA;
 
         float mBreakingImpulse;
-        PhysicsVec3 mPivotInA;
-        PhysicsVec3 mPivotInB;
+        glm::vec3 mPivotInA;
+        glm::vec3 mPivotInB;
     };
 }
 #endif //BULLET_POINT2POINTCONSTRAINT_H

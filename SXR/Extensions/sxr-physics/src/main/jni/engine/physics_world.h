@@ -20,7 +20,6 @@
 #ifndef PHYSICS_WORLD_H_
 #define PHYSICS_WORLD_H_
 
-#include "physics_common.h"
 #include "physics_rigidbody.h"
 #include "physics_joint.h"
 #include "physics_constraint.h"
@@ -78,7 +77,7 @@ public:
 
     virtual int getUpdated(std::vector<Component*>& bodies) = 0;
 
-    virtual PhysicsVec3 getGravity() const = 0;
+    virtual const glm::vec3& getGravity() const = 0;
 };
 
 }
