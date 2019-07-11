@@ -32,7 +32,7 @@ namespace sxr {
 
     class BulletGeneric6dofConstraint : public PhysicsGenericConstraint, BulletObject {
     public:
-        explicit BulletGeneric6dofConstraint(PhysicsRigidBody *rigidBodyB, float const joint[],
+        explicit BulletGeneric6dofConstraint(PhysicsRigidBody* bodyA, float const joint[],
                                              float const rotationA[], float const rotationB[]);
 
         BulletGeneric6dofConstraint(btGeneric6DofConstraint *constraint);
@@ -66,7 +66,7 @@ namespace sxr {
     private:
 
         btGeneric6DofConstraint *mGeneric6DofConstraint;
-        BulletRigidBody *mRigidBodyB;
+        BulletRigidBody *mRigidBodyA;
 
         float mBreakingImpulse;
         PhysicsVec3 mLinearLowerLimits;

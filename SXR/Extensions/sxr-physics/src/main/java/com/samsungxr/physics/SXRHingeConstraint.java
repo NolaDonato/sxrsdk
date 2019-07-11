@@ -22,26 +22,27 @@ import com.samsungxr.SXRContext;
  */
 
 /**
- * Represents a hinge constraint that restricts two {@linkplain SXRRigidBody rigid bodies} to only
- * rotate around one axis.
+ * Represents a hinge constraint that restricts two {@linkplain SXRRigidBody rigid bodies}
+ * or {@linkplain SXRPhysicsJoint joints }to only rotate around one axis.
  */
-public class SXRHingeConstraint extends SXRConstraint {
+public class SXRHingeConstraint extends SXRConstraint
+{
 
     /**
      * Constructs a new instance of hinge constraint.
      *
      * @param ctx the context of the app
-     * @param bodyB      the second rigid body (not the owner) in this constraint
-     * @param pivotInA   the pivot point related to body A (the owner)
-     * @param pivotInB   the pivot point related to body B
+     * @param bodyA      the first rigid body (not the owner) in this constraint
+     * @param pivotInA   the pivot point related to body A
+     * @param pivotInB   the pivot point related to body B (the owner)
      * @param axisInA    the axis around which body A can rotate
      * @param axisInB    the axis around which body B can rotate
      */
-    public SXRHingeConstraint(SXRContext ctx, SXRPhysicsWorldObject bodyB, float pivotInA[],
+    public SXRHingeConstraint(SXRContext ctx, SXRPhysicsWorldObject bodyA, float pivotInA[],
                                  float pivotInB[], float axisInA[], float axisInB[])
     {
-        this(ctx, Native3DHingeConstraint.ctor(bodyB.getNative(), pivotInA, pivotInB, axisInA, axisInB));
-        mBodyB = bodyB;
+        this(ctx, Native3DHingeConstraint.ctor(bodyA.getNative(), pivotInA, pivotInB, axisInA, axisInB));
+        mBodyA = bodyA;
     }
 
     /** Used only by {@link SXRPhysicsLoader} */

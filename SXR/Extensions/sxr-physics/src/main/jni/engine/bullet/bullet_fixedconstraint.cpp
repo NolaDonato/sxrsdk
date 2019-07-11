@@ -10,17 +10,17 @@ static const char tag[] = "PHYSICS";
 
 namespace sxr {
 
-BulletFixedConstraint::BulletFixedConstraint(PhysicsRigidBody* rigidBodyB)
+BulletFixedConstraint::BulletFixedConstraint(PhysicsRigidBody* bodyA)
 {
     mFixedConstraint = 0;
-    mRigidBodyB = reinterpret_cast<BulletRigidBody*>(rigidBodyB);
+    mRigidBodyA = reinterpret_cast<BulletRigidBody*>(bodyA);
     mBreakingImpulse = SIMD_INFINITY;
 }
 
 BulletFixedConstraint::BulletFixedConstraint(btFixedConstraint *constraint)
 {
     mFixedConstraint = constraint;
-    mRigidBodyB = static_cast<BulletRigidBody*>(constraint->getRigidBodyB().getUserPointer());
+    mRigidBodyA = static_cast<BulletRigidBody*>(constraint->getRigidBodyA().getUserPointer());
     constraint->setUserConstraintPtr(this);
 }
 
@@ -60,12 +60,12 @@ void BulletFixedConstraint::updateConstructionInfo()
     {
         return;
     }
-    BulletRigidBody* bodyA = (BulletRigidBody*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY);
+    BulletRigidBody* bodyB= (BulletRigidBody*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY);
 
-    if (bodyA)
+    if (bodyB)
     {
-        btRigidBody *rbA = bodyA->getRigidBody();
-        btRigidBody *rbB = mRigidBodyB->getRigidBody();
+        btRigidBody* rbB = bodyB->getRigidBody();
+        btRigidBody* rbA = mRigidBodyA->getRigidBody();
         mFixedConstraint = new btFixedConstraint(*rbA, *rbB,
                                                  rbB->getWorldTransform(),
                                                  rbA->getWorldTransform());
@@ -73,11 +73,11 @@ void BulletFixedConstraint::updateConstructionInfo()
     }
     else
     {
-        BulletJoint* jointA = (BulletJoint*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT);
-        if (jointA)
+        BulletJoint* jointB = (BulletJoint*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT);
+        if (jointB)
         {
-            btMultibodyLink* link = jointA->getLink();
-            BulletJoint* jointB = (BulletJoint*) mRigidBodyB;
+            btMultibodyLink* link = jointB->getLink();
+            BulletJoint* jointA = (BulletJoint*) mRigidBodyA;
             btTransform transA;
             btTransform transB;
 

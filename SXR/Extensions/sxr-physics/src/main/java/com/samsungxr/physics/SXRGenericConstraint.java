@@ -23,30 +23,32 @@ import com.samsungxr.SXRTransform;
  */
 
 /**
- * Represents a generic constraint for two {@linkplain SXRRigidBody rigid bodies} that are linked by
- * a joint point related to the first one (the owner of the constraint). Though it can be moved the
+ * Represents a generic constraint for two {@linkplain SXRRigidBody rigid bodies} or
+ * {@linkplain SXRPhysicsJoint joints} that are linked by a point related to the first one.
+ * The second one is the owner of the constraint). Though it can be moved the
  * first body can be referred as "fixed" since it will keep same distance and rotation from this
  * joint point while the second is the "moving" because one can explicitly set restriction for each
  * translation and rotation axis.
  */
-public class SXRGenericConstraint extends SXRConstraint {
+public class SXRGenericConstraint extends SXRConstraint
+{
     /**
      * Construct a new instance of a generic constraint.
      *
      * @param ctx        the context of the app
-     * @param bodyB      the "moving" body (not the owner) in this constraint
+     * @param bodyA      the "fixed" body (not the owner) in this constraint
      * @param jointPos   the joint point (x, y and z coordinates) in this constraint
      *                   relative to "fixed"body
      * @param rotationA  the rotation of the constraint (an array containing the elements of 3x3
-     *                   rotation matrix) related to "fixed" body
-     * @param rotationB  the rotation of the constraint (an array containing the elements of 3x3
      *                   rotation matrix) related to "moving" body
+     * @param rotationB  the rotation of the constraint (an array containing the elements of 3x3
+     *                   rotation matrix) related to "fied" body
      */
-    public SXRGenericConstraint(SXRContext ctx, SXRPhysicsWorldObject bodyB, final float jointPos[],
+    public SXRGenericConstraint(SXRContext ctx, SXRPhysicsWorldObject bodyA, final float jointPos[],
                                 final float rotationA[], final float rotationB[])
     {
-        this(ctx, Native3DGenericConstraint.ctor(bodyB.getNative(), jointPos, rotationA, rotationB));
-        mBodyB = bodyB;
+        this(ctx, Native3DGenericConstraint.ctor(bodyA.getNative(), jointPos, rotationA, rotationB));
+        mBodyA = bodyA;
     }
 
     /** Used only by {@link SXRPhysicsLoader} */

@@ -22,21 +22,22 @@ import com.samsungxr.SXRContext;
  */
 
 /**
- * Represents a constraint that allows two {@linkplain SXRRigidBody rigid bodies} to rotate and
- * translate over a single axis.
+ * Represents a constraint that allows two {@linkplain SXRRigidBody rigid bodies}
+ * {@linkplain SXRPhysicsJoint joints} to rotate and translate over a single axis.
  */
-public class SXRSliderConstraint extends SXRConstraint {
+public class SXRSliderConstraint extends SXRConstraint
+{
 
     /**
      * Constructs a new instance of a slider constraint.
      *
      * @param ctx   the context of the app
-     * @param bodyB the second rigid body (not the owner) in this constraint.
+     * @param bodyA the second rigid body (not the owner) in this constraint.
      */
-    public SXRSliderConstraint(SXRContext ctx, SXRPhysicsWorldObject bodyB)
+    public SXRSliderConstraint(SXRContext ctx, SXRPhysicsWorldObject bodyA)
     {
-        this(ctx, Native3DSliderConstraint.ctor(bodyB.getNative()));
-        mBodyB = bodyB;
+        this(ctx, Native3DSliderConstraint.ctor(bodyA.getNative()));
+        mBodyA = bodyA;
     }
 
     /** Used only by {@link SXRPhysicsLoader} */

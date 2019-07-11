@@ -31,14 +31,15 @@ namespace sxr {
     {
 
     public:
-        explicit BulletPoint2PointConstraint(PhysicsRigidBody* rigidBodyB, float pivotInA[],
-                                             float pivotInB[]);
+        explicit BulletPoint2PointConstraint(PhysicsRigidBody* rigidBodyA,
+                                             float pivotInA[],float pivotInB[]);
 
         BulletPoint2PointConstraint(btPoint2PointConstraint *constraint);
 
         virtual ~BulletPoint2PointConstraint();
 
-        virtual void* getUnderlying() {
+        virtual void* getUnderlying()
+        {
             return this->mPoint2PointConstraint;
         }
 
@@ -57,8 +58,8 @@ namespace sxr {
         void updateConstructionInfo();
 
     private:
-        btPoint2PointConstraint *mPoint2PointConstraint;
-        BulletRigidBody *mRigidBodyB;
+        btPoint2PointConstraint* mPoint2PointConstraint;
+        BulletRigidBody* mRigidBodyA;
 
         float mBreakingImpulse;
         PhysicsVec3 mPivotInA;

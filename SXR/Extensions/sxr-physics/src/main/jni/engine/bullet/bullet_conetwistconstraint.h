@@ -60,7 +60,7 @@ namespace sxr {
     private:
 
         btConeTwistConstraint *mConeTwistConstraint;
-        BulletRigidBody *mRigidBodyB;
+        BulletRigidBody *mRigidBodyA;
 
         float mBreakingImpulse;
         PhysicsVec3 mPivot;

@@ -26,7 +26,7 @@ namespace sxr {
     extern "C" {
     JNIEXPORT jlong JNICALL
     Java_com_samsungxr_physics_Native3DGenericConstraint_ctor(
-            JNIEnv *env, jclass obj, jlong rigidBodyB, jfloatArray const joint,
+            JNIEnv *env, jclass obj, jlong bodyA, jfloatArray const joint,
             jfloatArray const rotationA, jfloatArray const rotationB);
 
     JNIEXPORT void JNICALL
@@ -64,10 +64,10 @@ namespace sxr {
 
     JNIEXPORT jlong JNICALL
     Java_com_samsungxr_physics_Native3DGenericConstraint_ctor(JNIEnv *env, jclass obj,
-            jlong rigidBodyB, jfloatArray const joint,
+            jlong bodyA, jfloatArray const joint,
             jfloatArray const rotationA, jfloatArray const rotationB)
     {
-        PhysicsRigidBody *body = reinterpret_cast<PhysicsRigidBody*>(rigidBodyB);
+        PhysicsRigidBody *body = reinterpret_cast<PhysicsRigidBody*>(bodyA);
         float const *_joint = env->GetFloatArrayElements(joint, 0);
         float const *_rotA = env->GetFloatArrayElements(rotationA, 0);
         float const *_rotB = env->GetFloatArrayElements(rotationB, 0);

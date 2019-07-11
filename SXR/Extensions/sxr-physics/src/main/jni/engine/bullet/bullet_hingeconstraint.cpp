@@ -26,11 +26,11 @@ const char tag[] = "BulletHingeConstrN";
 
 namespace sxr {
 
-    BulletHingeConstraint::BulletHingeConstraint(PhysicsRigidBody *rigidBodyB, const float *pivotInA,
+    BulletHingeConstraint::BulletHingeConstraint(PhysicsRigidBody* rigidBodyA, const float *pivotInA,
                                                  const float *pivotInB, const float *axisInA,
                                                  const float *axisInB) {
         mHingeConstraint = 0;
-        mRigidBodyB = reinterpret_cast<BulletRigidBody*>(rigidBodyB);
+        mRigidBodyA = reinterpret_cast<BulletRigidBody*>(rigidBodyA);
         mBreakingImpulse = SIMD_INFINITY;
         mPivotInA.set(pivotInA);
         mPivotInB.set(pivotInB);
@@ -45,7 +45,7 @@ namespace sxr {
     BulletHingeConstraint::BulletHingeConstraint(btHingeConstraint *constraint)
     {
         mHingeConstraint = constraint;
-        mRigidBodyB = static_cast<BulletRigidBody*>(constraint->getRigidBodyB().getUserPointer());
+        mRigidBodyA = static_cast<BulletRigidBody*>(constraint->getRigidBodyA().getUserPointer());
         constraint->setUserConstraintPtr(this);
     }
 
@@ -126,22 +126,23 @@ namespace sxr {
             btVector3 pivotInB(mPivotInB.x, mPivotInB.y, mPivotInB.z);
             btVector3 axisInA(mAxisInA.x, mAxisInA.y, mAxisInA.z);
             btVector3 axisInB(mAxisInB.x, mAxisInB.y, mAxisInB.z);
-            BulletRigidBody* bodyA = ((BulletRigidBody *) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
+            BulletRigidBody* bodyB = ((BulletRigidBody *) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
 
-            if (bodyA)
+            if (bodyB)
             {
-                btRigidBody *rbA = bodyA->getRigidBody();
-                mHingeConstraint = new btHingeConstraint(*rbA, *mRigidBodyB->getRigidBody(),
+                btRigidBody* rbB = bodyB->getRigidBody();
+                btRigidBody* rbA = mRigidBodyA->getRigidBody();
+                mHingeConstraint = new btHingeConstraint(*rbA, *rbB,
                                                          pivotInA, pivotInB, axisInA, axisInB);
                 mHingeConstraint->setLimit(mTempLower, mTempUpper);
                 mHingeConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
             }
             else
             {
-                BulletJoint* joint = (BulletJoint*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT);
-                if (joint)
+                BulletJoint* jointB = (BulletJoint*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT);
+                if (jointB)
                 {
-                    btMultibodyLink* link = joint->getLink();
+                    btMultibodyLink* link = jointB->getLink();
                     btVector3 bottomAxis(axisInB.cross(pivotInB));
 
                     link->m_jointType = btMultibodyLink::eRevolute;

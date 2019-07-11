@@ -33,7 +33,7 @@ namespace sxr {
                                   BulletObject {
 
     public:
-        explicit BulletHingeConstraint(PhysicsRigidBody *rigidBodyB, float const pivotInA[],
+        explicit BulletHingeConstraint(PhysicsRigidBody* rigidBodyA, float const pivotInA[],
                                        float const pivotInB[], float const axisInA[],
                                        float const axisInB[]);
 
@@ -57,7 +57,7 @@ namespace sxr {
 
     private:
         btHingeConstraint *mHingeConstraint;
-        BulletRigidBody *mRigidBodyB;
+        BulletRigidBody *mRigidBodyA;
 
         float mBreakingImpulse;
         float mTempLower;

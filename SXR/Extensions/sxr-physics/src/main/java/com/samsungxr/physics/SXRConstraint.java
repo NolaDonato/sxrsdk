@@ -25,11 +25,11 @@ import java.util.List;
 
 /**
  * Base class to represent a constraint for the movement of two
- * {@linkplain SXRRigidBody rigid bodies}.
- * <p>
+ * {@linkplain SXRRigidBody rigid bodies} or {@linkplain SXRPhysicsJoint joints}
+ * <p>.
  * After created anf fully configured a constraint must be attached to a
  * {@linkplain com.samsungxr.SXRNode node} containing a rigid body that will become
- * the owner of this constraint (body A).
+ * the owner of this constraint (body B).
  */
 abstract class SXRConstraint extends SXRPhysicsWorldObject implements IComponentGroup<SXRConstraint>
 {
@@ -44,11 +44,13 @@ abstract class SXRConstraint extends SXRPhysicsWorldObject implements IComponent
     protected SXRPhysicsWorldObject mBodyB = null;
     protected SXRConstraint.Group<SXRConstraint> mGroup = new SXRConstraint.Group<>();
 
-    protected SXRConstraint(SXRContext gvrContext, long nativePointer) {
+    protected SXRConstraint(SXRContext gvrContext, long nativePointer)
+    {
         super(gvrContext, nativePointer);
     }
 
-    protected SXRConstraint(SXRContext gvrContext, long nativePointer, List<NativeCleanupHandler> cleanupHandlers) {
+    protected SXRConstraint(SXRContext gvrContext, long nativePointer, List<NativeCleanupHandler> cleanupHandlers)
+    {
         super(gvrContext, nativePointer, cleanupHandlers);
     }
 
@@ -110,11 +112,11 @@ abstract class SXRConstraint extends SXRPhysicsWorldObject implements IComponent
     @Override
     public void onAttach(SXRNode newOwner)
     {
-        mBodyA = (SXRRigidBody)newOwner.getComponent(SXRRigidBody.getComponentType());
-        if (mBodyA == null)
+        mBodyB = (SXRRigidBody) newOwner.getComponent(SXRRigidBody.getComponentType());
+        if (mBodyB == null)
         {
-            mBodyA = (SXRPhysicsJoint) newOwner.getComponent(SXRPhysicsJoint.getComponentType());
-            if (mBodyA == null)
+            mBodyB = (SXRPhysicsJoint) newOwner.getComponent(SXRPhysicsJoint.getComponentType());
+            if (mBodyB == null)
             {
                 throw new UnsupportedOperationException("There is no rigid body attached to owner object.");
             }

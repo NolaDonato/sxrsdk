@@ -24,7 +24,7 @@ import com.samsungxr.SXRNode;
 
 /**
  * Represents a constraint that restricts translation of two {@linkplain SXRRigidBody rigid bodies}
- * to keep fixed distance from a local pivot.
+ * or {@linkplain SXRPhysicsJoint joins} to keep fixed distance from a local pivot.
  */
 public class SXRPoint2PointConstraint extends SXRConstraint
 {
@@ -32,15 +32,15 @@ public class SXRPoint2PointConstraint extends SXRConstraint
      * Constructs new instance of point-to-point constraint.
      *
      * @param ctx       the context of the app
-     * @param bodyB     the second rigid body (not the owner) in this constraint
-     * @param pivotInA  the pivot point (x, y and z coordinates) related to body A (the owner)
-     * @param pivotInB  the pivot point related to body B
+     * @param bodyA     the first rigid body (not the owner) in this constraint
+     * @param pivotInA  the pivot point (x, y and z coordinates) related to body A
+     * @param pivotInB  the pivot point related to body B (the owner)
      */
-    public SXRPoint2PointConstraint(SXRContext ctx, SXRPhysicsWorldObject bodyB,
+    public SXRPoint2PointConstraint(SXRContext ctx, SXRPhysicsWorldObject bodyA,
                                     float pivotInA[], float pivotInB[])
     {
-        this(ctx, Native3DPoint2PointConstraint.ctor(bodyB.getNative(), pivotInA, pivotInB));
-        mBodyB = bodyB;
+        this(ctx, Native3DPoint2PointConstraint.ctor(bodyA.getNative(), pivotInA, pivotInB));
+        mBodyA = bodyA;
     }
 
     /** Used only by {@link SXRPhysicsLoader} */

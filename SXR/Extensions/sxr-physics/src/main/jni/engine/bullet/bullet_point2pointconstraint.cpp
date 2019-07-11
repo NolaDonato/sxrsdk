@@ -12,24 +12,28 @@ static const char tag[] = "PHYSICS";
 
 namespace sxr {
 
-    BulletPoint2PointConstraint::BulletPoint2PointConstraint(PhysicsRigidBody* rigidBodyB,
-            float pivotInA[], float pivotInB[]) {
+    BulletPoint2PointConstraint::BulletPoint2PointConstraint(PhysicsRigidBody* rigidBodyA,
+            float pivotInA[], float pivotInB[])
+    {
         mPoint2PointConstraint = 0;
-        mRigidBodyB = reinterpret_cast<BulletRigidBody*>(rigidBodyB);
+        mRigidBodyA = reinterpret_cast<BulletRigidBody*>(rigidBodyA);
         mBreakingImpulse = SIMD_INFINITY;
         mPivotInA.set(pivotInA);
         mPivotInB.set(pivotInB);
     };
 
     // This constructor is only used when loading physics from bullet file
-    BulletPoint2PointConstraint::BulletPoint2PointConstraint(btPoint2PointConstraint *constraint) {
+    BulletPoint2PointConstraint::BulletPoint2PointConstraint(btPoint2PointConstraint *constraint)
+    {
         mPoint2PointConstraint = constraint;
-        mRigidBodyB = static_cast<BulletRigidBody*>(constraint->getRigidBodyB().getUserPointer());
+        mRigidBodyA = static_cast<BulletRigidBody*>(constraint->getRigidBodyA().getUserPointer());
         constraint->setUserConstraintPtr(this);
     }
 
-    BulletPoint2PointConstraint::~BulletPoint2PointConstraint() {
-        if (0 != mPoint2PointConstraint) {
+    BulletPoint2PointConstraint::~BulletPoint2PointConstraint()
+    {
+        if (mPoint2PointConstraint)
+        {
             delete mPoint2PointConstraint;
         }
     };
@@ -50,20 +54,26 @@ namespace sxr {
         mPoint2PointConstraint->setPivotB(p);
     }
 
-    void BulletPoint2PointConstraint::setBreakingImpulse(float impulse) {
-        if (0 != mPoint2PointConstraint) {
+    void BulletPoint2PointConstraint::setBreakingImpulse(float impulse)
+    {
+        if (mPoint2PointConstraint)
+        {
             mPoint2PointConstraint->setBreakingImpulseThreshold(impulse);
         }
-        else {
+        else
+        {
             mBreakingImpulse = impulse;
         }
     }
 
-    float BulletPoint2PointConstraint::getBreakingImpulse() const {
-        if (0 != mPoint2PointConstraint) {
+    float BulletPoint2PointConstraint::getBreakingImpulse() const
+    {
+        if (mPoint2PointConstraint)
+        {
             return mPoint2PointConstraint->getBreakingImpulseThreshold();
         }
-        else {
+        else
+        {
             return mBreakingImpulse;
         }
     }
@@ -75,11 +85,11 @@ void BulletPoint2PointConstraint::updateConstructionInfo()
     {
         btVector3 pivotInA(mPivotInA.x, mPivotInA.y, mPivotInA.z);
         btVector3 pivotInB(mPivotInB.x, mPivotInB.y, mPivotInB.z);
-        BulletRigidBody* bodyA = (BulletRigidBody *) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY);
-        if (bodyA)
+        BulletRigidBody* bodyB = (BulletRigidBody *) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY);
+        if (bodyB)
         {
-            btRigidBody *rbA = bodyA->getRigidBody();
-            btRigidBody *rbB = mRigidBodyB->getRigidBody();
+            btRigidBody* rbB = bodyB->getRigidBody();
+            btRigidBody* rbA = mRigidBodyA->getRigidBody();
 
             mPoint2PointConstraint = new btPoint2PointConstraint(*rbA, *rbB, pivotInA, pivotInB);
             mPoint2PointConstraint->setBreakingImpulseThreshold(mBreakingImpulse);

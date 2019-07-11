@@ -234,7 +234,7 @@ void BulletRigidBody::setWorldTransform(const btTransform &centerOfMassWorldTran
         float x = pos.getX();
         float y = pos.getY();
         float z = pos.getZ();
-        LOGD("PHYSICS: %s  %0.2f, %0.2f, %0.2f", owner->name().c_str(), x, y, z);
+        //LOGD("PHYSICS: %s  %0.2f, %0.2f, %0.2f", owner->name().c_str(), x, y, z);
         prevPos = physicBody;
     }
     if (mSimType == DYNAMIC)

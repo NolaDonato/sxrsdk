@@ -34,7 +34,7 @@ namespace sxr {
     class BulletSliderConstraint : public PhysicsSliderConstraint, BulletObject
     {
     public:
-        explicit BulletSliderConstraint(PhysicsRigidBody *rigidBodyB);
+        explicit BulletSliderConstraint(PhysicsRigidBody* rigidBodyA);
 
         BulletSliderConstraint(btSliderConstraint *constraint);
 
@@ -66,7 +66,7 @@ namespace sxr {
 
     private:
         btSliderConstraint* mSliderConstraint;
-        BulletRigidBody* mRigidBodyB;
+        BulletRigidBody* mRigidBodyA;
 
         float mBreakingImpulse;
         float mLowerAngularLimit;

@@ -18,21 +18,25 @@ package com.samsungxr.physics;
 import com.samsungxr.SXRContext;
 
 /**
- * Represents a constraint that forces two {@linkplain SXRRigidBody rigid bodies} to keep same
+ * Represents a constraint that forces two {@linkplain SXRRigidBody rigid bodies}
+ * or ({@linkplain SXRPhysicsJoint} to keep same the
  * distance and same rotation in respect to each other.
+ * The constraint should be attached to the second body or joint
+ * (bodyB)
  */
-public class SXRFixedConstraint extends SXRConstraint {
-
+public class SXRFixedConstraint extends SXRConstraint
+{
     /**
      * Constructs new instance of fixed constraint.
      *
      * @param ctx   the context of the app
-     * @param bodyB the second rigid body (not the owner) in this constraint
+     * @param bodyA the first rigid body or joint (not the owner) in this constraint
      */
-    public SXRFixedConstraint(SXRContext ctx, SXRPhysicsWorldObject bodyB) {
-        this(ctx, Native3DFixedConstraint.ctor(bodyB.getNative()));
+    public SXRFixedConstraint(SXRContext ctx, SXRPhysicsWorldObject bodyA)
+    {
+        this(ctx, Native3DFixedConstraint.ctor(bodyA.getNative()));
 
-        mBodyB = bodyB;
+        mBodyA = bodyA;
     }
 
     /** Used only by {@link SXRPhysicsLoader} */

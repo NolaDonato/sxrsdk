@@ -28,10 +28,11 @@ namespace sxr {
     class BulletRigidBody;
 
     class BulletFixedConstraint : public PhysicsFixedConstraint,
-                                         BulletObject  {
+                                         BulletObject
+    {
 
     public:
-        explicit BulletFixedConstraint(PhysicsRigidBody* rigidBodyB);
+        explicit BulletFixedConstraint(PhysicsRigidBody* bodyA);
 
         BulletFixedConstraint(btFixedConstraint *constraint);
 
@@ -49,7 +50,7 @@ namespace sxr {
 
     private:
         btFixedConstraint *mFixedConstraint;
-        BulletRigidBody *mRigidBodyB; //this is A
+        BulletRigidBody *mRigidBodyA; //this is A
 
         float mBreakingImpulse;
     };

@@ -26,7 +26,7 @@ namespace sxr {
     extern "C" {
     JNIEXPORT jlong JNICALL
     Java_com_samsungxr_physics_Native3DConeTwistConstraint_ctor(JNIEnv *env, jclass obj,
-                                                              jlong rigidBodyB,
+                                                              jlong bodyA,
                                                               const jfloatArray pivot,
                                                               const jfloatArray bodyRotation,
                                                               const jfloatArray coneRotation);
@@ -53,7 +53,7 @@ namespace sxr {
 
     JNIEXPORT jlong JNICALL
     Java_com_samsungxr_physics_Native3DConeTwistConstraint_ctor(JNIEnv *env, jclass obj,
-                                                              jlong rigidBodyB,
+                                                              jlong bodyA,
                                                               const jfloatArray pivot,
                                                               const jfloatArray bodyRotation,
                                                               const jfloatArray coneRotation)
@@ -63,7 +63,7 @@ namespace sxr {
         PhysicsMat3x3 _c_rot(env->GetFloatArrayElements(coneRotation, 0));
 
         return reinterpret_cast<jlong>(new
-                BulletConeTwistConstraint(reinterpret_cast<PhysicsRigidBody*>(rigidBodyB),
+                BulletConeTwistConstraint(reinterpret_cast<PhysicsRigidBody*>(bodyA),
                                           _pivot, _b_rot, _c_rot));
     }
 
