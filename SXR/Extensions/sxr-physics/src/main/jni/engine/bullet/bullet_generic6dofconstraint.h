@@ -21,7 +21,7 @@
 #define EXTENSIONS_BULLET_GENERIC6DOFCONSTRAINT_H
 
 #include "../physics_genericconstraint.h"
-#include "bullet_object.h"
+#include "../physics_collidable.h"
 #include <glm/vec3.hpp>
 #include <glm/mat3x3.hpp>
 
@@ -31,10 +31,11 @@ namespace sxr {
     class PhysicsRigidBody;
     class BulletRigidBody;
 
-    class BulletGeneric6dofConstraint : public PhysicsGenericConstraint, BulletObject {
+    class BulletGeneric6dofConstraint : public PhysicsGenericConstraint
+    {
     public:
-        explicit BulletGeneric6dofConstraint(PhysicsRigidBody* bodyA, float const joint[],
-                                             float const rotationA[], float const rotationB[]);
+        BulletGeneric6dofConstraint(PhysicsCollidable* bodyA, float const joint[],
+                                    float const rotationA[], float const rotationB[]);
 
         BulletGeneric6dofConstraint(btGeneric6DofConstraint *constraint);
 
@@ -66,17 +67,17 @@ namespace sxr {
 
     private:
 
-        btGeneric6DofConstraint *mGeneric6DofConstraint;
-        BulletRigidBody *mRigidBodyA;
+        btGeneric6DofConstraint* mGeneric6DofConstraint;
+        PhysicsCollidable*       mRigidBodyA;
 
-        float mBreakingImpulse;
+        float             mBreakingImpulse;
         mutable glm::vec3 mLinearLowerLimits;
         mutable glm::vec3 mLinearUpperLimits;
         mutable glm::vec3 mAngularLowerLimits;
         mutable glm::vec3 mAngularUpperLimits;
-        glm::vec3 mPosition;
-        glm::mat3 mRotationA;
-        glm::mat3 mRotationB;
+        glm::vec3         mPosition;
+        glm::mat3         mRotationA;
+        glm::mat3         mRotationB;
     };
 
 }

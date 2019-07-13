@@ -12,11 +12,11 @@ static const char tag[] = "PHYSICS";
 
 namespace sxr {
 
-    BulletPoint2PointConstraint::BulletPoint2PointConstraint(PhysicsRigidBody* rigidBodyA,
+    BulletPoint2PointConstraint::BulletPoint2PointConstraint(PhysicsCollidable* bodyA,
             float pivotInA[], float pivotInB[])
     {
         mPoint2PointConstraint = 0;
-        mRigidBodyA = reinterpret_cast<BulletRigidBody*>(rigidBodyA);
+        mRigidBodyA = reinterpret_cast<BulletRigidBody*>(bodyA);
         mBreakingImpulse = SIMD_INFINITY;
         mPivotInA.x = pivotInA[0];
         mPivotInA.y = pivotInA[1];
@@ -93,7 +93,7 @@ void BulletPoint2PointConstraint::updateConstructionInfo()
         if (bodyB)
         {
             btRigidBody* rbB = bodyB->getRigidBody();
-            btRigidBody* rbA = mRigidBodyA->getRigidBody();
+            btRigidBody* rbA = reinterpret_cast<BulletRigidBody*>(mRigidBodyA)->getRigidBody();
 
             mPoint2PointConstraint = new btPoint2PointConstraint(*rbA, *rbB, pivotInA, pivotInB);
             mPoint2PointConstraint->setBreakingImpulseThreshold(mBreakingImpulse);

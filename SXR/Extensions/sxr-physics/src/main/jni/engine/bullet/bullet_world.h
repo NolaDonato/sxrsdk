@@ -21,6 +21,7 @@
 #define BULLET_WORLD_H_
 
 #include "../physics_world.h"
+#include "../physics_collidable.h"
 
 #include <utility>
 #include <map>
@@ -68,15 +69,13 @@ class BulletWorld : public PhysicsWorld {
 
     void listCollisions(std::list <ContactPoint> &contactPoints);
 
-    int getUpdated(std::vector<Component*>& bodies);
+    int getUpdated(std::vector<PhysicsCollidable*>& bodies);
 
     void setGravity(float x, float y, float z);
 
     void setGravity(glm::vec3 gravity);
 
-    void markUpdated(PhysicsRigidBody* body);
-
-    void markUpdated(PhysicsJoint* body);
+    void markUpdated(PhysicsCollidable* body);
 
     const glm::vec3& getGravity() const;
 
@@ -86,6 +85,10 @@ class BulletWorld : public PhysicsWorld {
     void initialize(bool isMultiBody);
 
     void finalize();
+
+    void setPhysicsTransforms();
+
+    void getPhysicsTransforms();
 
  private:
     std::map<std::pair <long,long>, ContactPoint> prevCollisions;
@@ -99,7 +102,7 @@ class BulletWorld : public PhysicsWorld {
     int mActivationState;
     bool mIsMultiBody;
     mutable glm::vec3 mGravity;
-    std::vector<Component*> mBodiesChanged;
+    std::vector<PhysicsCollidable*> mBodiesChanged;
 };
 
 }

@@ -21,7 +21,7 @@
 #define EXTENSIONS_BULLET_HINGECONSTRAINT_H
 
 #include "../physics_hingeconstraint.h"
-#include "bullet_object.h"
+#include "../physics_collidable.h"
 #include <glm/vec3.hpp>
 
 class btHingeConstraint;
@@ -30,13 +30,13 @@ namespace sxr {
 
     class PhysicsRigidBody;
     class BulletRigidBody;
-    class BulletHingeConstraint : public PhysicsHingeConstraint,
-                                  BulletObject {
+    class BulletHingeConstraint : public PhysicsHingeConstraint
+    {
 
     public:
-        explicit BulletHingeConstraint(PhysicsRigidBody* rigidBodyA, float const pivotInA[],
-                                       float const pivotInB[], float const axisInA[],
-                                       float const axisInB[]);
+        BulletHingeConstraint(PhysicsCollidable* bodyA,
+                float const pivotInA[], float const pivotInB[],
+                float const axisInA[], float const axisInB[]);
 
         BulletHingeConstraint(btHingeConstraint *constraint);
 
@@ -57,13 +57,12 @@ namespace sxr {
         void updateConstructionInfo();
 
     private:
-        btHingeConstraint *mHingeConstraint;
-        BulletRigidBody *mRigidBodyA;
+        btHingeConstraint* mHingeConstraint;
+        PhysicsCollidable* mRigidBodyA;
 
-        float mBreakingImpulse;
-        float mTempLower;
-        float mTempUpper;
-
+        float     mBreakingImpulse;
+        float     mTempLower;
+        float     mTempUpper;
         glm::vec3 mPivotInA;
         glm::vec3 mPivotInB;
         glm::vec3 mAxisInA;

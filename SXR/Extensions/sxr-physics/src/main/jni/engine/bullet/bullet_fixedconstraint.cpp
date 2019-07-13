@@ -10,17 +10,17 @@ static const char tag[] = "PHYSICS";
 
 namespace sxr {
 
-BulletFixedConstraint::BulletFixedConstraint(PhysicsRigidBody* bodyA)
+BulletFixedConstraint::BulletFixedConstraint(PhysicsCollidable* bodyA)
 {
     mFixedConstraint = 0;
-    mRigidBodyA = reinterpret_cast<BulletRigidBody*>(bodyA);
+    mRigidBodyA = bodyA;
     mBreakingImpulse = SIMD_INFINITY;
 }
 
 BulletFixedConstraint::BulletFixedConstraint(btFixedConstraint *constraint)
 {
     mFixedConstraint = constraint;
-    mRigidBodyA = static_cast<BulletRigidBody*>(constraint->getRigidBodyA().getUserPointer());
+    mRigidBodyA = nullptr; // TODO: what should this be?
     constraint->setUserConstraintPtr(this);
 }
 
@@ -65,7 +65,7 @@ void BulletFixedConstraint::updateConstructionInfo()
     if (bodyB)
     {
         btRigidBody* rbB = bodyB->getRigidBody();
-        btRigidBody* rbA = mRigidBodyA->getRigidBody();
+        btRigidBody* rbA = reinterpret_cast<BulletRigidBody*>(mRigidBodyA)->getRigidBody();
         mFixedConstraint = new btFixedConstraint(*rbA, *rbB,
                                                  rbB->getWorldTransform(),
                                                  rbA->getWorldTransform());
@@ -77,7 +77,7 @@ void BulletFixedConstraint::updateConstructionInfo()
         if (jointB)
         {
             btMultibodyLink* link = jointB->getLink();
-            BulletJoint* jointA = (BulletJoint*) mRigidBodyA;
+            BulletJoint* jointA = reinterpret_cast<BulletJoint*>(mRigidBodyA);
             btTransform transA;
             btTransform transB;
 

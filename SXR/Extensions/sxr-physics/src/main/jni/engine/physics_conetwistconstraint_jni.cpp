@@ -18,7 +18,7 @@
 //
 
 #include "physics_conetwistconstraint.h"
-#include "physics_rigidbody.h"
+#include "physics_collidable.h"
 #include "bullet/bullet_conetwistconstraint.h"
 #include <glm/vec3.hpp>
 #include <glm/mat3x3.hpp>
@@ -66,7 +66,7 @@ namespace sxr {
         glm::mat3 _c_rot(glm::make_mat3(env->GetFloatArrayElements(coneRotation, 0)));
 
         return reinterpret_cast<jlong>(new
-                BulletConeTwistConstraint(reinterpret_cast<PhysicsRigidBody*>(bodyA),
+                BulletConeTwistConstraint(reinterpret_cast<PhysicsCollidable*>(bodyA),
                                           _pivot, _b_rot, _c_rot));
     }
 

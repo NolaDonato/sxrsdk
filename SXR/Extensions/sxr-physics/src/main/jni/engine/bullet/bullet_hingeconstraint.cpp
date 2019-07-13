@@ -26,11 +26,12 @@ const char tag[] = "BulletHingeConstrN";
 
 namespace sxr {
 
-    BulletHingeConstraint::BulletHingeConstraint(PhysicsRigidBody* rigidBodyA, const float *pivotInA,
-                                                 const float *pivotInB, const float *axisInA,
-                                                 const float *axisInB) {
+    BulletHingeConstraint::BulletHingeConstraint(PhysicsCollidable* bodyA,
+                            const float* pivotInA, const float* pivotInB,
+                            const float* axisInA, const float *axisInB)
+    {
         mHingeConstraint = 0;
-        mRigidBodyA = reinterpret_cast<BulletRigidBody*>(rigidBodyA);
+        mRigidBodyA = bodyA;
         mBreakingImpulse = SIMD_INFINITY;
         mPivotInA.x = pivotInA[0];
         mPivotInA.y = pivotInA[1];
@@ -53,7 +54,7 @@ namespace sxr {
     BulletHingeConstraint::BulletHingeConstraint(btHingeConstraint *constraint)
     {
         mHingeConstraint = constraint;
-        mRigidBodyA = static_cast<BulletRigidBody*>(constraint->getRigidBodyA().getUserPointer());
+        mRigidBodyA = reinterpret_cast<PhysicsCollidable*>(constraint->getRigidBodyA().getUserPointer());
         constraint->setUserConstraintPtr(this);
     }
 
@@ -131,12 +132,12 @@ namespace sxr {
             btVector3 pivotInB(mPivotInB.x, mPivotInB.y, mPivotInB.z);
             btVector3 axisInA(mAxisInA.x, mAxisInA.y, mAxisInA.z);
             btVector3 axisInB(mAxisInB.x, mAxisInB.y, mAxisInB.z);
-            BulletRigidBody* bodyB = ((BulletRigidBody *) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
+            BulletRigidBody* bodyB = reinterpret_cast<BulletRigidBody*>(owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
 
             if (bodyB)
             {
                 btRigidBody* rbB = bodyB->getRigidBody();
-                btRigidBody* rbA = mRigidBodyA->getRigidBody();
+                btRigidBody* rbA = reinterpret_cast<BulletRigidBody*>(mRigidBodyA)->getRigidBody();
                 mHingeConstraint = new btHingeConstraint(*rbA, *rbB,
                                                          pivotInA, pivotInB, axisInA, axisInB);
                 mHingeConstraint->setLimit(mTempLower, mTempUpper);
@@ -144,20 +145,33 @@ namespace sxr {
             }
             else
             {
-                BulletJoint* jointB = (BulletJoint*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT);
+                BulletJoint* jointB = reinterpret_cast<BulletJoint*>(owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT));
                 if (jointB)
                 {
+                    BulletJoint* jointA = static_cast<BulletJoint*>(mRigidBodyA);
+                    btMultiBody* mb = jointB->getMultiBody();
                     btMultibodyLink* link = jointB->getLink();
-                    btVector3 bottomAxis(axisInB.cross(pivotInB));
+                    btTransform tA;
+                    btTransform tB;
 
-                    link->m_jointType = btMultibodyLink::eRevolute;
-                    link->setAxisTop(0, axisInB.normalize());
-                    link->setAxisBottom(0, bottomAxis.normalize());
-                    link->m_dVector = pivotInB.normalize();
-                    link->m_eVector = pivotInA.normalize();
+                    jointA->getWorldTransform(tA);
+                    jointB->getWorldTransform(tB);
+                    btVector3 bodyACOM(tA.getOrigin());
+                    btVector3 bodyBCOM(tB.getOrigin());
+                    btVector3 diffCOM = bodyBCOM - bodyACOM;
+                    btVector3 bodyACOM2bodyBpivot = diffCOM - pivotInB;
+
+                    mb->setupRevolute(jointB->getBoneID(),
+                            link->m_mass,
+                            btVector3(0, 0, 0),
+                            static_cast<PhysicsJoint*>(mRigidBodyA)->getBoneID(),
+                            btQuaternion(0, 0, 0, 1),
+                            axisInB.normalize(),
+                            bodyACOM2bodyBpivot,
+                            pivotInB,
+                            true);
                     link->m_jointLowerLimit = mTempLower;
                     link->m_jointUpperLimit = mTempUpper;
-                    link->m_dofCount = 1;
                 }
             }
         }

@@ -52,11 +52,6 @@ public class SXRPhysicsJoint extends SXRPhysicsWorldObject
         super(parent.getSXRContext(), NativePhysicsJoint.ctorLink(parent.getNative(), boneID, mass));
     }
 
-    public void setName(String name)
-    {
-        NativePhysicsJoint.setName(getNative(), name);
-    }
-
     /** Used only by {@link SXRPhysicsLoader} */
     SXRPhysicsJoint(SXRContext ctx, long nativeJoint)
     {
@@ -167,7 +162,6 @@ public class SXRPhysicsJoint extends SXRPhysicsWorldObject
 
     protected void attachSkeleton(SXRSkeleton skel, float defaultMass)
     {
-        setName(skel.getBoneName(0));
         for (int i = 1; i < skel.getNumBones(); ++i)
         {
             SXRNode bone = skel.getBone(i);
@@ -189,7 +183,6 @@ public class SXRPhysicsJoint extends SXRPhysicsWorldObject
                         }
                     }
                     joint = new SXRPhysicsJoint(parentJoint, i, defaultMass);
-                    joint.setName(skel.getBoneName(i));
                     bone.attachComponent(joint);
                 }
             }
@@ -208,10 +201,6 @@ class NativePhysicsJoint
     static native float getMass(long joint);
 
     static native int getBoneID(long joint);
-
-    static native String getName(long joint);
-
-    static native void setName(long joint, String name);
 
     static native void setFriction(long joint, float friction);
 

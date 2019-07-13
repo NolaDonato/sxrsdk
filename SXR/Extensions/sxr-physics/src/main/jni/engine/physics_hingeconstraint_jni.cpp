@@ -56,7 +56,7 @@ namespace sxr {
         float *aA = env->GetFloatArrayElements(axisInA, 0);
         float *aB = env->GetFloatArrayElements(axisInB, 0);
         return reinterpret_cast<jlong>(new BulletHingeConstraint(
-                reinterpret_cast<PhysicsRigidBody*>(bodyA), pA, pB, aA, aB));
+                reinterpret_cast<PhysicsCollidable*>(bodyA), pA, pB, aA, aB));
     }
 
     JNIEXPORT jlong JNICALL

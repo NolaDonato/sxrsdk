@@ -17,7 +17,6 @@
 #define BULLET_JOINT_H_
 
 #include "../physics_joint.h"
-#include "bullet_object.h"
 
 #include <BulletDynamics/Featherstone/btMultiBody.h>
 #include <BulletDynamics/Featherstone/btMultiBodyLink.h>
@@ -29,7 +28,7 @@ class BulletWorld;
 namespace sxr {
 class Node;
 
-class BulletJoint : public PhysicsJoint, BulletObject, btMotionState
+class BulletJoint : public PhysicsJoint
 {
  public:
     BulletJoint(float mass, int numBones);
@@ -46,23 +45,19 @@ class BulletJoint : public PhysicsJoint, BulletObject, btMotionState
 
     btMultibodyLink* getLink() const { return mLink; }
 
-    virtual const char* getName() { return mName.c_str(); }
+    virtual void setMass(float mass);
 
-    virtual void setName(const char* name);
+    virtual float getMass() const;
 
-    void setMass(float mass);
-
-    float getMass();
-
-    float getFriction() { return mLink ? mLink->m_jointFriction : 0; }
+    float getFriction() const { return mLink ? mLink->m_jointFriction : 0; }
 
     void setFriction(float f);
 
     int getBoneID() { return mBoneID; }
 
-    void getWorldTransform(btTransform &worldTrans) const;
+    virtual void getWorldTransform(btTransform &worldTrans) const;
 
-    void setWorldTransform(const btTransform &worldTrans);
+    virtual void setWorldTransform(const btTransform &worldTrans);
 
     virtual void updateConstructionInfo();
 

@@ -21,7 +21,7 @@
 #define EXTENSIONS_BULLET_CONETWISTCONSTRAINT_H
 
 #include "../physics_conetwistconstraint.h"
-#include "bullet_object.h"
+#include "../physics_collidable.h"
 #include <glm/glm.hpp>
 #include <glm/mat3x3.hpp>
 
@@ -31,9 +31,10 @@ namespace sxr {
     class PhysicsRigidBody;
     class BulletRigidBody;
 
-    class BulletConeTwistConstraint : public PhysicsConeTwistConstraint, BulletObject {
+    class BulletConeTwistConstraint : public PhysicsConeTwistConstraint
+    {
     public:
-        explicit BulletConeTwistConstraint(PhysicsRigidBody *rigidBodyA,
+        explicit BulletConeTwistConstraint(PhysicsCollidable* bodyA,
                                            const glm::vec3& pivot,
                                            const glm::mat3& bodyRotation,
                                            const glm::mat3& coneRotation);
@@ -62,16 +63,15 @@ namespace sxr {
         void updateConstructionInfo();
     private:
 
-        btConeTwistConstraint *mConeTwistConstraint;
-        BulletRigidBody *mRigidBodyA;
+        btConeTwistConstraint* mConeTwistConstraint;
+        PhysicsCollidable*     mRigidBodyA;
 
-        float mBreakingImpulse;
+        float     mBreakingImpulse;
         glm::vec3 mPivot;
         glm::mat3 mBodyRotation;
         glm::mat3 mConeRotation;
-
-        float mSwingLimit;
-        float mTwistLimit;
+        float     mSwingLimit;
+        float     mTwistLimit;
     };
 
 }

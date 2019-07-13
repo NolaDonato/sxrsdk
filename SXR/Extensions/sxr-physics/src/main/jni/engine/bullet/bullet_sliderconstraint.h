@@ -21,7 +21,7 @@
 #define EXTENSIONS_BULLET_SLIDERCONSTRAINT_H
 
 #include "../physics_sliderconstraint.h"
-#include "bullet_object.h"
+#include "../physics_collidable.h"
 
 class btSliderConstraint;
 class btMultiBodySliderConstraint;
@@ -31,10 +31,10 @@ namespace sxr {
     class PhysicsRigidBody;
     class BulletRigidBody;
 
-    class BulletSliderConstraint : public PhysicsSliderConstraint, BulletObject
+    class BulletSliderConstraint : public PhysicsSliderConstraint
     {
     public:
-        explicit BulletSliderConstraint(PhysicsRigidBody* rigidBodyA);
+        BulletSliderConstraint(PhysicsCollidable* bodyA);
 
         BulletSliderConstraint(btSliderConstraint *constraint);
 
@@ -66,7 +66,7 @@ namespace sxr {
 
     private:
         btSliderConstraint* mSliderConstraint;
-        BulletRigidBody* mRigidBodyA;
+        PhysicsCollidable* mRigidBodyA;
 
         float mBreakingImpulse;
         float mLowerAngularLimit;

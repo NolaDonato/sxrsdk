@@ -314,7 +314,6 @@ class PhysicsAVTLoader
         parseCollider(link.getJSONObject("Collider").getJSONObject("value"), nodeName);
         JSONObject props = link.getJSONObject("Physic Material");
         joint.setFriction((float) props.getDouble("Friction"));
-        joint.setName(nodeName);
         Log.e("PHYSICS", "rigidbody %s bone = %s boneID = %d",
                 link.getString("Name"), nodeName, joint.getBoneID());
     }

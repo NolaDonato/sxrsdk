@@ -44,7 +44,7 @@ BulletRigidBody::BulletRigidBody()
     mWorld = nullptr;
 }
 
-BulletRigidBody::BulletRigidBody(btRigidBody *rigidBody)
+BulletRigidBody::BulletRigidBody(btRigidBody* rigidBody)
         : mConstructionInfo(btScalar(0.0f), nullptr, nullptr),
           mRigidBody(rigidBody),
           m_centerOfMassOffset(btTransform::getIdentity()),
@@ -102,15 +102,19 @@ BulletRigidBody::SimulationType BulletRigidBody::getSimulationType() const
     return mSimType;
 }
 
-void BulletRigidBody::updateConstructionInfo() {
+void BulletRigidBody::updateConstructionInfo()
+{
     if (mConstructionInfo.m_collisionShape != nullptr)
     {
         // This rigid body was not loaded so its construction must be finished
-        Collider *collider = (Collider *) owner_object_->getComponent(COMPONENT_TYPE_COLLIDER);
+        Collider *collider = (Collider *) owner_object()->getComponent(COMPONENT_TYPE_COLLIDER);
         if (collider)
         {
             bool isDynamic = (getMass() != 0.f);
-            delete mConstructionInfo.m_collisionShape;
+            if (mConstructionInfo.m_collisionShape)
+            {
+                delete mConstructionInfo.m_collisionShape;
+            }
             mRigidBody->setMotionState(this);
             mRigidBody->setMassProps(mConstructionInfo.m_mass, mConstructionInfo.m_localInertia);
             mConstructionInfo.m_collisionShape = convertCollider2CollisionShape(collider);
@@ -232,10 +236,6 @@ void BulletRigidBody::setWorldTransform(const btTransform &centerOfMassWorldTran
             trans->set_position(pos.getX(), pos.getY(), pos.getZ());
             trans->set_rotation(rot.getW(), rot.getX(), rot.getY(), rot.getZ());
         }
-        float x = pos.getX();
-        float y = pos.getY();
-        float z = pos.getZ();
-        //LOGD("PHYSICS: %s  %0.2f, %0.2f, %0.2f", owner->name().c_str(), x, y, z);
         prevPos = physicBody;
     }
     if (mSimType == DYNAMIC)
@@ -300,73 +300,6 @@ void BulletRigidBody::applyTorqueImpulse(float x, float y, float z)
     {
         mRigidBody->activate(true);
     }
-}
-
-float BulletRigidBody::center_x() const
-{
-    return m_centerOfMassOffset.getOrigin().getX();
-}
-
-float BulletRigidBody::center_y() const
-{
-    return m_centerOfMassOffset.getOrigin().getY();
-}
-
-float BulletRigidBody::center_z() const {
-    return m_centerOfMassOffset.getOrigin().getZ();
-}
-
-void  BulletRigidBody::set_center(float x, float y, float z)
-{
-    m_centerOfMassOffset.setOrigin(btVector3(x, y, z));
-}
-
-float BulletRigidBody::rotation_w() const
-{
-    return m_centerOfMassOffset.getRotation().getW();
-}
-
-float BulletRigidBody::rotation_x() const
-{
-    return m_centerOfMassOffset.getRotation().getX();
-}
-
-float BulletRigidBody::rotation_y() const
-{
-    return m_centerOfMassOffset.getRotation().getY();
-}
-
-float BulletRigidBody::rotation_z() const
-{
-    return m_centerOfMassOffset.getRotation().getZ();
-}
-
-void  BulletRigidBody::set_rotation(float w, float x, float y, float z)
-{
-    m_centerOfMassOffset.setRotation(btQuaternion(x, y, z, w));
-}
-
-float BulletRigidBody::scale_x() const
-{
-    return mScale.getX();
-}
-
-float BulletRigidBody::scale_y() const
-{
-    return mScale.getY();
-}
-
-float BulletRigidBody::scale_z() const
-{
-    return mScale.getZ();
-}
-
-void  BulletRigidBody::set_scale(float x, float y, float z)
-{
-    mScale.setValue(x, y, z);
-
-    //TODO: verify scaling upon graphic object update & diminish dependency
-    updateCollisionShapeLocalScaling();
 }
 
 void  BulletRigidBody::updateCollisionShapeLocalScaling()
@@ -492,23 +425,23 @@ void BulletRigidBody::getLinearFactor(float *v3) const {
     v3[2] = result.getZ();
 }
 
-const float  BulletRigidBody::getFriction() const {
+float  BulletRigidBody::getFriction() const {
     return mRigidBody->getFriction();
 }
 
-const float  BulletRigidBody::getRestitution() const {
+float  BulletRigidBody::getRestitution() const {
     return mRigidBody->getRestitution();
 }
 
-const float  BulletRigidBody::getCcdMotionThreshold() const {
+float  BulletRigidBody::getCcdMotionThreshold() const {
     return mRigidBody->getCcdMotionThreshold();
 }
 
-const float  BulletRigidBody::getCcdSweptSphereRadius() const {
+float  BulletRigidBody::getCcdSweptSphereRadius() const {
     return mRigidBody->getCcdSweptSphereRadius();
 }
 
-const float  BulletRigidBody::getContactProcessingThreshold() const {
+float  BulletRigidBody::getContactProcessingThreshold() const {
     return mRigidBody->getContactProcessingThreshold();
 }
 

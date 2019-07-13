@@ -29,9 +29,9 @@ static const char tag[] = "BulletSliderConstrN";
 
 namespace sxr {
 
-    BulletSliderConstraint::BulletSliderConstraint(PhysicsRigidBody* rigidBodyA)
+    BulletSliderConstraint::BulletSliderConstraint(PhysicsCollidable* bodyA)
     {
-        mRigidBodyA = reinterpret_cast<BulletRigidBody*>(rigidBodyA);
+        mRigidBodyA = reinterpret_cast<BulletRigidBody*>(bodyA);
         mSliderConstraint = 0;
 
         mBreakingImpulse = SIMD_INFINITY;
@@ -191,7 +191,7 @@ void BulletSliderConstraint::updateConstructionInfo()
     if (rigidBodyB)
     {
         btRigidBody* rbB = rigidBodyB->getRigidBody();
-        btRigidBody* rbA = mRigidBodyA->getRigidBody();
+        btRigidBody* rbA = reinterpret_cast<BulletRigidBody*>(mRigidBodyA)->getRigidBody();
         mSliderConstraint = new btSliderConstraint(*rbA, *rbB, frameInA, frameInB, true);
         mSliderConstraint->setLowerAngLimit(mLowerAngularLimit);
         mSliderConstraint->setUpperAngLimit(mUpperAngularLimit);
@@ -204,7 +204,7 @@ void BulletSliderConstraint::updateConstructionInfo()
         BulletJoint* jointB = (BulletJoint*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT);
         if (jointB)
         {
-            BulletJoint* jointA = (BulletJoint*) mRigidBodyA;
+            BulletJoint* jointA = reinterpret_cast<BulletJoint*>(mRigidBodyA);
             Transform* transA = owner_object()->transform();
             Transform* transB = jointB->owner_object()->transform();
             btMultibodyLink* link = jointA->getLink();

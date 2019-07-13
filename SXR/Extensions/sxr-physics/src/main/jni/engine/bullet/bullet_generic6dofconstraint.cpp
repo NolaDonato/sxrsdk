@@ -32,13 +32,12 @@ static const char tag[] = "PHYSICS";
 
 namespace sxr {
 
-    BulletGeneric6dofConstraint::BulletGeneric6dofConstraint(
-            PhysicsRigidBody* rigidBodyA, float const joint[], float const rotationA[],
-            float const rotationB[]) {
+    BulletGeneric6dofConstraint::BulletGeneric6dofConstraint(PhysicsCollidable* bodyA,
+            float const joint[], float const rotationA[], float const rotationB[])
+    {
         mGeneric6DofConstraint = 0;
 
-        mRigidBodyA = reinterpret_cast<BulletRigidBody*>(rigidBodyA);
-
+        mRigidBodyA = bodyA;
         mBreakingImpulse = SIMD_INFINITY;
         mPosition.x = joint[0];
         mPosition.y = joint[1];
@@ -185,7 +184,7 @@ void BulletGeneric6dofConstraint::updateConstructionInfo()
     if (bodyB)
     {
         btRigidBody* rbB = bodyB->getRigidBody();
-        btRigidBody* rbA = mRigidBodyA->getRigidBody();
+        btRigidBody* rbA = reinterpret_cast<BulletRigidBody*>(mRigidBodyA)->getRigidBody();
         btVector3    p(mPosition.x, mPosition.y, mPosition.z);
         btMatrix3x3  m(mRotationA[0][0], mRotationA[0][1], mRotationA[0][2],
                        mRotationA[1][0], mRotationA[1][1], mRotationA[1][2],
@@ -212,7 +211,8 @@ void BulletGeneric6dofConstraint::updateConstructionInfo()
         if (jointB)
         {
             btMultibodyLink* link = jointB->getLink();
-            BulletJoint* jointA = (BulletJoint*) mRigidBodyA;
+            btMultiBody* mb = jointB->getMultiBody();
+            BulletJoint* jointA = reinterpret_cast<BulletJoint*>(mRigidBodyA);
             btVector3 axis0(mRotationB[0][0], mRotationB[0][1], mRotationB[0][2]);
             btVector3 axis1(mRotationB[1][0], mRotationB[1][1], mRotationB[1][2]);
             btVector3 axis2(mRotationB[2][0], mRotationB[2][1], mRotationB[2][2]);
@@ -221,18 +221,19 @@ void BulletGeneric6dofConstraint::updateConstructionInfo()
 
             jointA->getWorldTransform(tA);
             jointB->getWorldTransform(tB);
-            btVector3 posA(tA.getOrigin());
-            btVector3 posB(tB.getOrigin());
+            btVector3 bodyACOM(tA.getOrigin());
+            btVector3 bodyBCOM(tB.getOrigin());
+            btVector3 diffCOM = bodyBCOM - bodyACOM;
+            btVector3 bodyACOM2bodyBpivot = diffCOM;
 
-            link->m_jointType = btMultibodyLink::eSpherical;
-            link->m_dVector = posB.normalize();
-            link->m_eVector = posA.normalize();
-            link->setAxisTop(0, axis0);
-            link->setAxisTop(1, axis1);
-            link->setAxisTop(2, axis2);
-            link->setAxisBottom(0, link->m_dVector.cross(axis0));
-            link->setAxisBottom(1, link->m_dVector.cross(axis1));
-            link->setAxisBottom(2, link->m_dVector.cross(axis2));
+            mb->setupSpherical(jointB->getBoneID(),
+                              link->m_mass,
+                              btVector3(0, 0, 0),
+                              static_cast<PhysicsJoint*>(mRigidBodyA)->getBoneID(),
+                              btQuaternion(0, 0, 0, 1),
+                              bodyACOM2bodyBpivot,
+                              btVector3(0,0, 0),
+                              true);
             link->m_dofCount = 3;
         }
     }

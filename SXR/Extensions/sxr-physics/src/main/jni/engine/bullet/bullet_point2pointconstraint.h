@@ -18,7 +18,7 @@
 #define BULLET_POINT2POINTCONSTRAINT_H
 
 #include "../physics_point2pointconstraint.h"
-#include "bullet_object.h"
+#include "../physics_collidable.h"
 #include <glm/vec3.hpp>
 
 class btPoint2PointConstraint;
@@ -28,11 +28,11 @@ namespace sxr {
     class PhysicsRigidBody;
     class BulletRigidBody;
 
-    class BulletPoint2PointConstraint : public PhysicsPoint2pointConstraint, BulletObject
+    class BulletPoint2PointConstraint : public PhysicsPoint2pointConstraint
     {
 
     public:
-        explicit BulletPoint2PointConstraint(PhysicsRigidBody* rigidBodyA,
+        explicit BulletPoint2PointConstraint(PhysicsCollidable* bodyA,
                                              float pivotInA[],float pivotInB[]);
 
         BulletPoint2PointConstraint(btPoint2PointConstraint *constraint);
@@ -60,9 +60,9 @@ namespace sxr {
 
     private:
         btPoint2PointConstraint* mPoint2PointConstraint;
-        BulletRigidBody* mRigidBodyA;
+        PhysicsCollidable*       mRigidBodyA;
 
-        float mBreakingImpulse;
+        float     mBreakingImpulse;
         glm::vec3 mPivotInA;
         glm::vec3 mPivotInB;
     };

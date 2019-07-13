@@ -103,22 +103,5 @@ extern "C"
         return mb->getBoneID();
     }
 
-    JNIEXPORT jobject JNICALL
-    Java_com_samsungxr_physics_NativePhysicsJoint_getName(JNIEnv* env, jclass obj, jlong jjoint)
-    {
-        PhysicsJoint* mb = reinterpret_cast<PhysicsJoint*>(jjoint);
-        const char* name = mb->getName();
-        return env->NewStringUTF(name);
-    }
-
-    JNIEXPORT void JNICALL
-    Java_com_samsungxr_physics_NativePhysicsJoint_setName(JNIEnv* env, jclass obj, jlong jjoint, jstring jname)
-    {
-        PhysicsJoint* mb = reinterpret_cast<PhysicsJoint*>(jjoint);
-        const char* name = env->GetStringUTFChars(jname, 0);
-
-        mb->setName(name);
-        env->ReleaseStringUTFChars(jname, name);
-    }
 
 }

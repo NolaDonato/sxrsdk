@@ -28,14 +28,13 @@
 const char tag[] = "PHYSICS";
 
 namespace sxr {
-    BulletConeTwistConstraint::BulletConeTwistConstraint(PhysicsRigidBody* bodyA,
+    BulletConeTwistConstraint::BulletConeTwistConstraint(PhysicsCollidable* bodyA,
                                                          const glm::vec3& pivot,
                                                          const glm::mat3& bodyRotation,
                                                          const glm::mat3& coneRotation)
     {
         mConeTwistConstraint = 0;
-        mRigidBodyA = reinterpret_cast<BulletRigidBody*>(bodyA);
-
+        mRigidBodyA = bodyA;
         mBreakingImpulse = SIMD_INFINITY;
         mPivot = pivot;
         mBodyRotation = bodyRotation;
@@ -140,7 +139,7 @@ void BulletConeTwistConstraint::updateConstructionInfo()
     }
 
     btRigidBody* rbB = reinterpret_cast<BulletRigidBody*>(owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY))->getRigidBody();
-    btRigidBody* rbA = mRigidBodyA->getRigidBody();
+    btRigidBody* rbA = reinterpret_cast<BulletRigidBody*>(mRigidBodyA)->getRigidBody();
     // Original pivot is relative to body A (the one that swings)
     btVector3 p(mPivot.x, mPivot.y, mPivot.z);
 
