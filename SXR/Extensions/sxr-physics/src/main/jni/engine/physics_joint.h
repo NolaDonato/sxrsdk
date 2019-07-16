@@ -28,7 +28,7 @@
 namespace sxr {
 class PhysicsWorld;
 
-class PhysicsJoint : public PhysicsCollidable
+class PhysicsJoint :  public PhysicsCollidable
 {
  public:
 

@@ -61,9 +61,9 @@ class BulletWorld : public PhysicsWorld {
 
     void removeRigidBody(PhysicsRigidBody *body);
 
-    void addRootJoint(PhysicsJoint* body);
+    void addJoint(PhysicsJoint *joint);
 
-    void removeRootJoint(PhysicsJoint* body);
+    void removeJoint(PhysicsJoint *body);
 
     void step(float timeStep, int maxSubSteps);
 

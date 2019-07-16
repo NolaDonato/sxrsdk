@@ -131,7 +131,7 @@ namespace sxr {
         }
     }
 
-void BulletConeTwistConstraint::updateConstructionInfo()
+void BulletConeTwistConstraint::updateConstructionInfo(PhysicsWorld* world)
 {
     if (mConeTwistConstraint)
     {

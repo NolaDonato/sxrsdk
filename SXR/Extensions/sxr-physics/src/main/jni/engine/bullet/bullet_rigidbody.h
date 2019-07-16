@@ -57,6 +57,8 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
 
     virtual void setFriction(float f);
 
+    virtual void updateConstructionInfo(PhysicsWorld* world);
+
     void setCenterOfMass(Transform *t);
 
     void getRotation(float &w, float &x, float &y, float &z);
@@ -66,8 +68,6 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
     virtual void getWorldTransform(btTransform &worldTrans) const;
 
     virtual void setWorldTransform(const btTransform &worldTrans);
-
-    virtual void updateConstructionInfo();
 
     void applyCentralForce(float x, float y, float z);
 

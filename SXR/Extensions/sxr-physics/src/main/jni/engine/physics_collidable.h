@@ -18,8 +18,8 @@
 #define PHYSICS_COLLIDABLE_H
 
 
-class Node;
 namespace sxr {
+    class PhysicsWorld;
 
     class PhysicsCollidable : public Component
     {
@@ -33,7 +33,9 @@ namespace sxr {
         virtual void setFriction(float n)  = 0;
 
         virtual float getFriction() const = 0;
+
+        virtual void updateConstructionInfo(PhysicsWorld*) = 0;
     };
 
 }
-#endif //BULLET_COLLIDABLE_H
+#endif // PHYSICS_COLLIDABLE_H

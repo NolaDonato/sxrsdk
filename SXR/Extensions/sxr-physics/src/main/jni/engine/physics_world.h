@@ -27,6 +27,7 @@
 #include <list>
 
 namespace sxr {
+class PhysicsConstraint;
 
 struct ContactPoint {
 	PhysicsRigidBody* body0 = 0;
@@ -61,9 +62,9 @@ public:
 
     virtual void addRigidBody(PhysicsRigidBody *body) = 0;
 
-    virtual void addRootJoint(PhysicsJoint* body) = 0;
+    virtual void addJoint(PhysicsJoint *body) = 0;
 
-    virtual void removeRootJoint(PhysicsJoint* body) = 0;
+    virtual void removeJoint(PhysicsJoint *body) = 0;
 
     virtual void addRigidBody(PhysicsRigidBody *body, int collisiontype, int collidesWith) = 0;
 

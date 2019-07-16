@@ -64,18 +64,18 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
     public interface IPhysicsEvents extends IEvents
     {
         /**
-         * Called when a multi body root is added to a physics world.
-         * @param world physics world the body is added to.
-         * @param body  rigid body added.
+         * Called when a joint is added to a physics world.
+         * @param world  physics world the body is added to.
+         * @param joint  joint added.
          */
-        public void onAddRootJoint(final SXRWorld world, final SXRPhysicsJoint body);
+        public void onAddJoint(final SXRWorld world, final SXRPhysicsJoint joint);
 
         /**
-         * Called when a multi body root is removed from a physics world.
-         * @param world physics world the body is removed from.
-         * @param body  rigid body removed.
+         * Called when a joint is removed from a physics world.
+         * @param world  physics world the body is removed from.
+         * @param joint  joint removed.
          */
-        public void onRemoveRootJoint(final SXRWorld world, final SXRPhysicsJoint body);
+        public void onRemoveJoint(final SXRWorld world, final SXRPhysicsJoint joint);
 
         /**
          * Called when a rigid body is added to a physics world.
@@ -194,16 +194,26 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
      *
      * @param gvrConstraint The {@link SXRConstraint} to add.
      */
-    public void addConstraint(final SXRConstraint gvrConstraint) {
-        mPhysicsContext.runOnPhysicsThread(new Runnable() {
+    public void addConstraint(final SXRConstraint gvrConstraint)
+    {
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
             @Override
-            public void run() {
-                if (contains(gvrConstraint)) {
+            public void run()
+            {
+                if (contains(gvrConstraint))
+                {
                     return;
                 }
-                if (((gvrConstraint.mBodyA != null) && !contains(gvrConstraint.mBodyA)) ||
-                    ((gvrConstraint.mBodyB != null && !contains(gvrConstraint.mBodyB)))) {
-                    throw new UnsupportedOperationException("Rigid body not found in the physics world.");
+                SXRPhysicsWorldObject bodyB = gvrConstraint.mBodyB;
+                SXRPhysicsWorldObject bodyA = gvrConstraint.mBodyA;
+
+                if ((bodyB != null) && (bodyB instanceof SXRRigidBody))
+                {
+                    if (!contains(bodyB) || ((bodyA != null) && !contains(bodyA)))
+                    {
+                        throw new UnsupportedOperationException("Rigid body used by constraint is not found in the physics world.");
+                    }
                 }
                 NativePhysics3DWorld.addConstraint(getNative(), gvrConstraint.getNative());
                 mPhysicsObject.put(gvrConstraint.getNative(), gvrConstraint);
@@ -342,9 +352,9 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
                 {
                     return;
                 }
-                NativePhysics3DWorld.addRootJoint(getNative(), body.getNative());
+                NativePhysics3DWorld.addJoint(getNative(), body.getNative());
                 mPhysicsObject.put(body.getNative(), body);
-                getSXRContext().getEventManager().sendEvent(SXRWorld.this, IPhysicsEvents.class, "onAddRootJoint", SXRWorld.this, body);
+                getSXRContext().getEventManager().sendEvent(SXRWorld.this, IPhysicsEvents.class, "onAddJoint", SXRWorld.this, body);
             }
         });
     }
@@ -377,9 +387,9 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
             @Override
             public void run() {
                 if (contains(joint)) {
-                    NativePhysics3DWorld.removeRootJoint(getNative(), joint.getNative());
+                    NativePhysics3DWorld.removeJoint(getNative(), joint.getNative());
                     mPhysicsObject.remove(joint.getNative());
-                    getSXRContext().getEventManager().sendEvent(SXRWorld.this, IPhysicsEvents.class, "onRemoveRootJoint", SXRWorld.this, joint);
+                    getSXRContext().getEventManager().sendEvent(SXRWorld.this, IPhysicsEvents.class, "onRemoveJoint", SXRWorld.this, joint);
                 }
             }
         });
@@ -655,9 +665,9 @@ class NativePhysics3DWorld {
 
     static native void stopDrag(long jphysics_world);
 
-    static native void addRootJoint(long jphysics_world, long jjoint);
+    static native void addJoint(long jphysics_world, long jjoint);
 
-    static native void removeRootJoint(long jphysics_world, long jjoint);
+    static native void removeJoint(long jphysics_world, long jjoint);
 
     static native void addRigidBody(long jphysics_world, long jrigid_body);
 

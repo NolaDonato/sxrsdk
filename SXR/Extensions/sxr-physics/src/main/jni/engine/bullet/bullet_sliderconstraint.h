@@ -62,7 +62,7 @@ namespace sxr {
 
         void *getUnderlying() { return mSliderConstraint; }
 
-        void updateConstructionInfo();
+        void updateConstructionInfo(PhysicsWorld*);
 
     private:
         btSliderConstraint* mSliderConstraint;

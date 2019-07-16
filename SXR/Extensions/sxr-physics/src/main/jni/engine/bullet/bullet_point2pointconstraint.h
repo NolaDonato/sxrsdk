@@ -56,7 +56,7 @@ namespace sxr {
 
         const glm::vec3& getPivotInB() const { return mPivotInB; }
 
-        void updateConstructionInfo();
+        void updateConstructionInfo(PhysicsWorld* world);
 
     private:
         btPoint2PointConstraint* mPoint2PointConstraint;

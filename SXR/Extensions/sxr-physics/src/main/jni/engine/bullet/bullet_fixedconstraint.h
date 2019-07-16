@@ -45,7 +45,7 @@ namespace sxr {
 
         float getBreakingImpulse() const;
 
-        void updateConstructionInfo();
+        void updateConstructionInfo(PhysicsWorld* world);
 
     private:
         btFixedConstraint* mFixedConstraint;

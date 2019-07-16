@@ -54,7 +54,7 @@ float BulletFixedConstraint::getBreakingImpulse() const
     }
 }
 
-void BulletFixedConstraint::updateConstructionInfo()
+void BulletFixedConstraint::updateConstructionInfo(PhysicsWorld* world)
 {
     if (mFixedConstraint != nullptr)
     {
@@ -78,18 +78,16 @@ void BulletFixedConstraint::updateConstructionInfo()
         {
             btMultibodyLink* link = jointB->getLink();
             BulletJoint* jointA = reinterpret_cast<BulletJoint*>(mRigidBodyA);
-            btTransform transA;
-            btTransform transB;
-
-            jointA->getWorldTransform(transA);
-            jointB->getWorldTransform(transB);
-            btVector3 posA(transA.getOrigin());
-            btVector3 posB(transB.getOrigin());
+            glm::mat4 tA = jointA->owner_object()->transform()->getModelMatrix(true);
+            glm::mat4 tB = owner_object()->transform()->getModelMatrix(true);
+            btVector3 posA(tA[3][0], tA[3][1], tA[3][2]);
+            btVector3 posB(tB[3][0], tB[3][1], tB[3][2]);
 
             link->m_jointType = btMultibodyLink::eRevolute;
             link->m_dVector = posB.normalize();
             link->m_eVector = posA.normalize();
             link->m_dofCount = 0;
+            jointB->addConstraint();
         }
     }
 }

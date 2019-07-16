@@ -137,7 +137,7 @@ public class SXRPhysicsJoint extends SXRPhysicsWorldObject
     {
         if (newOwner.getCollider() == null)
         {
-            throw new UnsupportedOperationException("You must have a collider attached to the node before attaching the multi body component");
+            throw new UnsupportedOperationException("You must have a collider attached to the node before attaching the joint component");
         }
         super.onAttach(newOwner);
     }
@@ -162,12 +162,19 @@ public class SXRPhysicsJoint extends SXRPhysicsWorldObject
 
     protected void attachSkeleton(SXRSkeleton skel, float defaultMass)
     {
+        SXRNode rootBone = skel.getBone(0);
+        SXRPhysicsJoint joint = (SXRPhysicsJoint) rootBone.getComponent(SXRPhysicsJoint.getComponentType());
+        if (joint == null)
+        {
+            joint = new SXRPhysicsJoint(skel.getSXRContext(), defaultMass, skel.getNumBones() - 1);
+        }
+        SXRPhysicsJoint rootJoint = joint;
         for (int i = 1; i < skel.getNumBones(); ++i)
         {
             SXRNode bone = skel.getBone(i);
             if (bone != null)
             {
-                SXRPhysicsJoint joint = (SXRPhysicsJoint) bone.getComponent(SXRPhysicsJoint.getComponentType());
+                joint = (SXRPhysicsJoint) bone.getComponent(SXRPhysicsJoint.getComponentType());
                 if (joint == null)
                 {
                     SXRNode parent = skel.getBone(skel.getParentBoneIndex(i));
@@ -187,6 +194,7 @@ public class SXRPhysicsJoint extends SXRPhysicsWorldObject
                 }
             }
         }
+        rootBone.attachComponent(rootJoint);
     }
 }
 
@@ -205,4 +213,5 @@ class NativePhysicsJoint
     static native void setFriction(long joint, float friction);
 
     static native float getFriction(long joint);
+
 }

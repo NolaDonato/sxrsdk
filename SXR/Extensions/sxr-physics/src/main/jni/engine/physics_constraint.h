@@ -17,6 +17,7 @@
 #define EXTENSIONS_PHYSICS_CONSTRAINT_H
 
 #include "../objects/node.h"
+#include "physics_world.h"
 
 namespace sxr {
 
@@ -44,7 +45,7 @@ namespace sxr {
         virtual void *getUnderlying() = 0;
         virtual void setBreakingImpulse(float impulse) = 0;
         virtual float getBreakingImpulse() const = 0;
-        virtual void updateConstructionInfo() = 0;
+        virtual void updateConstructionInfo(PhysicsWorld*) = 0;
         virtual void addChildComponent(Component* constraint)
         {
             mConstraints.push_back(static_cast<PhysicsConstraint*>(constraint));

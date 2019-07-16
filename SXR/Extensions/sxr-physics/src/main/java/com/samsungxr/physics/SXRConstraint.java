@@ -118,7 +118,7 @@ abstract class SXRConstraint extends SXRPhysicsWorldObject implements IComponent
             mBodyB = (SXRPhysicsJoint) newOwner.getComponent(SXRPhysicsJoint.getComponentType());
             if (mBodyB == null)
             {
-                throw new UnsupportedOperationException("There is no rigid body attached to owner object.");
+                throw new UnsupportedOperationException("There is no rigid body or joint attached to owner object.");
             }
         }
         super.onAttach(newOwner);

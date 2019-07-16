@@ -102,7 +102,7 @@ BulletRigidBody::SimulationType BulletRigidBody::getSimulationType() const
     return mSimType;
 }
 
-void BulletRigidBody::updateConstructionInfo()
+void BulletRigidBody::updateConstructionInfo(PhysicsWorld* world)
 {
     if (mConstructionInfo.m_collisionShape != nullptr)
     {

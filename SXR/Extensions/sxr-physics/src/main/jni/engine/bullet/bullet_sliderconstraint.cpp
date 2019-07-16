@@ -16,7 +16,7 @@
 //
 // Created by c.bozzetto on 31/05/2017.
 //
-
+#include "objects/node.h"
 #include "bullet_rigidbody.h"
 #include "bullet_joint.h"
 #include "bullet_sliderconstraint.h"
@@ -178,7 +178,7 @@ namespace sxr {
         }
     }
 
-void BulletSliderConstraint::updateConstructionInfo()
+void BulletSliderConstraint::updateConstructionInfo(PhysicsWorld* world)
 {
     if (mSliderConstraint != nullptr)
     {
@@ -209,13 +209,10 @@ void BulletSliderConstraint::updateConstructionInfo()
             Transform* transB = jointB->owner_object()->transform();
             btMultibodyLink* link = jointA->getLink();
             glm::vec3 jointAxis = findJointAxis(transA, transB);
-            btTransform tA;
-            btTransform tB;
-
-            jointA->getWorldTransform(tA);
-            jointB->getWorldTransform(tB);
-            btVector3 posA(tA.getOrigin());
-            btVector3 posB(tB.getOrigin());
+            glm::mat4 tA = jointA->owner_object()->transform()->getModelMatrix(true);
+            glm::mat4 tB = owner_object()->transform()->getModelMatrix(true);
+            btVector3 posA(tA[3][0], tA[3][1], tA[3][2]);
+            btVector3 posB(tB[3][0], tB[3][1], tB[3][2]);
 
             link->m_jointType = btMultibodyLink::ePrismatic;
             link->m_dVector = posB.normalize();
@@ -225,6 +222,7 @@ void BulletSliderConstraint::updateConstructionInfo()
             link->m_jointLowerLimit = mLowerLinearLimit;
             link->m_jointUpperLimit = mUpperLinearLimit;
             link->m_dofCount = 1;
+            jointB->addConstraint();
         }
     }
 

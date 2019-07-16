@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+#include <string>
 #include "bullet/bullet_joint.h"
 
 namespace sxr {
@@ -41,12 +41,6 @@ extern "C"
 
     JNIEXPORT void JNICALL
     Java_com_samsungxr_physics_NativePhysicsJoint_setFriction(JNIEnv* env, jclass obj, jlong jjoint, jfloat friction);
-
-    JNIEXPORT jobject JNICALL
-    Java_com_samsungxr_physics_NativePhysicsJoint_getName(JNIEnv* env, jclass obj, jlong jjoint);
-
-    JNIEXPORT void JNICALL
-    Java_com_samsungxr_physics_NativePhysicsJoint_setName(JNIEnv* env, jclass obj, jlong jjoint, jstring jname);
 }
 
     JNIEXPORT jlong JNICALL
@@ -102,6 +96,7 @@ extern "C"
         PhysicsJoint* mb = reinterpret_cast<PhysicsJoint*>(jjoint);
         return mb->getBoneID();
     }
+
 
 
 }

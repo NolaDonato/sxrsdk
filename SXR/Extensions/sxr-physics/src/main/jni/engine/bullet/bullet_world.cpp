@@ -149,7 +149,7 @@ void BulletWorld::markUpdated(PhysicsCollidable* body)
 
 void BulletWorld::addConstraint(PhysicsConstraint *constraint)
 {
-    constraint->updateConstructionInfo();
+    constraint->updateConstructionInfo(this);
     btTypedConstraint* _constr = reinterpret_cast<btTypedConstraint*>(constraint->getUnderlying());
     mPhysicsWorld->addConstraint(_constr);
 }
@@ -188,7 +188,7 @@ void BulletWorld::stopDrag()
 void BulletWorld::addRigidBody(PhysicsRigidBody *body)
 {
     BulletRigidBody* rb = static_cast<BulletRigidBody *>(body);
-    body->updateConstructionInfo();
+    body->updateConstructionInfo(this);
     mPhysicsWorld->addRigidBody(rb->getRigidBody());
     rb->mWorld = this;
 }
@@ -196,7 +196,7 @@ void BulletWorld::addRigidBody(PhysicsRigidBody *body)
 void BulletWorld::addRigidBody(PhysicsRigidBody *body, int collisiontype, int collidesWith)
 {
     BulletRigidBody* rb = static_cast<BulletRigidBody *>(body);
-    body->updateConstructionInfo();
+    body->updateConstructionInfo(this);
     mPhysicsWorld->addRigidBody(rb->getRigidBody(), collidesWith, collisiontype);
     rb->mWorld = this;
 }
@@ -206,19 +206,17 @@ void BulletWorld::removeRigidBody(PhysicsRigidBody *body)
     mPhysicsWorld->removeRigidBody((static_cast<BulletRigidBody *>(body))->getRigidBody());
 }
 
-void BulletWorld::addRootJoint(PhysicsJoint* body)
+void BulletWorld::addJoint(PhysicsJoint *joint)
 {
     if (isMultiBody())
     {
-        btMultiBodyDynamicsWorld* world = static_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld);
-        btMultiBody* mb = static_cast<BulletJoint*>(body)->getMultiBody();
-        world->addMultiBody(mb);
+        joint->updateConstructionInfo(this);
     }
 }
 
-void BulletWorld::removeRootJoint(PhysicsJoint* body)
+void BulletWorld::removeJoint(PhysicsJoint *body)
 {
-    if (isMultiBody())
+    if (isMultiBody() && (body->getBoneID() == 0))
     {
         btMultiBodyDynamicsWorld* world = static_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld);
         btMultiBody* mb = static_cast<BulletJoint*>(body)->getMultiBody();
@@ -254,8 +252,12 @@ void BulletWorld::setPhysicsTransforms()
         const BulletJoint* joint = static_cast<const BulletJoint*>(mb->getUserPointer());
         btTransform t;
 
+        if (!joint->isReady())
+        {
+            return;
+        }
         joint->getWorldTransform(t);
-        for (int j = 0; j < mb->getNumLinks(); ++i)
+        for (int j = 0; j < mb->getNumLinks(); ++j)
         {
             btMultibodyLink& link = mb->getLink(j);
             const void* p = link.m_userPtr;
@@ -273,8 +275,12 @@ void BulletWorld::getPhysicsTransforms()
         btMultiBody* mb = world->getMultiBody(i);
         BulletJoint* joint = static_cast<BulletJoint*>(mb->getUserPointer());
 
+        if (!joint->isReady())
+        {
+            return;
+        }
         joint->setWorldTransform(mb->getBaseWorldTransform());
-        for (int j = 0; j < mb->getNumLinks(); ++i)
+        for (int j = 0; j < mb->getNumLinks(); ++j)
         {
             btMultibodyLink& link = mb->getLink(j);
             btMultiBodyLinkCollider* collider = link.m_collider;

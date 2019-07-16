@@ -16,6 +16,7 @@
 #ifndef BULLET_JOINT_H_
 #define BULLET_JOINT_H_
 
+#include <string>
 #include "../physics_joint.h"
 
 #include <BulletDynamics/Featherstone/btMultiBody.h>
@@ -59,20 +60,24 @@ class BulletJoint : public PhysicsJoint
 
     virtual void setWorldTransform(const btTransform &worldTrans);
 
-    virtual void updateConstructionInfo();
+    virtual void updateConstructionInfo(PhysicsWorld* world);
+
+    bool isReady() const;
+    void addLink();
+    void addConstraint();
 
 private:
-    void finalize();
+    void destroy();
     void updateCollisionShapeLocalScaling();
 
-private:
+protected:
     btMultiBody*             mMultiBody;
     btMultibodyLink*         mLink;
     btMultiBodyLinkCollider* mCollider;
     BulletWorld*             mWorld;
     int                      mBoneID;
-    std::string              mName;
-    friend class BulletWorld;
+    int                      mLinksAdded;
+    int                      mConstraintsAdded;
 };
 
 }

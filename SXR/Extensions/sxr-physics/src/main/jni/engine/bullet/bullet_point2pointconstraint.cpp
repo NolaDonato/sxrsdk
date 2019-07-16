@@ -83,7 +83,7 @@ namespace sxr {
     }
 
 
-void BulletPoint2PointConstraint::updateConstructionInfo()
+void BulletPoint2PointConstraint::updateConstructionInfo(PhysicsWorld* world)
 {
     if (mPoint2PointConstraint == nullptr)
     {

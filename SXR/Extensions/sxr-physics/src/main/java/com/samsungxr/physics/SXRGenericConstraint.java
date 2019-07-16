@@ -38,7 +38,7 @@ public class SXRGenericConstraint extends SXRConstraint
      * @param ctx        the context of the app
      * @param bodyA      the "fixed" body (not the owner) in this constraint
      * @param jointPos   the joint point (x, y and z coordinates) in this constraint
-     *                   relative to "fixed"body
+     *                   relative to "fixed" body
      * @param rotationA  the rotation of the constraint (an array containing the elements of 3x3
      *                   rotation matrix) related to "moving" body
      * @param rotationB  the rotation of the constraint (an array containing the elements of 3x3

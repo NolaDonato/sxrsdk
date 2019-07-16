@@ -173,7 +173,7 @@ namespace sxr {
         }
     }
 
-void BulletGeneric6dofConstraint::updateConstructionInfo()
+void BulletGeneric6dofConstraint::updateConstructionInfo(PhysicsWorld* world)
 {
     if (mGeneric6DofConstraint != nullptr)
     {
@@ -216,13 +216,10 @@ void BulletGeneric6dofConstraint::updateConstructionInfo()
             btVector3 axis0(mRotationB[0][0], mRotationB[0][1], mRotationB[0][2]);
             btVector3 axis1(mRotationB[1][0], mRotationB[1][1], mRotationB[1][2]);
             btVector3 axis2(mRotationB[2][0], mRotationB[2][1], mRotationB[2][2]);
-            btTransform tA;
-            btTransform tB;
-
-            jointA->getWorldTransform(tA);
-            jointB->getWorldTransform(tB);
-            btVector3 bodyACOM(tA.getOrigin());
-            btVector3 bodyBCOM(tB.getOrigin());
+            glm::mat4 tA = jointA->owner_object()->transform()->getModelMatrix(true);
+            glm::mat4 tB = owner_object()->transform()->getModelMatrix(true);
+            btVector3 bodyACOM(tA[3][0], tA[3][1], tA[3][2]);
+            btVector3 bodyBCOM(tB[3][0], tB[3][1], tB[3][2]);
             btVector3 diffCOM = bodyBCOM - bodyACOM;
             btVector3 bodyACOM2bodyBpivot = diffCOM;
 
@@ -235,6 +232,7 @@ void BulletGeneric6dofConstraint::updateConstructionInfo()
                               btVector3(0,0, 0),
                               true);
             link->m_dofCount = 3;
+            jointB->addConstraint();
         }
     }
 }

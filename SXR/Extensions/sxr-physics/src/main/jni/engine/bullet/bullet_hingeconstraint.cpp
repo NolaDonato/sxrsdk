@@ -124,7 +124,7 @@ namespace sxr {
         }
     }
 
-    void BulletHingeConstraint::updateConstructionInfo()
+    void BulletHingeConstraint::updateConstructionInfo(PhysicsWorld* world)
     {
         if (mHingeConstraint == nullptr)
         {
@@ -151,13 +151,10 @@ namespace sxr {
                     BulletJoint* jointA = static_cast<BulletJoint*>(mRigidBodyA);
                     btMultiBody* mb = jointB->getMultiBody();
                     btMultibodyLink* link = jointB->getLink();
-                    btTransform tA;
-                    btTransform tB;
-
-                    jointA->getWorldTransform(tA);
-                    jointB->getWorldTransform(tB);
-                    btVector3 bodyACOM(tA.getOrigin());
-                    btVector3 bodyBCOM(tB.getOrigin());
+                    glm::mat4 tA = jointA->owner_object()->transform()->getModelMatrix(true);
+                    glm::mat4 tB = owner_object()->transform()->getModelMatrix(true);
+                    btVector3 bodyACOM(tA[3][0], tA[3][1], tA[3][2]);
+                    btVector3 bodyBCOM(tB[3][0], tB[3][1], tB[3][2]);
                     btVector3 diffCOM = bodyBCOM - bodyACOM;
                     btVector3 bodyACOM2bodyBpivot = diffCOM - pivotInB;
 
@@ -172,6 +169,7 @@ namespace sxr {
                             true);
                     link->m_jointLowerLimit = mTempLower;
                     link->m_jointUpperLimit = mTempUpper;
+                    jointB->addConstraint();
                 }
             }
         }
