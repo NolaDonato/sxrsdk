@@ -36,8 +36,54 @@ add_library(sxrsdk SHARED IMPORTED)
 set_property(TARGET sxrsdk PROPERTY IMPORTED_LOCATION
              ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../SDK/sxrsdk/build/intermediates/ndkBuild/${buildType}/obj/local/${ANDROID_ABI}/libsxrsdk.so)
 
-add_library(Bullet SHARED IMPORTED)
-set_property(TARGET Bullet PROPERTY IMPORTED_LOCATION
-             ${CMAKE_CURRENT_SOURCE_DIR}/prebuilt/${ANDROID_ABI}/libBullet.so)
-
-target_link_libraries(sxr-physics sxrsdk android log Bullet EGL GLESv3)
+add_library(LinearMath SHARED IMPORTED)
+set_target_properties(
+        LinearMath
+        PROPERTIES IMPORTED_LOCATION
+        jniLibs/${ANDROID_ABI}/libLinearMath.so)
+add_library(Bullet3Common SHARED IMPORTED)
+set_target_properties(
+        BulletCommon
+        PROPERTIES IMPORTED_LOCATION
+        jniLibs/${ANDROID_ABI}/libBulletCommon.so)
+add_library(BulletCollision SHARED IMPORTED)
+set_target_properties(
+        BulletCollision
+        PROPERTIES IMPORTED_LOCATION
+        jniLibs/${ANDROID_ABI}/libBulletCollision.so)
+add_library(Bullet3Collision SHARED IMPORTED)
+set_target_properties(
+        Bullet3Collision
+        PROPERTIES IMPORTED_LOCATION
+        jniLibs/${ANDROID_ABI}/libBullet3Collision.so)
+add_library(BulletDynamics SHARED IMPORTED)
+set_target_properties(
+        BulletDynamics
+        PROPERTIES IMPORTED_LOCATION
+        jniLibs/${ANDROID_ABI}/libBulletDynamics.so)
+add_library(Bullet3Dynamics SHARED IMPORTED)
+set_target_properties(
+        Bullet3Dynamics
+        PROPERTIES IMPORTED_LOCATION
+        jniLibs/${ANDROID_ABI}/libBullet3Dynamics.so)
+add_library(Bullet3Geometry SHARED IMPORTED)
+set_target_properties(
+        Bullet3Geometry
+        PROPERTIES IMPORTED_LOCATION
+        jniLibs/${ANDROID_ABI}/libBullet3Geometry.so)
+add_library(Bullet2FileLoader SHARED IMPORTED)
+set_target_properties(
+        Bullet2FileLoader
+        PROPERTIES IMPORTED_LOCATION
+        jniLibs/${ANDROID_ABI}/libBullet2FileLoader.so)
+add_library(BulletWorldImporter SHARED IMPORTED)
+set_target_properties(
+        BulletWorldImporter
+        PROPERTIES IMPORTED_LOCATION
+        jniLibs/${ANDROID_ABI}/libBulletWorldImporter.so)
+add_library(BulletXmlWorldImporter SHARED IMPORTED)
+set_target_properties(
+        BulletXmlWorldImporter
+        PROPERTIES IMPORTED_LOCATION
+        jniLibs/${ANDROID_ABI}/libBulletXmlWorldImporter.so)
+target_link_libraries(sxr-physics sxrsdk android log LinearMath BulletCollision BulletDynamics BulletWorldImporter Bullet2FileLoader BulletXmlWorldImporter Bullet3Geometry Bullet3Dynamics Bullet3Common Bullet3Collision EGL GLESv3)

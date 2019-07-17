@@ -49,6 +49,7 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
 
     static {
         System.loadLibrary("sxr-physics");
+        System.loadLibrary("bullet3");
     }
 
     private final LongSparseArray<SXRPhysicsWorldObject> mPhysicsObject = new LongSparseArray<SXRPhysicsWorldObject>();
