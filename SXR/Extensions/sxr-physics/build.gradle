@@ -13,19 +13,18 @@ android {
         minSdkVersion 21
         targetSdkVersion 26
 
-        ndk {
-            moduleName "sxr-physics"
-            if (rootProject.hasProperty("SXRSDK_ABI_FILTER")) {
-                abiFilters rootProject.property("SXRSDK_ABI_FILTER")
-            } else {
-                abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
-            }
-        }
         externalNativeBuild {
             cmake {
                 arguments.add('-DANDROID_STL=c++_shared')
             }
         }
+    }
+
+    packagingOptions {
+        pickFirst 'lib/x86/libc++_shared.so'
+        pickFirst 'lib/arm64-v8a/libc++_shared.so'
+        pickFirst 'lib/armeabi-v7a/libc++_shared.so'
+        pickFirst 'lib/x86_64/libc++_shared.so'
     }
 
     buildTypes {
@@ -37,15 +36,17 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-project.txt'
         }
-        debug {
-            jniDebuggable true
-        }
     }
 
     sourceSets.main {
         java.srcDirs = ['src/main/java']
-        jni.srcDirs = [ 'jniLibs' ] // no auto generation of Android.mk
-        jniLibs.srcDir 'src/main/libs' // pre-compiled libraries
+        jni.srcDirs = [ ] // no auto generation of Android.mk
+        jniLibs.srcDirs - [ 'src/main/jniLibs' ]
+    }
+    externalNativeBuild {
+        cmake {
+            path 'src/main/jni/CMakeLists.txt'
+        }
     }
 }
 
@@ -58,8 +59,7 @@ dependencies {
     } else {
         implementation(name: 'sxrsdk-debug', ext: 'aar')
     }
-    debugImplementation(name: 'bullet3-debug', ext: 'aar')
-    releaseImplementation(name: 'bullet3-release', ext: 'aar')
+//    implementation fileTree(dir: 'src/main/jni/aar', include: '*.aar' )
 }
 
 clean {}.doLast {
@@ -73,8 +73,8 @@ clean {}.doLast {
 task extractSo (type: Copy) {
     println 'Extracting *.so file(s)....'
 
-    from zipTree("../../sxr-libs/bullet3-debug.aar")
-    into project.rootDir.absolutePath + "/../Extensions/sxr-physics/src/main/jniLibs/"
+    from zipTree("src/main/aar/bullet3-debug.aar")
+    into "src/main/jniLibs/"
     include "jni/**/*.so"
 
     eachFile {
