@@ -21,10 +21,10 @@ Properties properties = new Properties()
 properties.load(project.rootProject.file('local.properties').newDataInputStream())
 def sdkDir = properties.getProperty('sdk.dir')
 def ndkDir = properties.getProperty('ndk.dir')
+def buildRoot = project.getRootDir()
 def buildType = gradle.startParameter.taskNames.any {it.toLowerCase().contains("debug") ? "debug" : "release"}
 
 android {
-    publishNonDefault  true
     compileSdkVersion 26
 
     defaultConfig {
@@ -52,7 +52,8 @@ android {
                           '-DBUILD_UNIT_TESTS=OFF',
                           '-DBUILD_SHARED_LIBS=ON',
                           '-DUSE_DOUBLE_PRECISION=OFF',
-                          '-DUSE_SOFT_BODY_MULTI_BODY_DYNAMICS_WORLD=OFF'
+                          '-DUSE_SOFT_BODY_MULTI_BODY_DYNAMICS_WORLD=OFF',
+                          '-DPKGCONFIG_INSTALL_PREFIX=' + buildRoot + '/jni/libs'
             }
         }
     }

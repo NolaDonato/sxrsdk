@@ -28,6 +28,7 @@ import com.samsungxr.SXRTransform;
 import com.samsungxr.IEventReceiver;
 import com.samsungxr.IEvents;
 import com.samsungxr.animation.SXRSkeleton;
+import com.samsungxr.io.SXRCursorController;
 
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -64,7 +65,7 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
     private final LongSparseArray<SXRPhysicsWorldObject> mPhysicsObject = new LongSparseArray<SXRPhysicsWorldObject>();
     private final SXRCollisionMatrix mCollisionMatrix;
 
-    private final PhysicsDragger mPhysicsDragger;
+    private PhysicsDragger mPhysicsDragger = null;
     private SXRRigidBody mRigidBodyDragMe = null;
 
     /**
@@ -185,13 +186,23 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
         super(scene.getSXRContext(), NativePhysics3DWorld.ctor(isMultiBody));
         mIsEnabled = false;
         mListeners = new SXREventReceiver(this);
-        mPhysicsDragger = new PhysicsDragger(scene.getSXRContext());
         mCollisionMatrix = collisionMatrix;
         mWorldTask = new SXRWorldTask(interval);
         mPhysicsContext = SXRPhysicsContext.getInstance();
         scene.getRoot().attachComponent(this);
     }
 
+    public void setDragController(SXRCursorController controller)
+    {
+        if (controller != null)
+        {
+            mPhysicsDragger = new PhysicsDragger(controller);
+        }
+        else
+        {
+            mPhysicsDragger = null;
+        }
+    }
 
     static public long getComponentType() {
         return NativePhysics3DWorld.getComponentType();
@@ -260,7 +271,12 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
      * @return true if success, otherwise returns false.
      */
     public boolean startDrag(final SXRNode sceneObject,
-                             final float hitX, final float hitY, final float hitZ) {
+                             final float hitX, final float hitY, final float hitZ)
+    {
+        if (mPhysicsDragger == null)
+        {
+            throw new UnsupportedOperationException("You must call selectDragController before dragging");
+        }
         final SXRRigidBody dragMe = (SXRRigidBody)sceneObject.getComponent(SXRRigidBody.getComponentType());
         if (dragMe == null || dragMe.getSimulationType() != SXRRigidBody.DYNAMIC || !contains(dragMe))
             return false;
@@ -292,6 +308,10 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
      * Stop the drag action.
      */
     public void stopDrag() {
+        if (mPhysicsDragger == null)
+        {
+            return;
+        }
         mPhysicsDragger.stopDrag();
 
         mPhysicsContext.runOnPhysicsThread(new Runnable() {

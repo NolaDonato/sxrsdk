@@ -21,7 +21,6 @@ task extractBulletReleaseLibs (type: Copy) {
         return it
     }
     includeEmptyDirs = false
-    delete "src/main/libs/bullet3-release.aar"
 }
 
 task extractBulletDebugLibs (type: Copy) {
@@ -38,7 +37,6 @@ task extractBulletDebugLibs (type: Copy) {
         return it
     }
     includeEmptyDirs = false
-    delete "src/main/libs/bullet3-debug.aar"
 }
 
 android {
@@ -52,9 +50,8 @@ android {
             pickFirst 'lib/arm64-v8a/libc++_shared.so'
             pickFirst 'lib/armeabi-v7a/libc++_shared.so'
             pickFirst 'lib/x86_64/libc++_shared.so'
-            exclude 'libs/bullet3-debug.aar'
-            exclude 'libs/bullet3-release.aar'
-            doNotStrip "jniLibs/*/*.so"
+            doNotStrip 'jniLibs/*/*.so'
+            exclude 'src/main/jniLibs'
         }
     }
 

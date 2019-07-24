@@ -51,15 +51,11 @@ BulletJoint::BulletJoint(float mass, int numBones)
           mLinksAdded(0),
           mConstraintsAdded(0)
 {
-    btScalar q0 = -45.0f * M_PI / 180.0f;
-    btQuaternion quat0(btVector3(1, 1, 0).normalized(), q0);
     mMultiBody = new btMultiBody(numBones, mass, btVector3(0, 0, 0), true, false);
     mMultiBody->setUserPointer(this);
     mMultiBody->setBaseMass(mass);
     mMultiBody->setCanSleep(false);
     mMultiBody->setHasSelfCollision(false);
-    quat0.normalize();
-    mMultiBody->setJointPosMultiDof(0, quat0);
     mWorld = nullptr;
 }
 
@@ -278,6 +274,10 @@ void BulletJoint::setWorldTransform(const btTransform& centerOfMassWorldTrans)
             ++mLinksAdded;
             if (isReady())
             {
+                btScalar q0 = -45.0f * M_PI / 180.0f;
+                btQuaternion quat0(btVector3(1, 1, 0).normalized(), q0);
+                quat0.normalize();
+                mMultiBody->setJointPosMultiDof(0, quat0);
                 mMultiBody->finalizeMultiDof();
                 static_cast<btMultiBodyDynamicsWorld *>(mWorld->getPhysicsWorld())
                         ->addMultiBody(mMultiBody);
