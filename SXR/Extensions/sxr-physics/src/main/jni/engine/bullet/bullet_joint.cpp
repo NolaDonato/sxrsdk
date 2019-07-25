@@ -27,16 +27,13 @@
 #include "bullet_sxr_utils.h"
 #include "util/sxr_log.h"
 
-#include <BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h>
-#include <BulletDynamics/Featherstone/btMultiBody.h>
-#include <BulletDynamics/Featherstone/btMultiBodyLink.h>
-#include <BulletDynamics/Featherstone/btMultiBodyLinkCollider.h>
-#include <BulletCollision/CollisionDispatch/btCollisionObject.h>
-#include <BulletCollision/CollisionShapes/btEmptyShape.h>
-#include <LinearMath/btDefaultMotionState.h>
-#include <LinearMath/btScalar.h>
-#include <LinearMath/btVector3.h>
-#include <LinearMath/btTransform.h>
+#include "BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h"
+#include "BulletCollision/CollisionDispatch/btCollisionObject.h"
+#include "BulletCollision/CollisionShapes/btEmptyShape.h"
+#include "LinearMath/btDefaultMotionState.h"
+#include "LinearMath/btScalar.h"
+#include "LinearMath/btVector3.h"
+#include "LinearMath/btTransform.h"
 
 
 
@@ -67,11 +64,12 @@ BulletJoint::BulletJoint(BulletJoint* parent, int boneID, float mass)
           mLinksAdded(0),
           mConstraintsAdded(0)
 {
-    mMultiBody = static_cast<BulletJoint*>(parent)->getMultiBody();
-    mLink = &(mMultiBody->getLink(boneID - 1));
-    mLink->m_mass = mass;
-    mLink->m_parent = parent->getBoneID();
-    mLink->m_userPtr = this;
+    mMultiBody = parent->getMultiBody();
+    btMultibodyLink& link = mMultiBody->getLink(boneID - 1);
+    link.m_mass = mass;
+    link.m_parent = parent->getBoneID();
+    link.m_userPtr = this;
+    mLink = &link;
     mWorld = nullptr;
 }
 
@@ -226,6 +224,7 @@ void BulletJoint::setWorldTransform(const btTransform& centerOfMassWorldTrans)
                 mCollider = new btMultiBodyLinkCollider(mMultiBody, mBoneID);
                 btCollisionShape* shape = convertCollider2CollisionShape(collider);
                 mCollider->setCollisionShape(shape);
+                mCollider->setIslandTag(0);
                 updateCollisionShapeLocalScaling();
                 if (mLink == nullptr)
                 {
@@ -248,8 +247,8 @@ void BulletJoint::setWorldTransform(const btTransform& centerOfMassWorldTrans)
             {
                 mLink->m_linkName = owner->name().c_str();
                 mLink->m_jointName = owner->name().c_str();
-                BulletJoint* j = static_cast<BulletJoint*>(mMultiBody->getUserPointer());
-                j->addLink();
+                BulletJoint* rootJoint = static_cast<BulletJoint*>(mMultiBody->getUserPointer());
+                rootJoint->addLink();
             }
             else
             {
@@ -264,13 +263,6 @@ void BulletJoint::setWorldTransform(const btTransform& centerOfMassWorldTrans)
     {
         if (mWorld->isMultiBody())
         {
-            BulletJoint* j = static_cast<BulletJoint*> (mMultiBody->getUserPointer());
-
-            if (j != this)
-            {
-                j->addLink();
-                return;
-            }
             ++mLinksAdded;
             if (isReady())
             {
@@ -279,8 +271,7 @@ void BulletJoint::setWorldTransform(const btTransform& centerOfMassWorldTrans)
                 quat0.normalize();
                 mMultiBody->setJointPosMultiDof(0, quat0);
                 mMultiBody->finalizeMultiDof();
-                static_cast<btMultiBodyDynamicsWorld *>(mWorld->getPhysicsWorld())
-                        ->addMultiBody(mMultiBody);
+                static_cast<btMultiBodyDynamicsWorld *>(mWorld->getPhysicsWorld())->addMultiBody(mMultiBody);
             }
         }
     }
@@ -296,20 +287,12 @@ void BulletJoint::setWorldTransform(const btTransform& centerOfMassWorldTrans)
                 j->addConstraint();
                 return;
             }
-            ++mConstraintsAdded;
-            if (isReady())
-            {
-                mMultiBody->finalizeMultiDof();
-                static_cast<btMultiBodyDynamicsWorld *>(mWorld->getPhysicsWorld())
-                           ->addMultiBody(mMultiBody);
-            }
         }
     }
 
     bool BulletJoint::isReady() const
     {
-        return (mConstraintsAdded == mMultiBody->getNumLinks()) &&
-               (mLinksAdded == mMultiBody->getNumLinks());
+        return (mLinksAdded == mMultiBody->getNumLinks());
     }
 
 }

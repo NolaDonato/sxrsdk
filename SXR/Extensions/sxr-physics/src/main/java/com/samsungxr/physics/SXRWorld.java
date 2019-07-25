@@ -192,6 +192,19 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
         scene.getRoot().attachComponent(this);
     }
 
+    /***
+     * Indicates which controller should be used for dragging.
+     * <p>
+     * The drag is performed on the physics thread
+     * and is synchronized with physics.
+     * You can use {@link SXRCursorController#startDrag(SXRNode)} for
+     * dragging but it does not run on the physics thread and
+     * you may get unexpected results for objects being
+     * moved by physics
+     * @param controller {@link SXRCursorController} to use for dragging,
+     *                   If null, dragging is disabled.
+     * @see #startDrag(SXRNode, float, float, float)
+     */
     public void setDragController(SXRCursorController controller)
     {
         if (controller != null)
@@ -263,12 +276,23 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
 
     /**
      * Start the drag operation of a node with a rigid body.
-     *
+     * <p>
+     * The drag operation is run on the physics thread and is
+     * synchronized with physics. It should be used instead of
+     * {@link SXRCursorController#startDrag(SXRNode)} for objects
+     * which are controlled by physics.
+     * <p>
+     * To enable dragging, you need to call {@link #setDragController(SXRCursorController)}
+     * to indicate which controller to use for dragging.
      * @param sceneObject Scene object with a rigid body attached to it.
      * @param hitX rel position in x-axis.
      * @param hitY rel position in y-axis.
      * @param hitZ rel position in z-axis.
      * @return true if success, otherwise returns false.
+     * @throws UnsupportedOperationException if no controller has been specified
+     * @see #stopDrag()
+     * @see #setDragController(SXRCursorController)
+     * @see SXRCursorController#startDrag(SXRNode)
      */
     public boolean startDrag(final SXRNode sceneObject,
                              final float hitX, final float hitY, final float hitZ)
@@ -305,7 +329,20 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
     }
 
     /**
-     * Stop the drag action.
+     * Stop dragging the current object being dragged.
+     * <p>
+     * The drag operation is stopped on the physics thread and is
+     * synchronized with physics. It should be used instead of
+     * {@link SXRCursorController#stopDrag()} for objects
+     * which are controlled by physics.
+     * <p>
+     * To enable dragging, you need to call {@link #setDragController(SXRCursorController)}
+     * to indicate which controller to use for dragging.
+     * If dragging is not enabled or nothing is being dragged,
+     * this function just returns.
+     * @see #startDrag(SXRNode, float, float, float)
+     * @see #setDragController(SXRCursorController)
+     * @see SXRCursorController#stopDrag()
      */
     public void stopDrag() {
         if (mPhysicsDragger == null)

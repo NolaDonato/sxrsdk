@@ -50,6 +50,10 @@ public class SXRPhysicsJoint extends SXRPhysicsWorldObject
     public SXRPhysicsJoint(SXRPhysicsJoint parent, int boneID, float mass)
     {
         super(parent.getSXRContext(), NativePhysicsJoint.ctorLink(parent.getNative(), boneID, mass));
+        if (boneID < 1)
+        {
+            throw new IllegalArgumentException("BoneID must be greater than zero");
+        }
     }
 
     /** Used only by {@link SXRPhysicsLoader} */

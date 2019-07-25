@@ -21,6 +21,7 @@
 
 #include <BulletDynamics/Featherstone/btMultiBody.h>
 #include <BulletDynamics/Featherstone/btMultiBodyLink.h>
+#include <BulletDynamics/Featherstone/btMultiBodyLinkCollider.h>
 #include <LinearMath/btMotionState.h>
 
 class btDynamicsWorld;
@@ -71,9 +72,9 @@ private:
     void updateCollisionShapeLocalScaling();
 
 protected:
+    btMultiBodyLinkCollider* mCollider;
     btMultiBody*             mMultiBody;
     btMultibodyLink*         mLink;
-    btMultiBodyLinkCollider* mCollider;
     BulletWorld*             mWorld;
     int                      mBoneID;
     int                      mLinksAdded;
