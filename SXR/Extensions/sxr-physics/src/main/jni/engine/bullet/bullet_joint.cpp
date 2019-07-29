@@ -215,16 +215,17 @@ void BulletJoint::setWorldTransform(const btTransform& centerOfMassWorldTrans)
     {
         Node* owner = owner_object();
         mWorld = static_cast<BulletWorld*>(world);
+        btVector3 localInertia;
         if (mCollider == nullptr)
         {
             Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
             if (collider)
             {
-                btVector3 localInertia;
                 mCollider = new btMultiBodyLinkCollider(mMultiBody, mBoneID);
                 btCollisionShape* shape = convertCollider2CollisionShape(collider);
                 mCollider->setCollisionShape(shape);
                 mCollider->setIslandTag(0);
+                mCollider->m_link = getBoneID() - 1;
                 updateCollisionShapeLocalScaling();
                 if (mLink == nullptr)
                 {
@@ -248,6 +249,10 @@ void BulletJoint::setWorldTransform(const btTransform& centerOfMassWorldTrans)
                 mLink->m_linkName = owner->name().c_str();
                 mLink->m_jointName = owner->name().c_str();
                 BulletJoint* rootJoint = static_cast<BulletJoint*>(mMultiBody->getUserPointer());
+                if (owner->getComponent(COMPONENT_TYPE_PHYSICS_CONSTRAINT) == nullptr)
+                {
+                    defaultJoint(owner);
+                }
                 rootJoint->addLink();
             }
             else
@@ -259,11 +264,34 @@ void BulletJoint::setWorldTransform(const btTransform& centerOfMassWorldTrans)
         getWorldTransform(t);
     }
 
+    void BulletJoint::defaultJoint(Node* owner)
+    {
+        Node* parent = owner->parent();
+        BulletJoint* jointA = static_cast<BulletJoint*>(parent->getComponent(COMPONENT_TYPE_PHYSICS_JOINT));
+        glm::mat4 tA = parent->transform()->getModelMatrix(true);
+        glm::mat4 tB = owner->transform()->getModelMatrix(true);
+        btVector3 bodyACOM(tA[3][0], tA[3][1], tA[3][2]);
+        btVector3 bodyBCOM(tB[3][0], tB[3][1], tB[3][2]);
+        btVector3 diffCOM = bodyBCOM - bodyACOM;
+        btVector3 bodyACOM2bodyBpivot = diffCOM;
+
+        mMultiBody->setupSpherical(getBoneID() - 1,
+                                   mLink->m_mass,
+                                   mLink->m_inertiaLocal,
+                                   jointA->getBoneID() - 1,
+                                   btQuaternion(0, 0, 0, 1),
+                                   bodyACOM2bodyBpivot,
+                                   btVector3(0,0, 0),
+                                   true);
+
+    }
+
     void BulletJoint::addLink()
     {
         if (mWorld->isMultiBody())
         {
             ++mLinksAdded;
+            mWorld->getPhysicsWorld()->addCollisionObject(mCollider);
             if (isReady())
             {
                 btScalar q0 = -45.0f * M_PI / 180.0f;

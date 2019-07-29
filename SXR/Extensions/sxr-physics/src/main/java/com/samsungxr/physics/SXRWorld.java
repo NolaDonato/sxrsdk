@@ -615,7 +615,7 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
 
             generateCollisionEvents();
             getSXRContext().getEventManager().sendEvent(SXRWorld.this, IPhysicsEvents.class, "onStepPhysics", SXRWorld.this);
-
+/*
             SXRRigidBody[] bodies = getUpdated();
             if (bodies != null)
             {
@@ -631,6 +631,7 @@ public class SXRWorld extends SXRComponent implements IEventReceiver
                     }
                 }
             }
+ */
             lastSimulTime = simulationTime;
 
             simulationTime = intervalMillis + simulationTime - SystemClock.uptimeMillis();
