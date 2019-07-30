@@ -204,25 +204,7 @@ void BulletSliderConstraint::updateConstructionInfo(PhysicsWorld* world)
         BulletJoint* jointB = (BulletJoint*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT);
         if (jointB)
         {
-            BulletJoint* jointA = reinterpret_cast<BulletJoint*>(mRigidBodyA);
-            Transform* transA = owner_object()->transform();
-            Transform* transB = jointB->owner_object()->transform();
-            btMultibodyLink* link = jointA->getLink();
-            glm::vec3 jointAxis = findJointAxis(transA, transB);
-            glm::mat4 tA = jointA->owner_object()->transform()->getModelMatrix(true);
-            glm::mat4 tB = owner_object()->transform()->getModelMatrix(true);
-            btVector3 posA(tA[3][0], tA[3][1], tA[3][2]);
-            btVector3 posB(tB[3][0], tB[3][1], tB[3][2]);
-
-            link->m_jointType = btMultibodyLink::ePrismatic;
-            link->m_dVector = posB.normalize();
-            link->m_eVector = posA.normalize();
-            link->setAxisTop(0, 0, 0, 0);
-            link->setAxisBottom(0, jointAxis.x, jointAxis.y, jointAxis.z);
-            link->m_jointLowerLimit = mLowerLinearLimit;
-            link->m_jointUpperLimit = mUpperLinearLimit;
-            link->m_dofCount = 1;
-            jointB->addConstraint();
+            jointB->setupSlider(mLowerLinearLimit, mUpperLinearLimit);
         }
     }
 

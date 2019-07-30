@@ -150,13 +150,26 @@ void BulletWorld::markUpdated(PhysicsCollidable* body)
 void BulletWorld::addConstraint(PhysicsConstraint *constraint)
 {
     constraint->updateConstructionInfo(this);
-    btTypedConstraint* _constr = reinterpret_cast<btTypedConstraint*>(constraint->getUnderlying());
-    mPhysicsWorld->addConstraint(_constr);
+    Node* owner = constraint->owner_object();
+    PhysicsJoint* joint = static_cast<PhysicsJoint*>(owner->getComponent(COMPONENT_TYPE_PHYSICS_JOINT));
+
+    if (joint == nullptr)
+    {
+        btTypedConstraint *_constr = reinterpret_cast<btTypedConstraint *>(constraint->getUnderlying());
+        mPhysicsWorld->addConstraint(_constr);
+    }
 }
 
 void BulletWorld::removeConstraint(PhysicsConstraint *constraint)
 {
-    mPhysicsWorld->removeConstraint(reinterpret_cast<btTypedConstraint*>(constraint->getUnderlying()));
+    Node* owner = constraint->owner_object();
+    PhysicsJoint* joint = static_cast<PhysicsJoint*>(owner->getComponent(COMPONENT_TYPE_PHYSICS_JOINT));
+
+    if (joint == nullptr)
+    {
+        mPhysicsWorld->removeConstraint(
+                reinterpret_cast<btTypedConstraint *>(constraint->getUnderlying()));
+    }
 }
 
 void BulletWorld::startDrag(Node *pivot_obj, PhysicsRigidBody *target,

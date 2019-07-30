@@ -51,9 +51,13 @@ class BulletJoint : public PhysicsJoint
 
     virtual float getMass() const;
 
-    float getFriction() const { return mLink ? mLink->m_jointFriction : 0; }
+    virtual float getFriction() const { return mLink ? mLink->m_jointFriction : 0; }
 
-    void setFriction(float f);
+    virtual void setFriction(float f);
+
+    virtual void applyTorque(float x, float y, float z);
+
+    virtual void applyCentralForce(float x, float y, float z);
 
     int getBoneID() { return mBoneID; }
 
@@ -62,6 +66,14 @@ class BulletJoint : public PhysicsJoint
     virtual void setWorldTransform(const btTransform &worldTrans);
 
     virtual void updateConstructionInfo(PhysicsWorld* world);
+
+    virtual void setupSpherical();
+
+    virtual void setupHinge(const glm::vec3& jointAxis, float lower, float upper);
+
+    virtual void setupSlider(float lower, float upper);
+
+    virtual void setupFixed();
 
     bool isReady() const;
     void addLink();

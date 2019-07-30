@@ -40,6 +40,11 @@ class PhysicsJoint :  public PhysicsCollidable
 	static long long getComponentType() {return COMPONENT_TYPE_PHYSICS_JOINT; }
 
 	virtual int getBoneID() = 0;
+
+	virtual void applyCentralForce(float x, float y, float z) = 0;
+
+	virtual void applyTorque(float x, float y, float z) = 0;
+
 };
 
 }

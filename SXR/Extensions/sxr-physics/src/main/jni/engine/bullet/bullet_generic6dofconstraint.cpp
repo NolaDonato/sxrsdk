@@ -210,29 +210,7 @@ void BulletGeneric6dofConstraint::updateConstructionInfo(PhysicsWorld* world)
         BulletJoint* jointB = (BulletJoint*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT);
         if (jointB)
         {
-            btMultibodyLink* link = jointB->getLink();
-            btMultiBody* mb = jointB->getMultiBody();
-            BulletJoint* jointA = reinterpret_cast<BulletJoint*>(mRigidBodyA);
-            btVector3 axis0(mRotationB[0][0], mRotationB[0][1], mRotationB[0][2]);
-            btVector3 axis1(mRotationB[1][0], mRotationB[1][1], mRotationB[1][2]);
-            btVector3 axis2(mRotationB[2][0], mRotationB[2][1], mRotationB[2][2]);
-            glm::mat4 tA = jointA->owner_object()->transform()->getModelMatrix(true);
-            glm::mat4 tB = owner_object()->transform()->getModelMatrix(true);
-            btVector3 bodyACOM(tA[3][0], tA[3][1], tA[3][2]);
-            btVector3 bodyBCOM(tB[3][0], tB[3][1], tB[3][2]);
-            btVector3 diffCOM = bodyBCOM - bodyACOM;
-            btVector3 bodyACOM2bodyBpivot = diffCOM;
-
-            mb->setupSpherical(jointB->getBoneID(),
-                              link->m_mass,
-                              btVector3(0, 0, 0),
-                              static_cast<PhysicsJoint*>(mRigidBodyA)->getBoneID(),
-                              btQuaternion(0, 0, 0, 1),
-                              bodyACOM2bodyBpivot,
-                              btVector3(0,0, 0),
-                              true);
-            link->m_dofCount = 3;
-            jointB->addConstraint();
+            jointB->setupSpherical();
         }
     }
 }

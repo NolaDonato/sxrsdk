@@ -26,6 +26,8 @@ import com.samsungxr.animation.SXRSkeleton;
  */
 public class SXRPhysicsJoint extends SXRPhysicsWorldObject
 {
+    private final SXRPhysicsContext mPhysicsContext;
+
     /**
      * Constructs the root joint of a multibody chain.
      *
@@ -35,6 +37,7 @@ public class SXRPhysicsJoint extends SXRPhysicsWorldObject
     public SXRPhysicsJoint(SXRContext ctx, float mass, int numBones)
     {
         super(ctx, NativePhysicsJoint.ctorRoot(mass, numBones));
+        mPhysicsContext = SXRPhysicsContext.getInstance();
     }
 
     /**
@@ -54,12 +57,14 @@ public class SXRPhysicsJoint extends SXRPhysicsWorldObject
         {
             throw new IllegalArgumentException("BoneID must be greater than zero");
         }
+        mPhysicsContext = SXRPhysicsContext.getInstance();
     }
 
     /** Used only by {@link SXRPhysicsLoader} */
     SXRPhysicsJoint(SXRContext ctx, long nativeJoint)
     {
         super(ctx, nativeJoint);
+        mPhysicsContext = SXRPhysicsContext.getInstance();
     }
 
     static public long getComponentType() {
@@ -131,6 +136,41 @@ public class SXRPhysicsJoint extends SXRPhysicsWorldObject
         return NativePhysicsJoint.getFriction(getNative());
     }
 
+    /**
+     * Apply a central force vector [X, Y, Z] to this {@linkplain SXRPhysicsJoint joint}
+     *
+     * @param x factor on the 'X' axis.
+     * @param y factor on the 'Y' axis.
+     * @param z factor on the 'Z' axis.
+     */
+    public void applyCentralForce(final float x, final float y, final float z)
+    {
+        mPhysicsContext.runOnPhysicsThread(new Runnable() {
+            @Override
+            public void run()
+            {
+                NativePhysicsJoint.applyCentralForce(getNative(), x, y, z);
+            }
+        });
+    }
+
+
+    /**
+     * Apply a torque vector [X, Y, Z] to this {@linkplain SXRPhysicsJoint joint}
+     *
+     * @param x factor on the 'X' axis.
+     * @param y factor on the 'Y' axis.
+     * @param z factor on the 'Z' axis.
+     */
+    public void applyTorque(final float x, final float y, final float z)
+    {
+        mPhysicsContext.runOnPhysicsThread(new Runnable() {
+            @Override
+            public void run() {
+                NativePhysicsJoint.applyTorque(getNative(), x, y, z);
+            }
+        });
+    }
     /**
      * Returns the bone ID of this joint.
      */
@@ -218,4 +258,7 @@ class NativePhysicsJoint
 
     static native float getFriction(long joint);
 
+    static native void applyCentralForce(long joint, float x, float y, float z);
+
+    static native void applyTorque(long joint, float x, float y, float z);
 }

@@ -34,6 +34,10 @@ namespace sxr {
 
         virtual float getFriction() const = 0;
 
+        virtual void applyTorque(float x, float y, float z) = 0;
+
+        virtual void applyCentralForce(float x, float y, float z) = 0;
+
         virtual void updateConstructionInfo(PhysicsWorld*) = 0;
     };
 

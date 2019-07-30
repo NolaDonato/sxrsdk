@@ -148,28 +148,7 @@ namespace sxr {
                 BulletJoint* jointB = reinterpret_cast<BulletJoint*>(owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT));
                 if (jointB)
                 {
-                    BulletJoint* jointA = static_cast<BulletJoint*>(mRigidBodyA);
-                    btMultiBody* mb = jointB->getMultiBody();
-                    btMultibodyLink* link = jointB->getLink();
-                    glm::mat4 tA = jointA->owner_object()->transform()->getModelMatrix(true);
-                    glm::mat4 tB = owner_object()->transform()->getModelMatrix(true);
-                    btVector3 bodyACOM(tA[3][0], tA[3][1], tA[3][2]);
-                    btVector3 bodyBCOM(tB[3][0], tB[3][1], tB[3][2]);
-                    btVector3 diffCOM = bodyBCOM - bodyACOM;
-                    btVector3 bodyACOM2bodyBpivot = diffCOM - pivotInB;
-
-                    mb->setupRevolute(jointB->getBoneID(),
-                            link->m_mass,
-                            btVector3(0, 0, 0),
-                            static_cast<PhysicsJoint*>(mRigidBodyA)->getBoneID(),
-                            btQuaternion(0, 0, 0, 1),
-                            axisInB.normalize(),
-                            bodyACOM2bodyBpivot,
-                            pivotInB,
-                            true);
-                    link->m_jointLowerLimit = mTempLower;
-                    link->m_jointUpperLimit = mTempUpper;
-                    jointB->addConstraint();
+                    jointB->setupHinge(mAxisInB, mTempLower, mTempUpper);
                 }
             }
         }
