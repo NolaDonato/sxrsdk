@@ -30,8 +30,8 @@ namespace sxr {
 class PhysicsConstraint;
 
 struct ContactPoint {
-	PhysicsRigidBody* body0 = 0;
-	PhysicsRigidBody* body1 = 0;
+	PhysicsCollidable* body0 = 0;
+	PhysicsCollidable* body1 = 0;
 	float normal[3] = {0.0f, 0.0f, 0.0f};
 	float distance = 0.0f;
 	bool isHit = true;

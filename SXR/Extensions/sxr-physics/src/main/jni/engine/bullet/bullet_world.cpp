@@ -15,12 +15,13 @@
 #include <algorithm>
 #include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <contrib/glm/ext.hpp>
 
 #include "bullet_world.h"
 #include "bullet_rigidbody.h"
 #include "bullet_joint.h"
-
 #include "bullet_sxr_utils.h"
+#include "util/sxr_log.h"
 
 #include <BulletCollision/CollisionDispatch/btDefaultCollisionConfiguration.h>
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
@@ -34,8 +35,7 @@
 #include <BulletDynamics/Featherstone/btMultiBodyConstraintSolver.h>
 #include <BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h>
 
-#include <android/log.h>
-#include <contrib/glm/ext.hpp>
+
 
 namespace sxr {
 
@@ -224,6 +224,10 @@ void BulletWorld::addJoint(PhysicsJoint *joint)
     if (isMultiBody())
     {
         joint->updateConstructionInfo(this);
+        if (joint->getBoneID() == 0)
+        {
+            mMultiBodies.push_back((BulletJoint*) joint);
+        }
     }
 }
 
@@ -246,6 +250,7 @@ void BulletWorld::step(float timeStep, int maxSubSteps)
     }
     if (mIsMultiBody)
     {
+        finalizeMultiBody();
         setPhysicsTransforms();
         mPhysicsWorld->stepSimulation(timeStep, maxSubSteps);
         getPhysicsTransforms();
@@ -256,26 +261,37 @@ void BulletWorld::step(float timeStep, int maxSubSteps)
     }
 }
 
+void BulletWorld::finalizeMultiBody()
+{
+    for (int i = 0; i < mMultiBodies.size(); ++i)
+    {
+        BulletJoint* mb = mMultiBodies[i];
+        mb->validate();
+    }
+    mMultiBodies.clear();
+}
+
 void BulletWorld::setPhysicsTransforms()
 {
     btMultiBodyDynamicsWorld* world = static_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld);
     for (int i = 0; i < world->getNumMultibodies(); ++i)
     {
         btMultiBody* mb = world->getMultiBody(i);
-        const BulletJoint* joint = static_cast<const BulletJoint*>(mb->getUserPointer());
-        btTransform t;
+        BulletJoint* joint = static_cast<BulletJoint*>(mb->getUserPointer());
 
         if (!joint->isReady())
         {
-            return;
+            continue;
         }
-        joint->getWorldTransform(t);
+        joint->updateWorldTransform();
         for (int j = 0; j < mb->getNumLinks(); ++j)
         {
             btMultibodyLink& link = mb->getLink(j);
-            const void* p = link.m_userPtr;
-            joint = static_cast<const BulletJoint*>(p);
-            joint->getWorldTransform(t);
+            joint = (BulletJoint*) link.m_collider->getUserPointer();
+            if (joint->isReady())
+            {
+                joint->updateWorldTransform();
+            }
         }
     }
 }
@@ -287,20 +303,26 @@ void BulletWorld::getPhysicsTransforms()
     {
         btMultiBody* mb = world->getMultiBody(i);
         BulletJoint* joint = static_cast<BulletJoint*>(mb->getUserPointer());
+        Node* owner = joint->owner_object();
 
         if (!joint->isReady())
         {
-            return;
+            continue;
         }
         joint->setWorldTransform(mb->getBaseWorldTransform());
         for (int j = 0; j < mb->getNumLinks(); ++j)
         {
             btMultibodyLink& link = mb->getLink(j);
             btMultiBodyLinkCollider* collider = link.m_collider;
-            const void* p = link.m_userPtr;
-            joint = (BulletJoint*) p;
-            const btTransform& t = collider->getWorldTransform();
-            joint->setWorldTransform(t);
+            joint = (BulletJoint*)  collider->getUserPointer();
+            if (joint->isReady())
+            {
+                const btTransform &t = collider->getWorldTransform();
+                joint->setWorldTransform(t);
+            }
+            Node* owner = joint->owner_object();
+            Transform* t = owner->transform();
+            LOGE("BULLET: WORLD %s %f, %f, %f", owner->name().c_str(), t->position_x(), t->position_y(), t->position_z());
         }
     }
 }
@@ -325,8 +347,8 @@ void BulletWorld::listCollisions(std::list <ContactPoint> &contactPoints)
         contactManifold = mPhysicsWorld->getDispatcher()->
                 getManifoldByIndexInternal(i);
 
-        contactPt.body0 = (BulletRigidBody *) (contactManifold->getBody0()->getUserPointer());
-        contactPt.body1 = (BulletRigidBody *) (contactManifold->getBody1()->getUserPointer());
+        contactPt.body0 = (PhysicsCollidable*) (contactManifold->getBody0()->getUserPointer());
+        contactPt.body1 = (PhysicsCollidable*) (contactManifold->getBody1()->getUserPointer());
         contactPt.normal[0] = contactManifold->getContactPoint(0).m_normalWorldOnB.getX();
         contactPt.normal[1] = contactManifold->getContactPoint(0).m_normalWorldOnB.getY();
         contactPt.normal[2] = contactManifold->getContactPoint(0).m_normalWorldOnB.getZ();

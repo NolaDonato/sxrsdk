@@ -37,6 +37,7 @@ namespace sxr {
 
 class PhysicsConstraint;
 class PhysicsRigidBody;
+class BulletJoint;
 
 class BulletWorld : public PhysicsWorld {
  public:
@@ -90,6 +91,8 @@ class BulletWorld : public PhysicsWorld {
 
     void getPhysicsTransforms();
 
+    void finalizeMultiBody();
+
  private:
     std::map<std::pair <long,long>, ContactPoint> prevCollisions;
     btDynamicsWorld* mPhysicsWorld;
@@ -103,6 +106,7 @@ class BulletWorld : public PhysicsWorld {
     bool mIsMultiBody;
     mutable glm::vec3 mGravity;
     std::vector<PhysicsCollidable*> mBodiesChanged;
+    std::vector<BulletJoint*> mMultiBodies;
 };
 
 }

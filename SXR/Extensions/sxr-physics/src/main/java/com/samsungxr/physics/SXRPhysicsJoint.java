@@ -187,6 +187,15 @@ public class SXRPhysicsJoint extends SXRPhysicsWorldObject
     }
 
     @Override
+    public void onDisable() {
+        super.onDisable();
+
+        if (getBoneID() == 0)
+        {
+            removeFromWorld(getWorld());
+        }
+    }
+    @Override
     protected void addToWorld(SXRWorld world)
     {
         if (world != null)

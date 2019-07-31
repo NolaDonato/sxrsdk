@@ -31,8 +31,8 @@ import java.util.List;
  * {@linkplain com.samsungxr.SXRNode node} containing a rigid body that will become
  * the owner of this constraint (body B).
  */
-abstract class SXRConstraint extends SXRPhysicsWorldObject implements IComponentGroup<SXRConstraint>
-{
+abstract class SXRConstraint extends SXRPhysicsWorldObject
+    {
     static final int fixedConstraintId = 1;
     static final int point2pointConstraintId = 2;
     static final int sliderConstraintId = 3;
@@ -42,7 +42,6 @@ abstract class SXRConstraint extends SXRPhysicsWorldObject implements IComponent
 
     protected SXRPhysicsWorldObject mBodyA = null;
     protected SXRPhysicsWorldObject mBodyB = null;
-    protected SXRConstraint.Group<SXRConstraint> mGroup = new SXRConstraint.Group<>();
 
     protected SXRConstraint(SXRContext gvrContext, long nativePointer)
     {
@@ -53,61 +52,6 @@ abstract class SXRConstraint extends SXRPhysicsWorldObject implements IComponent
     {
         super(gvrContext, nativePointer, cleanupHandlers);
     }
-
-    /**
-     * Default implementation for IComponentGroup that
-     * maintains an iterable list of components.
-     *
-     * @param <T> class of component in the group
-     */
-    private final static class Group<T extends SXRConstraint> implements Iterable<T>
-    {
-        List<T> mComponents = new ArrayList<T>();
-
-        public Iterator<T> iterator()
-        {
-            Iterator<T> iter = new Iterator<T>()
-            {
-                int mIndex = 0;
-
-                public boolean hasNext()
-                {
-                    return mIndex < getSize();
-                }
-
-                public T next()
-                {
-                    if (mIndex < getSize())
-                    {
-                        return mComponents.get(mIndex++);
-                    }
-                    return null;
-                }
-            };
-            return iter;
-        }
-
-        public void addChild(T child)
-        {
-            mComponents.add(child);
-        }
-
-        public void removeChild(T child)
-        {
-            mComponents.remove(child);
-        }
-
-        public int getSize()
-        {
-            return mComponents.size();
-        }
-
-        public T getChildAt(int index)
-        {
-            return mComponents.get(index);
-        }
-    };
-
 
     @Override
     public void onAttach(SXRNode newOwner)
@@ -165,33 +109,6 @@ abstract class SXRConstraint extends SXRPhysicsWorldObject implements IComponent
     static public long getComponentType()
     {
         return Native3DConstraint.getComponentType();
-    }
-
-    public int getSize()
-    {
-        return mGroup.getSize();
-    }
-
-    public SXRConstraint getChildAt(int index)
-    {
-        return mGroup.getChildAt(index);
-    }
-
-    public Iterator<SXRConstraint> iterator()
-    {
-        return mGroup.iterator();
-    }
-
-    public void addChildComponent(SXRConstraint child)
-    {
-        mGroup.addChild(child);
-        Native3DConstraint.addChildComponent(getNative(), child.getNative());
-    }
-
-    public void removeChildComponent(SXRConstraint child)
-    {
-        mGroup.removeChild(child);
-        Native3DConstraint.removeChildComponent(getNative(), child.getNative());
     }
 }
 

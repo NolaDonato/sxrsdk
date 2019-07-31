@@ -75,14 +75,16 @@ class BulletJoint : public PhysicsJoint
 
     virtual void setupFixed();
 
+    void updateWorldTransform();
+
     bool isReady() const;
-    void addLink();
     void addConstraint();
+    bool validate();
+    void finalize();
 
 private:
     void destroy();
-    void updateCollisionShapeLocalScaling();
-    void defaultJoint(Node* owner);
+    void updateCollisionShapeLocalScaling();void defaultJoint(Node* owner);
 
 protected:
     btMultiBodyLinkCollider* mCollider;
