@@ -30,11 +30,11 @@
 #include "BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h"
 #include "BulletCollision/CollisionDispatch/btCollisionObject.h"
 #include "BulletCollision/CollisionShapes/btEmptyShape.h"
+#include "BulletCollision/BroadphaseCollision/btBroadphaseProxy.h"
 #include "LinearMath/btDefaultMotionState.h"
 #include "LinearMath/btScalar.h"
 #include "LinearMath/btVector3.h"
 #include "LinearMath/btTransform.h"
-
 
 
 namespace sxr {
@@ -154,8 +154,12 @@ namespace sxr {
 
     void BulletJoint::updateWorldTransform()
     {
-        Transform* trans = owner_object()->transform();
+        Node* owner = owner_object();
+        Transform* trans = owner->transform();
         btTransform t  = convertTransform2btTransform(trans);
+        btVector3 pos = t.getOrigin();
+
+        LOGE("BULLET: UPDATE %s, %f, %f, %f", owner->name().c_str(), pos.getX(), pos.getY(), pos.getZ());
         if (mLink == nullptr)
         {
             mMultiBody->setBaseWorldTransform(t);
@@ -202,7 +206,8 @@ namespace sxr {
     {
         if (mLink)
         {
-            mMultiBody->addLinkTorque(getBoneID() - 1, btVector3(x, y, z));
+            //mMultiBody->addLinkTorque(getBoneID() - 1, btVector3(x, y, z));
+            mMultiBody->addJointTorque(getBoneID() - 1, x);
         }
         else
         {
@@ -252,11 +257,16 @@ namespace sxr {
             {
                 mCollider = new btMultiBodyLinkCollider(mMultiBody, mBoneID);
                 btCollisionShape* shape = convertCollider2CollisionShape(collider);
+                bool isDynamic = getMass() > 0;
+                int collisionFilterGroup = isDynamic ? int(btBroadphaseProxy::DefaultFilter) : int(btBroadphaseProxy::StaticFilter);
+                int collisionFilterMask = isDynamic ? int(btBroadphaseProxy::AllFilter) : int(btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter);
+
                 mCollider->setCollisionShape(shape);
                 mCollider->setIslandTag(0);
                 mCollider->m_link = getBoneID() - 1;
                 updateCollisionShapeLocalScaling();
                 shape->calculateLocalInertia(getMass(), localInertia);
+
                 if (mLink == nullptr)
                 {
                     mMultiBody->setBaseCollider(mCollider);
@@ -268,6 +278,7 @@ namespace sxr {
                     mLink->m_collider = mCollider;
                 }
                 mCollider->setUserPointer(this);
+                mWorld->getPhysicsWorld()->addCollisionObject(mCollider);
             }
             else
             {
@@ -277,7 +288,6 @@ namespace sxr {
             {
                 mLink->m_linkName = owner->name().c_str();
                 mLink->m_jointName = owner->name().c_str();
-                mWorld->getPhysicsWorld()->addCollisionObject(mCollider);
                 BulletJoint* root = static_cast<BulletJoint*> (mMultiBody->getUserPointer());
 
                 ++(root->mLinksAdded);
@@ -356,8 +366,8 @@ namespace sxr {
                           jointA->getBoneID() - 1,
                           btQuaternion(0, 0, 0, 1),
                           btVector3(jointAxis.x, jointAxis.y, jointAxis.z),
-                          bodyACOM2bodyBpivot,
-                          btVector3(0, 0, 0));
+                          btVector3(0, 0, 0),
+                          bodyACOM2bodyBpivot);
         mLink->m_jointLowerLimit = lower;
         mLink->m_jointUpperLimit = upper;
         addConstraint();
@@ -439,10 +449,6 @@ namespace sxr {
 
     bool BulletJoint::isReady() const
     {
-        if (!enabled())
-        {
-            return false;
-        }
         if (mLink)
         {
             return (mLink->m_jointType != btMultibodyLink::eInvalid);

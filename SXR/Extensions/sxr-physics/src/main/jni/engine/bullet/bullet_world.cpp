@@ -81,7 +81,7 @@ void BulletWorld::initialize(bool isMultiBody)
                 mSolver,
                 mCollisionConfiguration);
     }
-    mPhysicsWorld->setGravity(btVector3(0, -10, 0));
+    mPhysicsWorld->setGravity(btVector3(0, -9.81f, 0));
     mDraggingConstraint = nullptr;
 }
 
@@ -304,24 +304,29 @@ void BulletWorld::getPhysicsTransforms()
         btMultiBody* mb = world->getMultiBody(i);
         BulletJoint* joint = static_cast<BulletJoint*>(mb->getUserPointer());
         Node* owner = joint->owner_object();
+        Transform* t = owner->transform();
 
         if (!joint->isReady())
         {
             continue;
         }
-        joint->setWorldTransform(mb->getBaseWorldTransform());
+        if (joint->enabled())
+        {
+            joint->setWorldTransform(mb->getBaseWorldTransform());
+            LOGE("BULLET: WORLD %s %f, %f, %f", owner->name().c_str(), t->position_x(), t->position_y(), t->position_z());
+        }
         for (int j = 0; j < mb->getNumLinks(); ++j)
         {
             btMultibodyLink& link = mb->getLink(j);
             btMultiBodyLinkCollider* collider = link.m_collider;
             joint = (BulletJoint*)  collider->getUserPointer();
-            if (joint->isReady())
+            if (joint->enabled() && joint->isReady())
             {
                 const btTransform &t = collider->getWorldTransform();
                 joint->setWorldTransform(t);
             }
-            Node* owner = joint->owner_object();
-            Transform* t = owner->transform();
+            owner = joint->owner_object();
+            t = owner->transform();
             LOGE("BULLET: WORLD %s %f, %f, %f", owner->name().c_str(), t->position_x(), t->position_y(), t->position_z());
         }
     }
