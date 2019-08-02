@@ -35,13 +35,12 @@ public class SXRHingeConstraint extends SXRConstraint
      * @param bodyA      the first rigid body (not the owner) in this constraint
      * @param pivotInA   the pivot point related to body A
      * @param pivotInB   the pivot point related to body B (the owner)
-     * @param axisInA    the axis around which body A can rotate
-     * @param axisInB    the axis around which body B can rotate
+     * @param axisIn     the axis around which body A can rotate
      */
     public SXRHingeConstraint(SXRContext ctx, SXRPhysicsWorldObject bodyA, float pivotInA[],
-                                 float pivotInB[], float axisInA[], float axisInB[])
+                                 float pivotInB[], float axisIn[])
     {
-        this(ctx, Native3DHingeConstraint.ctor(bodyA.getNative(), pivotInA, pivotInB, axisInA, axisInB));
+        this(ctx, Native3DHingeConstraint.ctor(bodyA.getNative(), pivotInA, pivotInB, axisIn));
         mBodyA = bodyA;
     }
 
@@ -84,7 +83,7 @@ public class SXRHingeConstraint extends SXRConstraint
 
 class Native3DHingeConstraint
 {
-    static native long ctor(long rbB, float pivotInA[], float pivotInB[], float axisInA[], float axisInB[]);
+    static native long ctor(long rbB, float pivotInA[], float pivotInB[], float axisIn[]);
 
     static native void setLimits(long nativeConstraint, float lower, float upper);
 

@@ -27,24 +27,15 @@ const char tag[] = "BulletHingeConstrN";
 namespace sxr {
 
     BulletHingeConstraint::BulletHingeConstraint(PhysicsCollidable* bodyA,
-                            const float* pivotInA, const float* pivotInB,
-                            const float* axisInA, const float *axisInB)
+                                                 const glm::vec3& pivotA, const glm::vec3& pivotB,
+                                                 const glm::vec3 axis)
     {
         mHingeConstraint = 0;
-        mRigidBodyA = bodyA;
+        mBodyA = bodyA;
         mBreakingImpulse = SIMD_INFINITY;
-        mPivotInA.x = pivotInA[0];
-        mPivotInA.y = pivotInA[1];
-        mPivotInA.z = pivotInA[2];
-        mPivotInB.x = pivotInB[0];
-        mPivotInB.y = pivotInB[1];
-        mPivotInB.z = pivotInB[2];
-        mAxisInA.x = axisInA[0];
-        mAxisInA.y = axisInA[1];
-        mAxisInA.z = axisInA[2];
-        mAxisInB.x = axisInB[0];
-        mAxisInB.y = axisInB[1];
-        mAxisInB.z = axisInB[2];
+        mPivotInA = pivotA;
+        mPivotInB = pivotB;
+        mAxisIn = axis;
 
         // By default angular limit is inactive
         mTempLower = 2.0f;
@@ -54,7 +45,7 @@ namespace sxr {
     BulletHingeConstraint::BulletHingeConstraint(btHingeConstraint *constraint)
     {
         mHingeConstraint = constraint;
-        mRigidBodyA = reinterpret_cast<PhysicsCollidable*>(constraint->getRigidBodyA().getUserPointer());
+        mBodyA = reinterpret_cast<PhysicsCollidable*>(constraint->getRigidBodyA().getUserPointer());
         constraint->setUserConstraintPtr(this);
     }
 
@@ -130,16 +121,14 @@ namespace sxr {
         {
             btVector3 pivotInA(mPivotInA.x, mPivotInA.y, mPivotInA.z);
             btVector3 pivotInB(mPivotInB.x, mPivotInB.y, mPivotInB.z);
-            btVector3 axisInA(mAxisInA.x, mAxisInA.y, mAxisInA.z);
-            btVector3 axisInB(mAxisInB.x, mAxisInB.y, mAxisInB.z);
+            btVector3 axisIn(mAxisIn.x, mAxisIn.y, mAxisIn.z);
             BulletRigidBody* bodyB = reinterpret_cast<BulletRigidBody*>(owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
 
             if (bodyB)
             {
                 btRigidBody* rbB = bodyB->getRigidBody();
-                btRigidBody* rbA = reinterpret_cast<BulletRigidBody*>(mRigidBodyA)->getRigidBody();
-                mHingeConstraint = new btHingeConstraint(*rbA, *rbB,
-                                                         pivotInA, pivotInB, axisInA, axisInB);
+                btRigidBody* rbA = reinterpret_cast<BulletRigidBody*>(mBodyA)->getRigidBody();
+                mHingeConstraint = new btHingeConstraint(*rbA, *rbB, pivotInA, pivotInB, axisIn, axisIn);
                 mHingeConstraint->setLimit(mTempLower, mTempUpper);
                 mHingeConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
             }
@@ -148,7 +137,7 @@ namespace sxr {
                 BulletJoint* jointB = reinterpret_cast<BulletJoint*>(owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT));
                 if (jointB)
                 {
-                    jointB->setupHinge(mAxisInB, mTempLower, mTempUpper);
+                    jointB->setupHinge(this);
                 }
             }
         }

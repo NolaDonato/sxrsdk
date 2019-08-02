@@ -25,10 +25,15 @@
 #include <LinearMath/btMotionState.h>
 
 class btDynamicsWorld;
-class BulletWorld;
 
 namespace sxr {
+
 class Node;
+class BulletWorld;
+class BulletHingeConstraint;
+class BulletSliderConstraint;
+class BulletFixedConstraint;
+class BulletGeneric6dofConstraint;
 
 class BulletJoint : public PhysicsJoint
 {
@@ -67,13 +72,13 @@ class BulletJoint : public PhysicsJoint
 
     virtual void updateConstructionInfo(PhysicsWorld* world);
 
-    virtual void setupSpherical();
+    virtual void setupSpherical(BulletGeneric6dofConstraint* constraint);
 
-    virtual void setupHinge(const glm::vec3& jointAxis, float lower, float upper);
+    virtual void setupHinge(BulletHingeConstraint* constraint);
 
-    virtual void setupSlider(float lower, float upper);
+    virtual void setupSlider(BulletSliderConstraint* constraint);
 
-    virtual void setupFixed();
+    virtual void setupFixed(BulletFixedConstraint* constraint);
 
     void updateWorldTransform();
 

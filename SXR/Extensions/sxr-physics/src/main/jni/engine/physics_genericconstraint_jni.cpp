@@ -29,8 +29,7 @@ namespace sxr {
     extern "C" {
     JNIEXPORT jlong JNICALL
     Java_com_samsungxr_physics_Native3DGenericConstraint_ctor(
-            JNIEnv *env, jclass obj, jlong bodyA, jfloatArray const joint,
-            jfloatArray const rotationA, jfloatArray const rotationB);
+            JNIEnv *env, jclass obj, jlong bodyA, jfloatArray const pivotA);
 
     JNIEXPORT void JNICALL
     Java_com_samsungxr_physics_Native3DGenericConstraint_setLinearLowerLimits(
@@ -67,15 +66,13 @@ namespace sxr {
 
     JNIEXPORT jlong JNICALL
     Java_com_samsungxr_physics_Native3DGenericConstraint_ctor(JNIEnv *env, jclass obj,
-            jlong bodyA, jfloatArray const joint,
-            jfloatArray const rotationA, jfloatArray const rotationB)
+            jlong jbodyA, jfloatArray const jpivotA)
     {
-        PhysicsRigidBody *body = reinterpret_cast<PhysicsRigidBody*>(bodyA);
-        float const *_joint = env->GetFloatArrayElements(joint, 0);
-        float const *_rotA = env->GetFloatArrayElements(rotationA, 0);
-        float const *_rotB = env->GetFloatArrayElements(rotationB, 0);
-
-        return reinterpret_cast<jlong>(new BulletGeneric6dofConstraint(body, _joint, _rotA, _rotB));
+        PhysicsRigidBody* bodyA = reinterpret_cast<PhysicsRigidBody*>(jbodyA);
+        jfloat* pivotA = env->GetFloatArrayElements(jpivotA, 0);
+        glm::vec3 pivot(pivotA[0], pivotA[1], pivotA[2]);
+        env->ReleaseFloatArrayElements(jpivotA, pivotA, 0);
+        return reinterpret_cast<jlong>(new BulletGeneric6dofConstraint(bodyA, pivot));
     }
 
     JNIEXPORT void JNICALL

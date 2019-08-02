@@ -22,10 +22,11 @@
 
 
 class btDynamicsWorld;
-class BulletWorld;
 
 namespace sxr {
+
 class Node;
+class BulletWorld;
 
 class BulletRigidBody : public PhysicsRigidBody, btMotionState
 {

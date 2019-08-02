@@ -37,17 +37,12 @@ public class SXRGenericConstraint extends SXRConstraint
      *
      * @param ctx        the context of the app
      * @param bodyA      the "fixed" body (not the owner) in this constraint
-     * @param jointPos   the joint point (x, y and z coordinates) in this constraint
+     * @param pivotA    the pivot point (x, y and z coordinates) in this constraint
      *                   relative to "fixed" body
-     * @param rotationA  the rotation of the constraint (an array containing the elements of 3x3
-     *                   rotation matrix) related to "moving" body
-     * @param rotationB  the rotation of the constraint (an array containing the elements of 3x3
-     *                   rotation matrix) related to "fied" body
      */
-    public SXRGenericConstraint(SXRContext ctx, SXRPhysicsWorldObject bodyA, final float jointPos[],
-                                final float rotationA[], final float rotationB[])
+    public SXRGenericConstraint(SXRContext ctx, SXRPhysicsWorldObject bodyA, final float pivotA[])
     {
-        this(ctx, Native3DGenericConstraint.ctor(bodyA.getNative(), jointPos, rotationA, rotationB));
+        this(ctx, Native3DGenericConstraint.ctor(bodyA.getNative(), pivotA));
         mBodyA = bodyA;
     }
 
@@ -148,8 +143,7 @@ public class SXRGenericConstraint extends SXRConstraint
 
 class Native3DGenericConstraint
 {
-    static native long ctor(long rigidBodyB, final float joint[], final float rotationA[],
-                            final float rotationB[]);
+    static native long ctor(long rigidBodyB, final float joint[]);
 
     static native void setLinearLowerLimits(long jconstr, float limX, float limY, float limZ);
 

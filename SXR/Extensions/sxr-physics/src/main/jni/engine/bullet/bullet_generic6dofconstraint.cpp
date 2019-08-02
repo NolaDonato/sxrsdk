@@ -32,18 +32,13 @@ static const char tag[] = "PHYSICS";
 
 namespace sxr {
 
-    BulletGeneric6dofConstraint::BulletGeneric6dofConstraint(PhysicsCollidable* bodyA,
-            float const joint[], float const rotationA[], float const rotationB[])
+    BulletGeneric6dofConstraint::BulletGeneric6dofConstraint(PhysicsCollidable* bodyA, const glm::vec3& pivotA)
     {
         mGeneric6DofConstraint = 0;
 
         mRigidBodyA = bodyA;
         mBreakingImpulse = SIMD_INFINITY;
-        mPosition.x = joint[0];
-        mPosition.y = joint[1];
-        mPosition.z = joint[2];
-        mRotationA = glm::make_mat3(rotationA);
-        mRotationB = glm::make_mat3(rotationB);
+        mPivotA = pivotA;
     }
 
     BulletGeneric6dofConstraint::BulletGeneric6dofConstraint(btGeneric6DofConstraint *constraint)
@@ -185,20 +180,18 @@ void BulletGeneric6dofConstraint::updateConstructionInfo(PhysicsWorld* world)
     {
         btRigidBody* rbB = bodyB->getRigidBody();
         btRigidBody* rbA = reinterpret_cast<BulletRigidBody*>(mRigidBodyA)->getRigidBody();
-        btVector3    p(mPosition.x, mPosition.y, mPosition.z);
-        btMatrix3x3  m(mRotationA[0][0], mRotationA[0][1], mRotationA[0][2],
-                       mRotationA[1][0], mRotationA[1][1], mRotationA[1][2],
-                       mRotationA[2][0], mRotationA[2][1], mRotationA[2][2]);
-        btTransform  fA(m, p);
+        btVector3    p(mPivotA.x, mPivotA.y, mPivotA.z);
+        Transform*   tB = owner_object()->transform();
+        btMatrix3x3  rotB(btQuaternion(tB->rotation_x(), tB->rotation_y(), tB->rotation_z(), tB->rotation_w()));
+        btTransform  frameInB(rotB);
+        btTransform  frameInA = convertTransform2btTransform(mRigidBodyA->owner_object()->transform());
+        btVector3    posA = frameInA.getOrigin();
+        btVector3    posB(tB->position_x(), tB->position_y(), tB->position_z());
 
-        p = rbA->getWorldTransform().getOrigin() + p;
-        p -= rbB->getWorldTransform().getOrigin();
-        m.setValue(mRotationB[0][0], mRotationB[0][1], mRotationB[0][2],
-                   mRotationB[1][0], mRotationB[1][1], mRotationB[1][2],
-                   mRotationB[2][0], mRotationB[2][1], mRotationB[2][2]);
-        btTransform fB(m, p);
 
-        mGeneric6DofConstraint = new btGeneric6DofConstraint(*rbA, *rbB, fA, fB, false);
+        frameInA.setOrigin(frameInA.getOrigin() + p);
+        frameInB.setOrigin(frameInA.getOrigin() - frameInB.getOrigin());
+        mGeneric6DofConstraint = new btGeneric6DofConstraint(*rbA, *rbB, frameInA, frameInB, false);
         mGeneric6DofConstraint->setLinearLowerLimit(Common2Bullet(mLinearLowerLimits));
         mGeneric6DofConstraint->setLinearUpperLimit(Common2Bullet(mLinearUpperLimits));
         mGeneric6DofConstraint->setAngularLowerLimit(Common2Bullet(mAngularLowerLimits));
@@ -210,7 +203,7 @@ void BulletGeneric6dofConstraint::updateConstructionInfo(PhysicsWorld* world)
         BulletJoint* jointB = (BulletJoint*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT);
         if (jointB)
         {
-            jointB->setupSpherical();
+            jointB->setupSpherical(this);
         }
     }
 }

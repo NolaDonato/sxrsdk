@@ -17,13 +17,16 @@
 // Created by c.bozzetto on 31/05/2017.
 //
 #include "objects/node.h"
-#include "bullet_rigidbody.h"
-#include "bullet_joint.h"
-#include "bullet_sliderconstraint.h"
 #include "../physics_world.h"
+
 #include <BulletDynamics/ConstraintSolver/btSliderConstraint.h>
 #include <BulletDynamics/Featherstone/btMultiBodySliderConstraint.h>
 #include <LinearMath/btTransform.h>
+
+#include "bullet_rigidbody.h"
+#include "bullet_joint.h"
+#include "bullet_sliderconstraint.h"
+#include "bullet_sxr_utils.h"
 
 static const char tag[] = "BulletSliderConstrN";
 
@@ -184,14 +187,25 @@ void BulletSliderConstraint::updateConstructionInfo(PhysicsWorld* world)
     {
         return;
     }
-    BulletRigidBody* rigidBodyB = (BulletRigidBody*) this->owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY);
-    btTransform frameInA = btTransform::getIdentity();
-    btTransform frameInB = btTransform::getIdentity();
-
+    BulletRigidBody* rigidBodyB = (BulletRigidBody*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY);
     if (rigidBodyB)
     {
+        Transform* tB = owner_object()->transform();
+        btMatrix3x3 rotB(btQuaternion(tB->rotation_x(), tB->rotation_y(), tB->rotation_z(), tB->rotation_w()));
+        btTransform frameInB(rotB);
         btRigidBody* rbB = rigidBodyB->getRigidBody();
         btRigidBody* rbA = reinterpret_cast<BulletRigidBody*>(mRigidBodyA)->getRigidBody();
+        btTransform frameInA = convertTransform2btTransform(mRigidBodyA->owner_object()->transform());
+        btVector3 posA = frameInA.getOrigin();
+        btVector3 posB(tB->position_x(), tB->position_y(), tB->position_z());
+        btVector3 sliderAxis = posA - posB;
+        btMatrix3x3 rotX2SliderAxis;
+        btVector3 Xaxis(1, 0, 0);
+
+        rotX2SliderAxis = btMatrix3x3(shortestArcQuatNormalize2(Xaxis, sliderAxis));
+        frameInA.setOrigin(btVector3(0, 0, 0));
+        frameInA.getBasis() *= rotX2SliderAxis;
+        frameInB.getBasis() *= rotX2SliderAxis;
         mSliderConstraint = new btSliderConstraint(*rbA, *rbB, frameInA, frameInB, true);
         mSliderConstraint->setLowerAngLimit(mLowerAngularLimit);
         mSliderConstraint->setUpperAngLimit(mUpperAngularLimit);
@@ -204,7 +218,7 @@ void BulletSliderConstraint::updateConstructionInfo(PhysicsWorld* world)
         BulletJoint* jointB = (BulletJoint*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT);
         if (jointB)
         {
-            jointB->setupSlider(mLowerLinearLimit, mUpperLinearLimit);
+            jointB->setupSlider(this);
         }
     }
 

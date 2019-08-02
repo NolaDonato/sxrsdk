@@ -76,7 +76,7 @@ void BulletFixedConstraint::updateConstructionInfo(PhysicsWorld* world)
         BulletJoint* jointB = (BulletJoint*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT);
         if (jointB)
         {
-            jointB->setupFixed();
+            jointB->setupFixed(this);
         }
     }
 }

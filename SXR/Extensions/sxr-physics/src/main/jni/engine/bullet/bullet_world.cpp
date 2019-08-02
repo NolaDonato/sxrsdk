@@ -36,7 +36,6 @@
 #include <BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h>
 
 
-
 namespace sxr {
 
 BulletWorld::BulletWorld(bool isMultiBody)
@@ -126,7 +125,8 @@ void BulletWorld::finalize()
     delete mCollisionConfiguration;
 }
 
-btDynamicsWorld* BulletWorld::getPhysicsWorld() const {
+btDynamicsWorld* BulletWorld::getPhysicsWorld() const
+{
     return mPhysicsWorld;
 }
 
