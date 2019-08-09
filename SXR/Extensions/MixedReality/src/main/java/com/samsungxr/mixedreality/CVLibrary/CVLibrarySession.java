@@ -70,6 +70,7 @@ import com.samsungxr.SXRTransform;
 import com.samsungxr.mixedreality.IAnchorEvents;
 import com.samsungxr.mixedreality.IMarkerEvents;
 import com.samsungxr.mixedreality.IMixedReality;
+import com.samsungxr.mixedreality.IMixedRealityEvents;
 import com.samsungxr.mixedreality.IPlaneEvents;
 import com.samsungxr.mixedreality.SXRAnchor;
 import com.samsungxr.mixedreality.SXRHitResult;
@@ -109,6 +110,7 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
     private Vector2f mScreenToCamera = new Vector2f(1, 1);
     private Vector3f mDisplayGeometry;
     private float mScreenDepth;
+    private boolean mIsRunning = false;
 
     //private final HashMap<Anchor, ICloudAnchorListener> pendingAnchors = new HashMap<>();
 
@@ -136,11 +138,26 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
     public void pause()
     {
         mContext.unregisterDrawFrameListener(this);
+        mIsRunning = false;
     }
 
     public void resume()
     {
         mContext.registerDrawFrameListener(this);
+        mIsRunning = true;
+    }
+
+    public void resume()
+    {
+        if (!mIsRunning)
+        {
+            mContext.getEventManager().sendEvent(this,
+                                                 IMixedRealityEvents.class,
+                                                 "onMixedRealityStart",
+                                                 this);
+            mContext.registerDrawFrameListener(this);
+            mIsRunning = true;
+        }
     }
 
     public float getScreenDepth() { return mScreenDepth; }
@@ -148,6 +165,11 @@ public class CVLibrarySession implements IMixedReality, SXRDrawFrameListener
     public float getARToVRScale() { return mARtoVRScale; }
 
     public void setARToVRScale(float scale) { mARtoVRScale = scale; }
+
+    public boolean isPaused()
+    {
+        return !mIsRunning;
+    }
 
     public void onDrawFrame(float time)
     {
