@@ -17,6 +17,7 @@
 #define BULLET_JOINT_H_
 
 #include <string>
+#include "glm/mat4x4.hpp"
 #include "../physics_joint.h"
 
 #include <BulletDynamics/Featherstone/btMultiBody.h>
@@ -87,19 +88,17 @@ class BulletJoint : public PhysicsJoint
 
     virtual void updateConstructionInfo(PhysicsWorld* world);
 
-    virtual void setupSpherical();
-
-    virtual void setupHinge();
-
-    virtual void setupSlider();
-
-    virtual void setupFixed();
+    bool isReady() const;
 
     void updateWorldTransform();
 
-    bool isReady() const;
+    void getLocalTransform(const btTransform &worldTrans, glm::mat4 worldMatrices[], glm::mat4 localMatrices[]);
 
-private:
+protected:
+    void setupSpherical();
+    void setupHinge();
+    void setupSlider();
+    void setupFixed();
     void finalize();
     void destroy();
     void updateCollisionShapeLocalScaling();

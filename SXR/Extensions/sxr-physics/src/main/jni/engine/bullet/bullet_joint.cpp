@@ -230,6 +230,58 @@ namespace sxr {
         }
     }
 
+    void BulletJoint::getLocalTransform(const btTransform& centerOfMassWorldTrans, glm::mat4 worldMatrices[], glm::mat4 localMatrices[])
+    {
+        Node* owner = owner_object();
+        btTransform aux; getWorldTransform(aux);
+        btTransform physicBody = centerOfMassWorldTrans;
+        btVector3 pos = physicBody.getOrigin();
+        btQuaternion rot = physicBody.getRotation();
+        const BulletJoint* root = static_cast<const BulletJoint*> (mMultiBody->getUserPointer());
+        float matrixData[16];
+
+        centerOfMassWorldTrans.getOpenGLMatrix(matrixData);
+        glm::mat4 worldMatrix(glm::make_mat4(matrixData));
+        int boneID = getBoneID();
+        int parentBoneID = mLink ? mLink->m_parent + 1 : 0;
+        glm::mat4 localMatrix;
+
+        worldMatrices[boneID] = worldMatrix;
+        if (boneID > 0)
+        {
+            const glm::mat4& parentWorld = worldMatrices[parentBoneID];
+            glm::mat4 parentInverseWorld(glm::inverse(parentWorld));
+
+            localMatrix = parentInverseWorld * worldMatrix;
+        }
+        else
+        {
+            Node* parent = owner->parent();
+            if (parent != nullptr)
+            {
+                glm::mat4 parentWorld(parent->transform()->getModelMatrix(false));
+                glm::mat4 parentInverseWorld(glm::inverse(parentWorld));
+
+                localMatrix = parentInverseWorld * worldMatrix;
+            }
+            else
+            {
+                glm::quat q(rot.getX(), rot.getY(), rot.getZ(), rot.getW());
+                glm::mat4 localMatrix = glm::mat4_cast(q);
+                localMatrix[3][0] = pos.getX();
+                localMatrix[3][1] = pos.getY();
+                localMatrix[3][2] = pos.getZ();
+            }
+        }
+        localMatrices[boneID] = localMatrix;
+        owner->transform()->setModelMatrix(localMatrix);
+        glm::quat q = glm::quat_cast(localMatrix);
+        LOGD("BULLET: JOINT %s pos = %f, %f, %f  rot = %f, %f, %f, %f",
+                owner->name().c_str(),
+                localMatrix[3][0], localMatrix[3][1], localMatrix[3][2],
+                q.x, q.y, q.z, q.w);
+    }
+
     void BulletJoint::setWorldTransform(const btTransform& centerOfMassWorldTrans)
     {
         Node* owner = owner_object();
@@ -244,61 +296,22 @@ namespace sxr {
 
         centerOfMassWorldTrans.getOpenGLMatrix(matrixData);
         glm::mat4 worldMatrix(glm::make_mat4(matrixData));
-        if (skel)
+        Transform* trans = owner->transform();
+        if ((parent != nullptr) && (parent->parent() != nullptr))
         {
-            int boneID = getBoneID();
-            int parentBoneID = mLink ? mLink->m_parent + 1 : 0;
-            glm::mat4& skelLocalMatrix = *skel->getLocalBoneMatrix(boneID);
+            glm::mat4 parentWorld(parent->transform()->getModelMatrix(false));
+            glm::mat4 parentInverseWorld(glm::inverse(parentWorld));
             glm::mat4 localMatrix;
 
-            if (boneID > 0)
-            {
-                const glm::mat4& parentWorld = *skel->getWorldBoneMatrix(parentBoneID);
-                glm::mat4 parentInverseWorld(glm::inverse(parentWorld));
-
-                localMatrix = parentInverseWorld * worldMatrix;
-            }
-            else
-            {
-                if (parent != nullptr)
-                {
-                    glm::mat4 parentWorld(parent->transform()->getModelMatrix(false));
-                    glm::mat4 parentInverseWorld(glm::inverse(parentWorld));
-
-                    localMatrix = parentInverseWorld * worldMatrix;
-                }
-                else
-                {
-                    glm::quat q(rot.getX(), rot.getY(), rot.getZ(), rot.getW());
-                    glm::mat4 localMatrix = glm::mat4_cast(q);
-                    localMatrix[3][0] = pos.getX();
-                    localMatrix[3][1] = pos.getY();
-                    localMatrix[3][2] = pos.getZ();
-                }
-            }
-            skelLocalMatrix = localMatrix;
-            LOGD("BULLET: JOINT %s %f, %f, %f", owner->name().c_str(),
-                    localMatrix[3][0], localMatrix[3][1], localMatrix[3][2]);
+            localMatrix = parentInverseWorld * worldMatrix;
+            trans->setModelMatrix(localMatrix);
         }
         else
         {
-            Transform* trans = owner->transform();
-            if ((parent != nullptr) && (parent->parent() != nullptr))
-            {
-                glm::mat4 parentWorld(parent->transform()->getModelMatrix(false));
-                glm::mat4 parentInverseWorld(glm::inverse(parentWorld));
-                glm::mat4 localMatrix;
-
-                localMatrix = parentInverseWorld * worldMatrix;
-                trans->setModelMatrix(localMatrix);
-            }
-            else
-            {
-                trans->set_position(pos.getX(), pos.getY(), pos.getZ());
-                trans->set_rotation(rot.getW(), rot.getX(), rot.getY(), rot.getZ());
-            }
-            LOGD("BULLET: JOINT %s %f, %f, %f", owner->name().c_str(), trans->position_x(), trans->position_y(), trans->position_z());
+            trans->set_position(pos.getX(), pos.getY(), pos.getZ());
+            trans->set_rotation(rot.getW(), rot.getX(), rot.getY(), rot.getZ());
         }
+        LOGD("BULLET: JOINT %s %f, %f, %f", owner->name().c_str(), trans->position_x(), trans->position_y(), trans->position_z());
     }
 
     Skeleton* BulletJoint::createSkeleton()

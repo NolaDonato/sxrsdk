@@ -54,8 +54,6 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
     private static final long DEFAULT_INTERVAL = 15;
     private SXREventReceiver mListeners;
     private boolean mDoDebugDraw = false;
-    private List<SXRPhysicsJoint> mMultiBodies = null;
-    private final LongSparseArray<SXRPhysicsWorldObject> mPhysicsObject = new LongSparseArray<SXRPhysicsWorldObject>();
     private final SXRCollisionMatrix mCollisionMatrix;
     private PhysicsDragger mPhysicsDragger = null;
     private SXRRigidBody mRigidBodyDragMe = null;
@@ -200,10 +198,6 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
         mCollisionMatrix = collisionMatrix;
         mWorldTask = new SXRWorldTask(interval);
         mPhysicsContext = SXRPhysicsContext.getInstance();
-        if (isMultiBody)
-        {
-            mMultiBodies = new ArrayList<SXRPhysicsJoint>();
-        }
         scene.getRoot().attachComponent(this);
     }
 
@@ -283,7 +277,7 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
                 SXRPhysicsCollidable bodyB = constraint.mBodyB;
                 SXRPhysicsCollidable bodyA = constraint.mBodyA;
 
-                if ((bodyB != null) && (bodyB instanceof SXRRigidBody))
+                if (bodyB != null)
                 {
                     if (!contains(bodyB) || ((bodyA != null) && !contains(bodyA)))
                     {
@@ -470,10 +464,6 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
                 }
                 NativePhysics3DWorld.addJoint(getNative(), body.getNative());
                 mPhysicsObject.put(body.getNative(), body);
-                if (body.getBoneID() == 0)
-                {
-                    mMultiBodies.add(body);
-                }
                 getSXRContext().getEventManager().sendEvent(SXRWorld.this,
                         IPhysicsEvents.class,
                         "onAddJoint",
@@ -521,10 +511,6 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
                 {
                     NativePhysics3DWorld.removeJoint(getNative(), joint.getNative());
                     mPhysicsObject.remove(joint.getNative());
-                    if (joint.getBoneID() == 0)
-                    {
-                        mMultiBodies.remove(joint);
-                    }
                     getSXRContext().getEventManager().sendEvent(SXRWorld.this,
                             IPhysicsEvents.class,
                             "onRemoveJoint",
@@ -673,7 +659,7 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
             simulationTime = SystemClock.uptimeMillis();
             timeStep  = simulationTime - lastSimulTime;
             maxSubSteps = (int) (timeStep * 60) / 1000 + 1;
-
+timeStep = 1 / 60.0f;
             NativePhysics3DWorld.step(getNative(), timeStep, maxSubSteps);
 
             if (mDoDebugDraw)
@@ -681,13 +667,6 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
                 getSXRContext().runOnGlThread(debugDrawTask);
             }
             generateCollisionEvents();
-            if (mIsMultibody)
-            {
-                for (SXRPhysicsJoint joint : mMultiBodies)
-                {
-                    joint.onStep();
-                }
-            }
             getSXRContext().getEventManager().sendEvent(SXRWorld.this, IPhysicsEvents.class, "onStepPhysics", SXRWorld.this);
             lastSimulTime = simulationTime;
 

@@ -119,19 +119,6 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
         mPoseMapper = new SXRPoseMapper(skel, mSkeleton, duration);
     }
 
-    public void onStep()
-    {
-        if (mSkeleton != null)
-        {
-            mSkeleton.getNativePose();
-            mSkeleton.poseToBones();
-            if (mPoseMapper != null)
-            {
-                mPoseMapper.animate(0);
-            }
-        }
-    }
-
     /**
      * Returns the {@linkplain SXRWorld physics world} of this {@linkplain SXRRigidBody rigid body}.
      *

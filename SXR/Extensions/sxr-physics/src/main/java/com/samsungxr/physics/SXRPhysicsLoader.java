@@ -46,8 +46,8 @@ public class SXRPhysicsLoader {
      * from the Bullet file are added to the nodes in the
      * given scene.
      *
-     * @param fileName Physics settings file name.
-     * @param scene The scene containing the objects to attach physics components.
+     * @param fileName Name of file containing physics content.
+     * @param scene    The scene containing the objects to attach physics components.
      */
     public static void loadBulletFile(SXRScene scene, String fileName) throws IOException
     {
@@ -69,8 +69,8 @@ public class SXRPhysicsLoader {
      * from the Bullet file are added to the nodes in the
      * given scene.
      *
-     * @param resource {@link SXRAndroidResource} containing the physics components.
-     * @param scene The scene containing the objects to attach physics components.
+     * @param resource {@link SXRAndroidResource} containing the physics content..
+     * @param scene    The scene containing the objects to attach physics components.
      */
     public static void loadBulletFile(SXRScene scene, SXRAndroidResource resource) throws IOException
     {
@@ -84,16 +84,16 @@ public class SXRPhysicsLoader {
     }
 
     /**
-     * Loads a skeleton and physics components from an AVT file.
+     * Loads a skeleton and physics components from a JSON file describing the avatar.
      * <p>
-     * AVT files describe physics for articulated bodies.
+     * Avatar files describe physics for articulated bodies.
      * Each file has a skeleton and joints with collision geometries.
-     * @param ctx      {@link SXRContext} to use
-     * @param resource {@link SXRAndroidResource} containing the physics components.
+     * @param ctx         {@link SXRContext} to use
+     * @param resource    {@link SXRAndroidResource} containing the physics components.
      * @param isMultibody If true, use {@link SXRPhysicsJoint} and Bullet multibody support,
      *                    otherwise use {@link SXRRigidBody} and discrete dynamics simulation.
      */
-    public static SXRPhysicsContent loadAVTFile(SXRContext ctx, SXRAndroidResource resource, boolean isMultibody) throws IOException
+    public static SXRPhysicsContent loadAvatarFile(SXRContext ctx, SXRAndroidResource resource, boolean isMultibody) throws IOException
     {
         byte[] inputData = toByteArray(resource);
 
@@ -106,19 +106,19 @@ public class SXRPhysicsLoader {
     }
 
     /**
-     * Loads a skeleton and physics components from an AVT file.
+     * Loads a skeleton and physics components from a JSON file describing the avatar.
      * <p>
-     * AVT files describe physics for articulated bodies.
+     * Avatar files describe physics for articulated bodies.
      * Each file has a skeleton and joints with collision geometries.
-     * The contents of the AVT file is not added to the current scene.
+     * The contents of the AVT is not added to the current scene.
      * Instead it is imported and contained in a {@link SXRPhysicsContent}
      * object (like a physics world but it cannot simulate, just a container).
-     * @param ctx      {@link SXRContext} to use
-     * @param fileName Physics settings file name.
+     * @param ctx         {@link SXRContext} to use
+     * @param fileName    Physics settings file name.
      * @param isMultibody If true, use {@link SXRPhysicsJoint} and Bullet multibody support,
      *                    otherwise use {@link SXRRigidBody} and discrete dynamics simulation.
      */
-    public static SXRPhysicsContent loadAVTFile(SXRContext ctx, String fileName, boolean isMultibody) throws IOException
+    public static SXRPhysicsContent loadAvatarFile(SXRContext ctx, String fileName, boolean isMultibody) throws IOException
     {
         SXRAndroidResource resource = toAndroidResource(ctx, fileName);
         byte[] inputData = toByteArray(resource);

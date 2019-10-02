@@ -94,11 +94,11 @@ public class SXRPhysicsContent extends SXRComponent
             SXRPhysicsCollidable bodyB = gvrConstraint.mBodyB;
             SXRPhysicsCollidable bodyA = gvrConstraint.mBodyA;
 
-            if ((bodyB != null) && (bodyB instanceof SXRRigidBody))
+            if (bodyB != null)
             {
                 if (!contains(bodyB) || ((bodyA != null) && !contains(bodyA)))
                 {
-                    throw new UnsupportedOperationException("Rigid body used by constraint is not found in the physics world.");
+                    throw new UnsupportedOperationException("Collidable used by constraint is not found in the physics world.");
                 }
             }
             mPhysicsObject.put(gvrConstraint.getNative(), gvrConstraint);
@@ -129,7 +129,8 @@ public class SXRPhysicsContent extends SXRComponent
     {
         if (physicsObject != null)
         {
-            return mPhysicsObject.get(physicsObject.getNative()) != null;
+            long nativePtr = physicsObject.getNative();
+            return mPhysicsObject.get(nativePtr) != null;
         }
         return false;
     }
@@ -189,7 +190,9 @@ public class SXRPhysicsContent extends SXRComponent
 
     protected void doPhysicsAttach(SXRNode rootNode)
     {
-        rootNode.forAllDescendants(mAttachPhysics);
+        mAttachBodies.reset();
+        rootNode.forAllDescendants(mAttachBodies);
+        attachConstraints(mAttachBodies.BodiesAttached);
     }
 
     protected void doPhysicsDetach(SXRNode rootNode)
@@ -211,8 +214,15 @@ public class SXRPhysicsContent extends SXRComponent
         doPhysicsDetach(oldOwner);
     }
 
-    protected SXRNode.SceneVisitor mAttachPhysics = new SXRNode.SceneVisitor()
+    protected class PhysicsAttach implements SXRNode.SceneVisitor
     {
+        public ArrayList<SXRNode> BodiesAttached = new ArrayList<SXRNode>();
+
+        public void reset()
+        {
+            BodiesAttached.clear();
+        }
+
         @Override
         public boolean visit(SXRNode obj)
         {
@@ -221,6 +231,7 @@ public class SXRPhysicsContent extends SXRComponent
             if (body != null)
             {
                 addBody(body);
+                BodiesAttached.add(obj);
             }
             else if (mIsMultibody)
             {
@@ -228,18 +239,24 @@ public class SXRPhysicsContent extends SXRComponent
                 if (joint != null)
                 {
                     addBody(joint);
+                    BodiesAttached.add(obj);
                 }
             }
-            else
-            {
-                return true;
-            }
-            SXRConstraint constraint = (SXRConstraint) obj.getComponent(SXRConstraint.getComponentType());
+            return true;
+        }
+    }
+
+    protected PhysicsAttach mAttachBodies = new PhysicsAttach();
+
+    protected void attachConstraints(ArrayList<SXRNode> nodes)
+    {
+       for (SXRNode node : nodes)
+       {
+            SXRConstraint constraint = (SXRConstraint) node.getComponent(SXRConstraint.getComponentType());
             if (constraint != null)
             {
                 addConstraint(constraint);
             }
-            return true;
         }
     };
 

@@ -23,6 +23,7 @@
 #include "bullet_sxr_utils.h"
 #include "util/sxr_log.h"
 #include "bullet_debugdraw.h"
+#include "objects/components/skeleton.h"
 
 #include <BulletCollision/CollisionDispatch/btDefaultCollisionConfiguration.h>
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
@@ -295,21 +296,22 @@ void BulletWorld::getPhysicsTransforms()
     {
         btMultiBody* mb = world->getMultiBody(i);
         BulletJoint* joint = static_cast<BulletJoint*>(mb->getUserPointer());
-        Node* owner = joint->owner_object();
-        Transform* t = owner->transform();
 
         if (!joint->isReady())
         {
             continue;
         }
+        Skeleton* skel = joint->getSkeleton();
+        int numbones = skel->getNumBones();
+        glm::mat4 localMatrices[numbones];
+        glm::mat4 worldMatrices[numbones];
+
+        skel->getWorldPose((float*) worldMatrices);
+        skel->getPose((float*) localMatrices);
         if (joint->enabled())
         {
-            joint->setWorldTransform(mb->getBaseWorldTransform());
-            LOGE("BULLET: WORLD %s %f, %f, %f",
-                 owner->name().c_str(),
-                 t->position_x(),
-                 t->position_y(),
-                 t->position_z());
+            glm::mat4& localMatrix = localMatrices[0];
+            joint->getLocalTransform(mb->getBaseWorldTransform(), worldMatrices, localMatrices);
         }
         for (int j = 0; j < mb->getNumLinks(); ++j)
         {
@@ -319,14 +321,11 @@ void BulletWorld::getPhysicsTransforms()
             if (joint->enabled() && joint->isReady())
             {
                 const btTransform &t = collider->getWorldTransform();
-                joint->setWorldTransform(t);
-                LOGE("BULLET: WORLD %s %f, %f, %f",
-                     joint->owner_object()->name().c_str(),
-                     t.getOrigin().getX(),
-                     t.getOrigin().getY(),
-                     t.getOrigin().getZ());
+                joint->getLocalTransform(t, worldMatrices, localMatrices);
             }
         }
+        skel->setWorldPose((float*) worldMatrices);
+        skel->setPose((float*) localMatrices);
     }
 }
 
