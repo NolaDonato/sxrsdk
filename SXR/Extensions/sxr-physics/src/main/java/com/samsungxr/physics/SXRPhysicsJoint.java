@@ -15,6 +15,7 @@
 
 package com.samsungxr.physics;
 
+import com.samsungxr.SXRCollider;
 import com.samsungxr.SXRComponent;
 import com.samsungxr.SXRContext;
 import com.samsungxr.SXRNode;
@@ -22,31 +23,106 @@ import com.samsungxr.animation.SXRPoseMapper;
 import com.samsungxr.animation.SXRSkeleton;
 
 /**
- * Represents a joint in a multibody chain like a ragdoll.
+ * Represents a joint in an articulated body.
  * <p>
+ * Articulated bodies are implemented using the Bullet
+ * Featherstone multibody simulator. A joint can only
+ * be added to a simulation world in which multibody
+ * support has been enabled.
+   A joint can be static or dynamic.
+ * Static joints don't move at all, dynamic joints are moved by
+ * the physics engine.
+ * <p>
+ * Joints also have mass and respond to physical forces.
+ * To participate in collisions, a joint must have a
+ * {@link SXRCollider} component attached to its owner
+ * which describes the shape of the rigid body.
+ * <p>
+ * The joint component is attached to a {@linkplain com.samsungxr.SXRNode node}
+ * and uses the transform of its owner object, updating it if the joint is dynamic.
+ * Before attaching a joint to a node, make sure the node has the proper
+ * position and orientation. You cannot attach a rigid body to a node
+ * unless it is in the scene and has a collider component.
+ * <p>
+ * Unlike rigid bodies, joints are connected in a hierarchy which is
+ * not necessarily the same as the hierarchy of the corresponding owner nodes.
+ * Each joint has a type which constrains it with respect to its parent.
+ * Currently fixed, ball, hinge and slider joints are supported.
+ * Constraints between rigid bodies and joints are not currently
+ * supported (although the Bullet multibody simulator can do it).
+ * </p>
+ * @see SXRNode
+ * @see SXRCollider
+ * @see SXRWorld
  */
 public class SXRPhysicsJoint extends SXRPhysicsCollidable
 {
     private final SXRPhysicsContext mPhysicsContext;
     private SXRSkeleton mSkeleton = null;
     private SXRPoseMapper mPoseMapper = null;
+    private final int mCollisionGroup;
 
+    /**
+     * Joint is fixed and does not move.
+     */
     static final int FIXED = 1;
+
+    /**
+     * Joint rotates spherically around its parent (ball joint).
+     */
     static final int SPHERICAL = 2;
+
+    /**
+     * Joint rotates around an axis relative to its parent (hinge joint).
+     */
     static final int REVOLUTE = 3;
+
+    /**
+     * Joint slides along an axis relative to its parent (slider joint).
+     */
     static final int PRISMATIC = 4;
-    static final int PLANAR = 5;
+
+    /**
+     * Constructs the root joint of a multibody chain which collides with everything.
+     *
+     * @param ctx      The context of the app.
+     * @param mass     mass of the root joint.
+     * @oaran numBones number of child joints in the hierarchy.
+     */
+    public SXRPhysicsJoint(SXRContext ctx, float mass, int numBones)
+    {
+        this(ctx, mass, numBones, -1);
+    }
 
     /**
      * Constructs the root joint of a multibody chain.
      *
-     * @param ctx   The context of the app.
-     * @param mass  mass of the root joint.
+     * @param ctx            The context of the app.
+     * @param mass           mass of the root joint.
+     * @oaran numBones       number of child joints in the hierarchy.
+     * @param collisionGroup inteeger between 0 and 16 indicating which
+     *                       collision group the joint belongs to
      */
-    public SXRPhysicsJoint(SXRContext ctx, float mass, int numBones)
+    public SXRPhysicsJoint(SXRContext ctx, float mass, int numBones, int collisionGroup)
     {
         super(ctx, NativePhysicsJoint.ctorRoot(mass, numBones));
+        mCollisionGroup = collisionGroup;
         mPhysicsContext = SXRPhysicsContext.getInstance();
+    }
+
+    /**
+     * Constructs a multibody joint in a chain.
+     * <p>
+     * This joint is linked to the parent joint in the physics world.
+     * @param parent    The parent joint of this one.
+     * @param jointType Type of joint: one of (FIXED, SPHERICAL, REVOLUTE, PRISMATIC, PLANAR)
+     * @param boneID    0 based bone ID indicating which bone of the skeleton
+     *                  this joint belongs to
+     * @param mass      mass of this joint
+     */
+    public SXRPhysicsJoint(SXRPhysicsJoint parent, int jointType, int boneID, float mass)
+    {
+        this(parent, jointType, boneID, mass, -1);
     }
 
     /**
@@ -61,13 +137,16 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
      *                  this joint belongs to
      * @param mass      mass of this joint
      */
-    public SXRPhysicsJoint(SXRPhysicsJoint parent, int jointType, int boneID, float mass)
+    public SXRPhysicsJoint(SXRPhysicsJoint parent, int jointType, int boneID, float mass, int collisionGroup)
     {
-        super(parent.getSXRContext(), NativePhysicsJoint.ctorLink(parent.getNative(), jointType, boneID, mass));
+        super(parent.getSXRContext(),
+              NativePhysicsJoint.ctorLink(parent.getNative(),
+                                          jointType, boneID, mass));
         if (boneID < 1)
         {
             throw new IllegalArgumentException("BoneID must be greater than zero");
         }
+        mCollisionGroup = collisionGroup;
         mPhysicsContext = SXRPhysicsContext.getInstance();
     }
 
@@ -76,47 +155,34 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     {
         super(ctx, nativeJoint);
         mPhysicsContext = SXRPhysicsContext.getInstance();
+        mCollisionGroup = -1;
     }
 
+    /**
+     * Set the joint axis for hinge or slider.
+     * @param x X direction.
+     * @param y Y direction.
+     * @param z Z direction.
+     */
     public void setAxis(float x, float y, float z)
     {
         NativePhysicsJoint.setAxis(getNative(), x, y, z);
     }
 
+    /**
+     * Set the pivot point for this joint.
+     * @param x X pivot.
+     * @param y Y pivot.
+     * @param z Z pivot.
+     */
     public void setPivot(float x, float y, float z)
     {
         NativePhysicsJoint.setPivot(getNative(), x, y, z);
     }
 
-    static public long getComponentType() {
-        return NativePhysicsJoint.getComponentType();
-    }
-
-    /**
-     * Adds a pose mapper to map the physics skeleton associated with
-     * this joint (if any) to another skeleton in the scene.
-     * @param skel     {@link SXRSkeleton} to map the physics pose to
-     * @param duration duration of pose mapping (in seconds)
-     */
-    public void mapPoseToSkeleton(SXRSkeleton skel, float duration)
+    static public long getComponentType()
     {
-        if (mPoseMapper != null)
-        {
-            if ((mPoseMapper.getTargetSkeleton() == skel) &&
-                (mPoseMapper.getSourceSkeleton() == mSkeleton))
-            {
-                return;
-            }
-        }
-        if (mSkeleton == null)
-        {
-            mSkeleton = getSkeleton();
-            if (mSkeleton == null)
-            {
-                throw new IllegalArgumentException("Error cannot access physics skeleton, attach all the joint components before pose mapping");
-            }
-        }
-        mPoseMapper = new SXRPoseMapper(skel, mSkeleton, duration);
+        return NativePhysicsJoint.getComponentType();
     }
 
     /**
@@ -144,10 +210,12 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
      * @param worldOwner Scene object to search for a physics world in the scene.
      * @return Physics world from the scene.
      */
-    private static SXRWorld getWorldFromAscendant(SXRNode worldOwner) {
+    private static SXRWorld getWorldFromAscendant(SXRNode worldOwner)
+    {
         SXRComponent world = null;
 
-        while (worldOwner != null && world == null) {
+        while (worldOwner != null && world == null)
+        {
             world = worldOwner.getComponent(SXRWorld.getComponentType());
             worldOwner = worldOwner.getParent();
         }
@@ -156,12 +224,22 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     }
 
     /**
-     * Returns the mass of the body.
+     * Returns the mass of the joint.
      *
-     * @return The mass of the body.
+     * @return The mass of the joint.
      */
     public float getMass() {
         return NativePhysicsJoint.getMass(getNative());
+    }
+
+    /**
+     * Returns the collision group of this joint..
+     *
+     * @return The collision group id as an int
+     */
+    @Override
+    public int getCollisionGroup() {
+        return mCollisionGroup;
     }
 
     /**

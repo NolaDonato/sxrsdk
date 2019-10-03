@@ -50,9 +50,20 @@ import static android.opengl.GLES20.GL_LINES;
 
 /**
  * Represents a physics world which contains imported physics content.
- * This class is created during content import. It cannot perform
- * physics simulation, it just contains the objects.
- * Use {@link SXRWorld} for simulation.
+ * This class is the result of loading physics content.
+ * It cannot perform physics simulation, it just contains the objects.
+ * <p>
+ *  To become dynamic, this content must be added to a simulation world:
+ *  <pre>
+ *  SXRScene scene = ... // the scene being displayhed
+ *  SXRPhysicsContent importedPhysics = SXRPhysicsLoader.loadAvatarFile(...).
+ *  SXRWorld simulationWorld = new SXRWorld(scene);
+ *  simulationWorld.merge(importedPhysics);
+ *  simulationWorld.enable();
+ *  </pre>
+ * </p>
+ * @see SXRWorld
+ * @see SXRPhysicsLoader
  */
 public class SXRPhysicsContent extends SXRComponent
 {
@@ -60,39 +71,55 @@ public class SXRPhysicsContent extends SXRComponent
     protected final LongSparseArray<SXRPhysicsWorldObject> mPhysicsObject = new LongSparseArray<SXRPhysicsWorldObject>();
 
     /**
-     * Constructs a Physics World to contain physics components of a hierarchy.
-     * This version of the constructor is used when importing physics from
+     * Collects physics components and nodes in a hierarchy under the given root node.
+     * <p>
+     * This version of the constructor is used when importing physics from avatar
      * files - the nodes are not part of the scene yet. To perform simulation,
-     * a world constructed with this method must be merged with a world
-     * attached to the root of a scene.
+     * this container must be merged with a simulation world attached to the root of a scene.
+     * @param root          Root {@link SXRNode} under which imported content is added.
+     * @param isMultiBody   import articulated bodies as {@link SXRPhysicsJoint} components
+     *                      and use Featherstone multibody simulation. The default is to
+     *                      import everything as {@link SXRRigidBody} components and
+     *                      use discrete dynamics.
+     * @see SXRWorld#merge(SXRPhysicsContent)
      */
     public SXRPhysicsContent(SXRNode root, boolean isMultiBody)
     {
         super(root.getSXRContext(), NativePhysics3DWorld.ctor(isMultiBody));
         mIsEnabled = false;
         mIsMultibody = isMultiBody;
-        root.attachComponent(this);
     }
-
 
     static public long getComponentType()
     {
         return NativePhysics3DWorld.getComponentType();
     }
 
+    /**
+     * Detect whether this world supports multibody physics.
+     * {@link SXRPhysicsJoint} components can only be added to worlds
+     * which support multibody physics. Multibody support is established
+     * at construction time.
+     * @return true if multibody is supported, else false.
+     */
     public boolean isMultiBody() { return mIsMultibody; }
 
     /**
      * Add a {@link SXRConstraint} to this physics world.
-     *
-     * @param gvrConstraint The {@link SXRConstraint} to add.
+     * The rigid bodies or joints reference by the constraint must
+     * already have been added to the world.
+     * @param constraint The {@link SXRConstraint} to add.
+     * @throws UnsupportedOperationException
+     *                    if the collidables referenced by
+     *                    the constraint have not been added already.
+     * @see #addBody(SXRRigidBody)
      */
-    public void addConstraint(final SXRConstraint gvrConstraint)
+    public void addConstraint(final SXRConstraint constraint)
     {
-        if (!contains(gvrConstraint))
+        if (!contains(constraint))
         {
-            SXRPhysicsCollidable bodyB = gvrConstraint.mBodyB;
-            SXRPhysicsCollidable bodyA = gvrConstraint.mBodyA;
+            SXRPhysicsCollidable bodyB = constraint.mBodyB;
+            SXRPhysicsCollidable bodyA = constraint.mBodyA;
 
             if (bodyB != null)
             {
@@ -101,29 +128,31 @@ public class SXRPhysicsContent extends SXRComponent
                     throw new UnsupportedOperationException("Collidable used by constraint is not found in the physics world.");
                 }
             }
-            mPhysicsObject.put(gvrConstraint.getNative(), gvrConstraint);
+            mPhysicsObject.put(constraint.getNative(), constraint);
         }
     }
 
     /**
      * Remove a {@link SXRFixedConstraint} from this physics world.
      *
-     * @param gvrConstraint the {@link SXRFixedConstraint} to remove.
+     * @param constraint the {@link SXRFixedConstraint} to remove.
      */
-    public void removeConstraint(final SXRConstraint gvrConstraint)
+    public void removeConstraint(final SXRConstraint constraint)
     {
-        if (contains(gvrConstraint))
+        if (contains(constraint))
         {
-            mPhysicsObject.remove(gvrConstraint.getNative());
+            mPhysicsObject.remove(constraint.getNative());
         }
     }
 
 
     /**
-     * Returns true if the physics world contains the the specified rigid body.
+     * Returns true if the physics world contains the the specified physics component.
      *
-     * @param physicsObject Physics object to check if it is present in the world.
-     * @return true if the world contains the specified object.
+     * @param physicsObject Physics component to check if it is present in the world.
+     *                      This must be a {@link SXRRigidBody}, a {@SXRPhysicsJoint}
+     *                      or a {@link SXRConstraint}.
+     * @return true if the world contains the specified object, else false.
      */
     protected boolean contains(SXRPhysicsWorldObject physicsObject)
     {
@@ -138,39 +167,39 @@ public class SXRPhysicsContent extends SXRComponent
     /**
      * Add a {@link SXRRigidBody} to this physics world.
      *
-     * @param gvrBody The {@link SXRRigidBody} to add.
+     * @param body The {@link SXRRigidBody} to add.
      */
-    public void addBody(final SXRRigidBody gvrBody)
+    public void addBody(final SXRRigidBody body)
     {
-         if (!contains(gvrBody))
+         if (!contains(body))
          {
-             mPhysicsObject.put(gvrBody.getNative(), gvrBody);
+             mPhysicsObject.put(body.getNative(), body);
          }
     }
 
     /**
      * Add a {@link SXRPhysicsJoint} root to this physics world.
      *
-     * @param body The {@link SXRPhysicsJoint} to add.
+     * @param joint The {@link SXRPhysicsJoint} to add.
      */
-    public void addBody(final SXRPhysicsJoint body)
+    public void addBody(final SXRPhysicsJoint joint)
     {
-        if (!contains(body))
+        if (!contains(joint))
         {
-            mPhysicsObject.put(body.getNative(), body);
+            mPhysicsObject.put(joint.getNative(), joint);
         }
     }
 
     /**
      * Remove a {@link SXRRigidBody} from this physics world.
      *
-     * @param gvrBody the {@link SXRRigidBody} to remove.
+     * @param body the {@link SXRRigidBody} to remove.
      */
-    public void removeBody(final SXRRigidBody gvrBody)
+    public void removeBody(final SXRRigidBody body)
     {
-        if (contains(gvrBody))
+        if (contains(body))
         {
-            mPhysicsObject.remove(gvrBody.getNative());
+            mPhysicsObject.remove(body.getNative());
         }
     }
 
@@ -187,12 +216,31 @@ public class SXRPhysicsContent extends SXRComponent
         }
     }
 
+    /**
+     * Get a list of all the collidable objects (rigid bodies
+     * and joints) in this world.
+     * @return list of collidables, may be empty.
+     */
+    List<SXRPhysicsCollidable> getCollidables()
+    {
+        List<SXRPhysicsCollidable> collidables = new ArrayList<SXRPhysicsCollidable>();
+
+        for (int i = 0; i < mPhysicsObject.size(); ++i)
+        {
+            SXRPhysicsWorldObject o = mPhysicsObject.valueAt(i);
+
+            if (o instanceof SXRPhysicsCollidable)
+            {
+                collidables.add((SXRPhysicsCollidable) o);
+            }
+        }
+        return collidables;
+    }
 
     protected void doPhysicsAttach(SXRNode rootNode)
     {
-        mAttachBodies.reset();
         rootNode.forAllDescendants(mAttachBodies);
-        attachConstraints(mAttachBodies.BodiesAttached);
+        attachConstraints(getCollidables());
     }
 
     protected void doPhysicsDetach(SXRNode rootNode)
@@ -214,15 +262,14 @@ public class SXRPhysicsContent extends SXRComponent
         doPhysicsDetach(oldOwner);
     }
 
-    protected class PhysicsAttach implements SXRNode.SceneVisitor
+    /**
+     * Scans the hierarchy for {@SXRPhysicsCollidable} objects
+     * and adds them to the physics world. The bodies added
+     * are accumulated in BodiesAttached. Constraints must
+     * be added after the
+     */
+    protected  SXRNode.SceneVisitor mAttachBodies = new SXRNode.SceneVisitor()
     {
-        public ArrayList<SXRNode> BodiesAttached = new ArrayList<SXRNode>();
-
-        public void reset()
-        {
-            BodiesAttached.clear();
-        }
-
         @Override
         public boolean visit(SXRNode obj)
         {
@@ -231,7 +278,6 @@ public class SXRPhysicsContent extends SXRComponent
             if (body != null)
             {
                 addBody(body);
-                BodiesAttached.add(obj);
             }
             else if (mIsMultibody)
             {
@@ -239,20 +285,19 @@ public class SXRPhysicsContent extends SXRComponent
                 if (joint != null)
                 {
                     addBody(joint);
-                    BodiesAttached.add(obj);
                 }
             }
             return true;
         }
-    }
+    };
 
-    protected PhysicsAttach mAttachBodies = new PhysicsAttach();
-
-    protected void attachConstraints(ArrayList<SXRNode> nodes)
+    protected void attachConstraints(List<SXRPhysicsCollidable> bodies)
     {
-       for (SXRNode node : nodes)
+       for (SXRPhysicsCollidable body : bodies)
        {
+            SXRNode node = body.getOwnerObject();
             SXRConstraint constraint = (SXRConstraint) node.getComponent(SXRConstraint.getComponentType());
+
             if (constraint != null)
             {
                 addConstraint(constraint);

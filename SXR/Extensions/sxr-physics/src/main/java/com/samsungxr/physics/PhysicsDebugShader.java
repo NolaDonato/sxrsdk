@@ -18,6 +18,9 @@ package com.samsungxr.physics;
 import com.samsungxr.SXRShader;
 import com.samsungxr.SXRShaderData;
 
+/**
+ * GLSL shader used for Bullet debug drawing.
+ */
 public class PhysicsDebugShader extends SXRShader
 {
     final String vertex_shader =

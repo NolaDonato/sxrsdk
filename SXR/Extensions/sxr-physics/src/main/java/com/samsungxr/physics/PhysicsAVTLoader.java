@@ -45,6 +45,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Loader for Avatar physics files which describe a multibody articulated hierarchy.
+ */
 class PhysicsAVTLoader
 {
     private final String TAG = "AVT";;
@@ -380,6 +383,7 @@ class PhysicsAVTLoader
         String name = link.getString("Name");
         String parentName = link.optString("Parent", null);
         String type = link.getString("Joint Type");
+        int collisionGroup = link.optInt("Collision Layer ID", 0);
         int jointType;
         JSONArray dofdata = link.getJSONArray("DOF Data");
         float mass = (float) link.getDouble("Mass");
@@ -461,7 +465,7 @@ class PhysicsAVTLoader
         {
             throw new JSONException(type + " is an unknown constraint type");
         }
-        SXRPhysicsJoint joint = new SXRPhysicsJoint(parentJoint, jointType, boneID, mass);
+        SXRPhysicsJoint joint = new SXRPhysicsJoint(parentJoint, jointType, boneID, mass, collisionGroup);
         joint.setPivot(pivotB[0], pivotB[1], pivotB[2]);
         if (axis != null)
         {

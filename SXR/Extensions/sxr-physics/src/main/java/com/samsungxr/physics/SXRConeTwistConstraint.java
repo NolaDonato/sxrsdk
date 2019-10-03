@@ -21,15 +21,12 @@ import org.joml.Matrix3f;
 import org.joml.Vector3f;
 
 /**
- * Created by c.bozzetto on 06/06/2017.
- */
-
-/**
  * Represents a constraint for two {@linkplain SXRRigidBody bodies} in which the first one (the
  * owner) swings constrained to a right circular conic trajectory around a vortex while the other
  * body is simply fixed to this vortex (meaning that the vortex will move if the second body moves).
  */
-public class SXRConeTwistConstraint extends SXRConstraint {
+public class SXRConeTwistConstraint extends SXRConstraint
+{
     /**
      * Construct a new instance of a conic twist constraint.
      *

@@ -25,9 +25,9 @@ import java.util.List;
 
 /**
  * Base class to represent a constraint for the movement of two
- * {@linkplain SXRRigidBody rigid bodies} or {@linkplain SXRPhysicsJoint joints}
+ * {@linkplain SXRRigidBody rigid bodies}.
  * <p>.
- * After created anf fully configured a constraint must be attached to a
+ * After created anfd fully configured a constraint must be attached to a
  * {@linkplain com.samsungxr.SXRNode node} containing a rigid body that will become
  * the owner of this constraint (body B).
  */
@@ -45,14 +45,14 @@ abstract class SXRConstraint extends SXRPhysicsWorldObject
     protected SXRPhysicsCollidable mBodyA = null;
     protected SXRPhysicsCollidable mBodyB = null;
 
-    protected SXRConstraint(SXRContext gvrContext, long nativePointer)
+    protected SXRConstraint(SXRContext ctx, long nativePointer)
     {
-        super(gvrContext, nativePointer);
+        super(ctx, nativePointer);
     }
 
-    protected SXRConstraint(SXRContext gvrContext, long nativePointer, List<NativeCleanupHandler> cleanupHandlers)
+    protected SXRConstraint(SXRContext ctx, long nativePointer, List<NativeCleanupHandler> cleanupHandlers)
     {
-        super(gvrContext, nativePointer, cleanupHandlers);
+        super(ctx, nativePointer, cleanupHandlers);
     }
 
     @Override

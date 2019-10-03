@@ -94,6 +94,8 @@ class BulletJoint : public PhysicsJoint
 
     void getLocalTransform(const btTransform &worldTrans, glm::mat4 worldMatrices[], glm::mat4 localMatrices[]);
 
+    void setCollisionProperties(int collisionGroup, int collidesWith);
+
 protected:
     void setupSpherical();
     void setupHinge();

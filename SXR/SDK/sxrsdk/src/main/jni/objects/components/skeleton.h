@@ -33,7 +33,8 @@ public:
     void setBoneName(int boneIndex, const char* name);
     const char* getBoneName(int boneIndex) const;
     void setPose(const float* input);
-    void getPose(float* output);
+    void getPose(float* output) const;
+    void getWorldPose(float* output) const;
     void setWorldPose(const float* input);
     const glm::mat4* getLocalBoneMatrix(int boneId) const;
     const glm::mat4* getWorldBoneMatrix(int boneId) const;
@@ -42,7 +43,7 @@ public:
     const int*    getBoneParents() const;
     int getBoneParent(int boneId) const;
     int getBoneIndex(const char* name) const;
-    std::mutex& getLock() { return mLock; }
+    std::mutex& getLock() const { return mLock; }
 
     int getParentBoneID(int boneId) const
     {
@@ -60,7 +61,7 @@ private:
     Skeleton& operator=(Skeleton&& skel) = delete;
 
 private:
-    std::mutex  mLock;
+    mutable std::mutex  mLock;
     int         mNumBones;
     int*        mBoneParents;
     glm::mat4*  mWorldBoneMatrices;
