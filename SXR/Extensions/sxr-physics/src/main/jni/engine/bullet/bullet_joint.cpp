@@ -341,6 +341,19 @@ namespace sxr {
         return skel;
     }
 
+    void BulletJoint::applyCentralForce(float x, float y, float z)
+    {
+        btVector3 force(x, y, z);
+        if (mLink)
+        {
+            mMultiBody->addLinkForce(getBoneID() - 1, force);
+        }
+        else
+        {
+            mMultiBody->addBaseForce(force);
+        }
+    }
+
     void BulletJoint::applyTorque(float x, float y, float z)
     {
         if (mLink)
@@ -440,6 +453,10 @@ namespace sxr {
             else
             {
                 mMultiBody->setBaseName(owner->name().c_str());
+                if (mMultiBody->getNumLinks() == 0)
+                {
+                    finalize();
+                }
             }
         }
         updateWorldTransform();

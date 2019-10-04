@@ -281,6 +281,23 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     }
 
     /**
+     * Apply a force vector [X, Y, Z] to this {@linkplain SXRPhysicsJoint joint}
+     *
+     * @param x factor on the 'X' axis.
+     * @param y factor on the 'Y' axis.
+     * @param z factor on the 'Z' axis.
+     */
+    public void applyCentralForce(final float x, final float y, final float z)
+    {
+        mPhysicsContext.runOnPhysicsThread(new Runnable() {
+            @Override
+            public void run() {
+                NativePhysicsJoint.applyCentralForce(getNative(), x, y, z);
+            }
+        });
+    }
+
+    /**
      * Apply a torque to a single DOF joint {@linkplain SXRPhysicsJoint joint}
      *
      * @param t torque on the joint
@@ -383,6 +400,8 @@ class NativePhysicsJoint
     static native void setPivot(long joint, float x, float y, float z);
 
     static native void applyTorque(long joint, float x, float y, float z);
+
+    static native void applyCentralForce(long joint, float x, float y, float z);
 
     static native long getSkeleton(long joint);
 }

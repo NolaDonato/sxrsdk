@@ -101,9 +101,6 @@ namespace sxr
         world->removeJoint(body);
     }
 
-        world->startDrag(pivot_obj, target, relx, rely, relz);
-    }
-
     JNIEXPORT void JNICALL
     Java_com_samsungxr_physics_NativePhysics3DWorld_startDrag(JNIEnv *env, jclass obj, jlong jworld,
                                                               jlong jpivot_obj, jlong jtarget,

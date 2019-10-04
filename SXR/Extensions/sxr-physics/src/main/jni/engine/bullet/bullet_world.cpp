@@ -146,8 +146,11 @@ void BulletWorld::addConstraint(PhysicsConstraint *constraint)
     Node* owner = constraint->owner_object();
     PhysicsJoint* joint = reinterpret_cast<PhysicsJoint*>(owner->getComponent(COMPONENT_TYPE_PHYSICS_JOINT));
     PhysicsRigidBody* body = reinterpret_cast<PhysicsRigidBody*>(owner->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
+    int type = constraint->getBodyA()->getType();
 
-    if ((joint != nullptr) && mIsMultiBody && (constraint->getConstraintType() == PhysicsConstraint::jointMotor))
+    if (mIsMultiBody &&
+        ((joint != nullptr) && mIsMultiBody) ||
+         (type == COMPONENT_TYPE_PHYSICS_JOINT))
     {
         btMultiBodyConstraint* constr = reinterpret_cast<btMultiBodyConstraint *>(constraint->getUnderlying());
         reinterpret_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld)->addMultiBodyConstraint(constr);
@@ -170,7 +173,7 @@ void BulletWorld::removeConstraint(PhysicsConstraint *constraint)
     {
         mPhysicsWorld->removeConstraint(reinterpret_cast<btTypedConstraint *>(constraint->getUnderlying()));
     }
-    else if (mIsMultiBody && (joint != nullptr) && (constraint->getConstraintType() == PhysicsConstraint::jointMotor))
+    else if (mIsMultiBody && (joint != nullptr))
     {
         reinterpret_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld)->removeMultiBodyConstraint(reinterpret_cast<btMultiBodyConstraint *>(constraint->getUnderlying()));
     }

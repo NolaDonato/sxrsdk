@@ -31,7 +31,7 @@ namespace sxr {
                                                  const glm::vec3& pivotA, const glm::vec3& pivotB,
                                                  const glm::vec3 axis)
     {
-        mHingeConstraint = 0;
+        mConstraint = 0;
         mBodyA = bodyA;
         mBreakingImpulse = SIMD_INFINITY;
         mPivotA = pivotA;
@@ -45,24 +45,24 @@ namespace sxr {
 
     BulletHingeConstraint::BulletHingeConstraint(btHingeConstraint *constraint)
     {
-        mHingeConstraint = constraint;
+        mConstraint = constraint;
         mBodyA = reinterpret_cast<PhysicsCollidable*>(constraint->getRigidBodyA().getUserPointer());
         constraint->setUserConstraintPtr(this);
     }
 
     BulletHingeConstraint::~BulletHingeConstraint()
     {
-        if (mHingeConstraint)
+        if (mConstraint)
         {
-            delete mHingeConstraint;
+            delete mConstraint;
         }
     }
 
     void BulletHingeConstraint::setLimits(float lower, float upper)
     {
-        if (mHingeConstraint)
+        if (mConstraint)
         {
-            mHingeConstraint->setLimit(lower, upper);
+            mConstraint->setLimit(lower, upper);
         }
         mTempLower = lower;
         mTempUpper = upper;
@@ -70,9 +70,9 @@ namespace sxr {
 
     float BulletHingeConstraint::getLowerLimit() const
     {
-        if (mHingeConstraint)
+        if (mConstraint)
         {
-            return mHingeConstraint->getLowerLimit();
+            return mConstraint->getLowerLimit();
         }
         else
         {
@@ -82,9 +82,9 @@ namespace sxr {
 
     float BulletHingeConstraint::getUpperLimit() const
     {
-        if (mHingeConstraint)
+        if (mConstraint)
         {
-            return mHingeConstraint->getUpperLimit();
+            return mConstraint->getUpperLimit();
         }
         else
         {
@@ -94,9 +94,9 @@ namespace sxr {
 
     void BulletHingeConstraint::setBreakingImpulse(float impulse)
     {
-        if (mHingeConstraint)
+        if (mConstraint)
         {
-            mHingeConstraint->setBreakingImpulseThreshold(impulse);
+            mConstraint->setBreakingImpulseThreshold(impulse);
         }
         else
         {
@@ -106,9 +106,9 @@ namespace sxr {
 
     float BulletHingeConstraint::getBreakingImpulse() const
     {
-        if (mHingeConstraint)
+        if (mConstraint)
         {
-            return mHingeConstraint->getBreakingImpulseThreshold();
+            return mConstraint->getBreakingImpulseThreshold();
         }
         else
         {
@@ -118,7 +118,7 @@ namespace sxr {
 
     void BulletHingeConstraint::updateConstructionInfo(PhysicsWorld* world)
     {
-        if (mHingeConstraint != nullptr)
+        if (mConstraint != nullptr)
         {
             return;
         }
@@ -141,9 +141,9 @@ namespace sxr {
             btVector3 axisB = localFrameB.getBasis() * axisA;
 
             axisB.normalize();
-            mHingeConstraint = new btHingeConstraint(*rbA, *rbB, pA, pB, axisA, axisB, true);
-            mHingeConstraint->setLimit(mTempLower, mTempUpper);
-            mHingeConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
+            mConstraint = new btHingeConstraint(*rbA, *rbB, pA, pB, axisA, axisB, true);
+            mConstraint->setLimit(mTempLower, mTempUpper);
+            mConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
         }
     }
 }
