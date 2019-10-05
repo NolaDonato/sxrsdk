@@ -51,7 +51,7 @@ class PhysicsJoint :  public PhysicsCollidable
 
 	virtual JointType getJointType() const = 0;
 
-	virtual int getBoneID() const = 0;
+	virtual int getJointIndex() const = 0;
 
 	virtual const glm::vec3& getPivot() const = 0;
 

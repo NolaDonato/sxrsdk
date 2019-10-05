@@ -97,7 +97,8 @@ namespace sxr
                 btRigidBody* rbB = bodyB->getRigidBody();
                 BulletJoint* jointA = reinterpret_cast<BulletJoint*>(mBodyA);
                 btMultiBody* mbA = jointA->getMultiBody();
-                btMultiBodyFixedConstraint* constraint = new btMultiBodyFixedConstraint(mbA, jointA->getBoneID() - 1, rbB,
+                btMultiBodyFixedConstraint* constraint = new btMultiBodyFixedConstraint(mbA,
+                                                                                        jointA->getJointIndex() - 1, rbB,
                                                             pA, pB, frameA.getBasis(), frameB.getBasis());
                 mMBConstraint = constraint;
                 constraint->setMaxAppliedImpulse(mBreakingImpulse);
@@ -115,8 +116,8 @@ namespace sxr
                 BulletJoint *jointA = reinterpret_cast<BulletJoint *>(mBodyA);
                 btMultiBody *mbA = jointA->getMultiBody();
                 btMultiBodyFixedConstraint *constraint = new btMultiBodyFixedConstraint(
-                        mbA, jointA->getBoneID() - 1,
-                        mbB, jointB->getBoneID() - 1,
+                        mbA, jointA->getJointIndex() - 1,
+                        mbB, jointB->getJointIndex() - 1,
                         pA, pB,
                         frameA.getBasis(), frameB.getBasis());
                 constraint->setMaxAppliedImpulse(mBreakingImpulse);
@@ -127,7 +128,7 @@ namespace sxr
                 btRigidBody *rbA = reinterpret_cast<BulletRigidBody *>(mBodyA)->getRigidBody();
                 btMultiBody *mbB = jointB->getMultiBody();
                 btMultiBodyFixedConstraint *constraint = new btMultiBodyFixedConstraint(
-                        mbB, jointB->getBoneID() - 1,
+                        mbB, jointB->getJointIndex() - 1,
                         rbA, pB, pA,
                         frameB.getBasis(), frameA.getBasis());
                 constraint->setMaxAppliedImpulse(mBreakingImpulse);

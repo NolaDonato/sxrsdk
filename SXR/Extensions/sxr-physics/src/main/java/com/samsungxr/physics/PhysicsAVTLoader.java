@@ -21,20 +21,13 @@ import com.samsungxr.SXRBoxCollider;
 import com.samsungxr.SXRCapsuleCollider;
 import com.samsungxr.SXRCollider;
 import com.samsungxr.SXRContext;
-import com.samsungxr.SXRMaterial;
-import com.samsungxr.SXRMesh;
 import com.samsungxr.SXRNode;
-import com.samsungxr.SXRRenderData;
 import com.samsungxr.SXRSphereCollider;
-import com.samsungxr.SXRTransform;
 import com.samsungxr.animation.SXRPose;
 import com.samsungxr.animation.SXRSkeleton;
-import com.samsungxr.nodes.SXRCubeNode;
-import com.samsungxr.nodes.SXRSphereNode;
 import com.samsungxr.utility.Log;
 
 import org.joml.Matrix4f;
-import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import org.joml.Vector4f;
 import org.json.JSONArray;
@@ -55,9 +48,12 @@ class PhysicsAVTLoader
     private final SXRContext mContext;
     private final SXRPhysicsContent mWorld;
     private SXRSkeleton mSkeleton;
+    private String mAttachBoneName;
     private final Map<String, JSONObject> mTargetBones = new HashMap<String, JSONObject>();
     private float mAngularDamping;
     private float mLinearDamping;
+    private SXRNode mAttachNode = null;
+    private SXRPhysicsCollidable mRootCollider;
 
     public PhysicsAVTLoader(SXRContext ctx, boolean isMultiBody)
     {
@@ -66,10 +62,22 @@ class PhysicsAVTLoader
 
     public PhysicsAVTLoader(SXRNode root, boolean isMultiBody)
     {
+        mAttachBoneName = null;
         mRoot = root;
         mContext = root.getSXRContext();
         mSkeleton = null;
         mWorld = new SXRPhysicsContent(root, isMultiBody);
+        mRoot.attachComponent(mWorld);
+    }
+
+    public PhysicsAVTLoader(SXRSkeleton skel, String attachBone, boolean isMultiBody)
+    {
+        mContext = skel.getSXRContext();
+        mRoot = new SXRNode(mContext);
+        mSkeleton = skel;
+        mAttachBoneName = attachBone;
+        mRoot.addChildObject(skel.getOwnerObject());
+        mWorld = new SXRPhysicsContent(mRoot, isMultiBody);
         mRoot.attachComponent(mWorld);
     }
 
@@ -174,12 +182,23 @@ class PhysicsAVTLoader
             skel.setBoneName(i, bonenames[i]);
             skel.setBone(i, bones[i]);
         }
-        mSkeleton = skel;
         worldPose.sync();
         skel.setPose(worldPose);
         skel.poseToBones();
-        bones[0].attachComponent(skel);
-        mRoot.addChildObject(bones[0]);
+        if (mSkeleton != null)
+        {
+            if (mSkeleton.getBoneIndex(mAttachBoneName) < 0)
+            {
+                mAttachBoneName = mSkeleton.getBoneName(0);
+            }
+            mSkeleton.merge(skel, mAttachBoneName);
+        }
+        else
+        {
+            mSkeleton = skel;
+            bones[0].attachComponent(skel);
+            mRoot.addChildObject(bones[0]);
+        }
         return skel;
     }
 
@@ -188,14 +207,36 @@ class PhysicsAVTLoader
         JSONObject multibody = root.getJSONObject("Multi Body").getJSONObject("value");
         JSONObject basebone = multibody.getJSONObject("Base Bone");
         JSONArray childbones = multibody.getJSONObject("Child Bones").getJSONArray("property_value");
+        int collisionGroup = basebone.optInt("Collision Layer ID", 0);
         float mass = (float) basebone.getDouble("Mass");
+        SXRPhysicsJoint attachJoint = null;
+        int attachIndex = -1;
 
+        if ((mSkeleton != null) && (mAttachBoneName != null))
+        {
+            attachIndex = mSkeleton.getBoneIndex(mAttachBoneName);
+            if (attachIndex >= 0)
+            {
+                SXRNode attachNode = mSkeleton.getBone(attachIndex);
+                if (attachNode != null)
+                {
+                    attachJoint = (SXRPhysicsJoint) attachNode
+                        .getComponent(SXRPhysicsJoint.getComponentType());
+                }
+            }
+        }
         mTargetBones.clear();
         mTargetBones.put(basebone.getString("Name"), basebone);
-        SXRPhysicsJoint rootJoint = new SXRPhysicsJoint(mContext, mass, childbones.length() + 1);
-
         parseSkeleton(basebone, childbones);
-        parseBone(basebone, rootJoint);
+        SXRPhysicsJoint rootJoint = new SXRPhysicsJoint(mSkeleton, mass, childbones.length() + 1, collisionGroup);
+        mRootCollider = rootJoint;
+        SXRNode rootNode = parseBone(basebone, rootJoint);
+        if (attachJoint != null)
+        {
+            SXRFixedConstraint attachConstraint = new SXRFixedConstraint(mContext, attachJoint);
+            rootJoint.setBoneIndex(attachIndex);
+            rootNode.attachComponent(attachConstraint);
+        }
         for (int i = 0; i < childbones.length(); ++i)
         {
             JSONObject link = childbones.getJSONObject(i).getJSONObject("value");
@@ -472,6 +513,7 @@ class PhysicsAVTLoader
             joint.setAxis(axis.x, axis.y, axis.z);
         }
         parseBone(link, joint);
+        joint.setBoneIndex(boneID);
         return joint;
     }
 
@@ -632,7 +674,6 @@ class PhysicsAVTLoader
         else if (type.equals("fixed"))
         {
            SXRFixedConstraint fixed = new SXRFixedConstraint(mContext, parentBody);
-//            SXRPoint2PointConstraint fixed = new SXRPoint2PointConstraint(mContext, parentBody, pivotA, pivotB);
             constraint = fixed;
             Log.e(TAG, "Fixed joint between %s and %s", parentName, name);
         }
@@ -648,10 +689,10 @@ class PhysicsAVTLoader
         return body;
     }
 
-    private void parseBone(JSONObject link, SXRPhysicsJoint joint) throws JSONException
+    private SXRNode parseBone(JSONObject link, SXRPhysicsJoint joint) throws JSONException
     {
         String nodeName = link.getString("Target Bone");
-        SXRNode node = mSkeleton.getBone(joint.getBoneID());
+        SXRNode node = mSkeleton.getBone(joint.getJointIndex());
 
         parseCollider(link, nodeName);
 
@@ -661,7 +702,8 @@ class PhysicsAVTLoader
         Log.e(TAG, "link %s bone = %s boneID = %d ",
               link.getString("Name"),
               nodeName,
-              joint.getBoneID());
+              joint.getJointIndex());
+        return node;
     }
 
 }

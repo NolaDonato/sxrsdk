@@ -233,7 +233,7 @@ void BulletSliderConstraint::updateConstructionInfo(PhysicsWorld* world)
         {
             BulletJoint* jointA = reinterpret_cast<BulletJoint*>(mBodyA);
             btMultiBody* mbA = jointA->getMultiBody();
-            mMBConstraint = new btMultiBodySliderConstraint(mbA, jointA->getBoneID() - 1, rbB,
+            mMBConstraint = new btMultiBodySliderConstraint(mbA, jointA->getJointIndex() - 1, rbB,
                                                             pivotA, pivotB,
                                                             localFrameA.getBasis(), localFrameB.getBasis(),
                                                             sliderAxisB);
@@ -250,7 +250,7 @@ void BulletSliderConstraint::updateConstructionInfo(PhysicsWorld* world)
         {
             BulletRigidBody* rigidBodyA = reinterpret_cast<BulletRigidBody*>(mBodyA);
             btRigidBody* rbA = rigidBodyA->getRigidBody();
-            mMBConstraint = new btMultiBodySliderConstraint(mbB, jointB->getBoneID() - 1, rbA,
+            mMBConstraint = new btMultiBodySliderConstraint(mbB, jointB->getJointIndex() - 1, rbA,
                                                             pivotB, pivotA,
                                                             localFrameB.getBasis(), localFrameA.getBasis(),
                                                             sliderAxisB);
@@ -260,8 +260,8 @@ void BulletSliderConstraint::updateConstructionInfo(PhysicsWorld* world)
         {
             BulletJoint* jointA = reinterpret_cast<BulletJoint*>(mBodyA);
             btMultiBody* mbA = jointA->getMultiBody();
-            mMBConstraint = new btMultiBodySliderConstraint(mbA, jointA->getBoneID() - 1,
-                                                            mbB, jointB->getBoneID() - 1,
+            mMBConstraint = new btMultiBodySliderConstraint(mbA, jointA->getJointIndex() - 1,
+                                                            mbB, jointB->getJointIndex() - 1,
                                                             pivotA, pivotB,
                                                             localFrameA.getBasis(), localFrameB.getBasis(),
                                                             sliderAxisA);

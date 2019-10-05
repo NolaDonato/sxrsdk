@@ -71,10 +71,10 @@ Java_com_samsungxr_physics_NativePhysicsJoint_setFriction(JNIEnv *env, jclass ob
 }
 
 JNIEXPORT jint JNICALL
-Java_com_samsungxr_physics_NativePhysicsJoint_getBoneID(JNIEnv *env, jclass obj, jlong jjoint)
+Java_com_samsungxr_physics_NativePhysicsJoint_getJointIndex(JNIEnv *env, jclass obj, jlong jjoint)
 {
     PhysicsJoint *mb = reinterpret_cast<PhysicsJoint *>(jjoint);
-    return mb->getBoneID();
+    return mb->getJointIndex();
 }
 
 JNIEXPORT void JNICALL

@@ -82,7 +82,7 @@ class BulletJoint : public PhysicsJoint
 
     virtual void applyTorque(float t);
 
-    int getBoneID() const { return mBoneID; }
+    int getJointIndex() const { return mBoneID; }
 
     virtual void getWorldTransform(btTransform &worldTrans) const;
 

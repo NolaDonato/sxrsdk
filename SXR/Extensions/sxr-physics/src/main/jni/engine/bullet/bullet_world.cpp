@@ -231,7 +231,7 @@ void BulletWorld::addJoint(PhysicsJoint *joint)
     if (isMultiBody())
     {
         joint->updateConstructionInfo(this);
-        if (joint->getBoneID() == 0)
+        if (joint->getJointIndex() == 0)
         {
             mMultiBodies.push_back((BulletJoint*) joint);
         }
@@ -244,7 +244,7 @@ void BulletWorld::addJointWithMask(PhysicsJoint *joint, int collisionGroup, int 
     {
         joint->updateConstructionInfo(this);
         ((BulletJoint*) joint)->setCollisionProperties(collisionGroup, collidesWith);
-        if (joint->getBoneID() == 0)
+        if (joint->getJointIndex() == 0)
         {
             mMultiBodies.push_back((BulletJoint*) joint);
         }
@@ -253,7 +253,7 @@ void BulletWorld::addJointWithMask(PhysicsJoint *joint, int collisionGroup, int 
 
 void BulletWorld::removeJoint(PhysicsJoint *body)
 {
-    if (isMultiBody() && (body->getBoneID() == 0))
+    if (isMultiBody() && (body->getJointIndex() == 0))
     {
         btMultiBodyDynamicsWorld* world = reinterpret_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld);
         btMultiBody* mb = reinterpret_cast<BulletJoint*>(body)->getMultiBody();

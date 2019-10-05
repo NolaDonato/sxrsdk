@@ -85,7 +85,7 @@ namespace sxr {
         mMultiBody = parent->getMultiBody();
         btMultibodyLink& link = mMultiBody->getLink(boneID - 1);
         link.m_mass = mass;
-        link.m_parent = parent->getBoneID() - 1;
+        link.m_parent = parent->getJointIndex() - 1;
         link.m_userPtr = this;
         mLink = &link;
     }
@@ -189,7 +189,7 @@ namespace sxr {
 
         if (skel)
         {
-            const glm::mat4* m = skel->getWorldBoneMatrix(getBoneID());
+            const glm::mat4* m = skel->getWorldBoneMatrix(getJointIndex());
             centerOfMassWorldTrans = convertTransform2btTransform(*m);
         }
         else
@@ -208,7 +208,7 @@ namespace sxr {
 
         if (skel)
         {
-            const glm::mat4* m = skel->getWorldBoneMatrix(getBoneID());
+            const glm::mat4* m = skel->getWorldBoneMatrix(getJointIndex());
             t = convertTransform2btTransform(*m);
         }
         else
@@ -242,7 +242,7 @@ namespace sxr {
 
         centerOfMassWorldTrans.getOpenGLMatrix(matrixData);
         glm::mat4 worldMatrix(glm::make_mat4(matrixData));
-        int boneID = getBoneID();
+        int boneID = getJointIndex();
         int parentBoneID = mLink ? mLink->m_parent + 1 : 0;
         glm::mat4 localMatrix;
 
@@ -346,7 +346,7 @@ namespace sxr {
         btVector3 force(x, y, z);
         if (mLink)
         {
-            mMultiBody->addLinkForce(getBoneID() - 1, force);
+            mMultiBody->addLinkForce(getJointIndex() - 1, force);
         }
         else
         {
@@ -359,8 +359,8 @@ namespace sxr {
         if (mLink)
         {
             float torque[] = { x, y, z, 0 };
-            mMultiBody->addJointTorqueMultiDof(getBoneID() - 1, torque);
-            mMultiBody->addLinkTorque(getBoneID() - 1, btVector3(x, y, z));
+            mMultiBody->addJointTorqueMultiDof(getJointIndex() - 1, torque);
+            mMultiBody->addLinkTorque(getJointIndex() - 1, btVector3(x, y, z));
         }
         else
         {
@@ -372,7 +372,7 @@ namespace sxr {
     {
         if (mLink)
         {
-            mMultiBody->addJointTorque(getBoneID() - 1, t);
+            mMultiBody->addJointTorque(getJointIndex() - 1, t);
         }
         else
         {
@@ -414,7 +414,7 @@ namespace sxr {
 
                 mCollider->setCollisionShape(shape);
                 mCollider->setIslandTag(0);
-                mCollider->m_link = getBoneID() - 1;
+                mCollider->m_link = getJointIndex() - 1;
                 updateCollisionShapeLocalScaling();
                 shape->calculateLocalInertia(getMass(), localInertia);
 
@@ -482,10 +482,10 @@ namespace sxr {
         btVector3          bodyBCOM(worldB.getOrigin());
         btVector3          diffCOM = bodyBCOM + pivotB - bodyACOM;
 
-        mMultiBody->setupFixed(getBoneID() - 1,
+        mMultiBody->setupFixed(getJointIndex() - 1,
                                mLink->m_mass,
                                mLink->m_inertiaLocal,
-                               jointA->getBoneID() - 1,
+                               jointA->getJointIndex() - 1,
                                rot,
                                diffCOM,
                                -pivotB,
@@ -508,12 +508,12 @@ namespace sxr {
         btVector3          bodyACOM(worldA.getOrigin());
         btVector3          bodyBCOM(worldB.getOrigin());
         btVector3          diffCOM = bodyBCOM + pivotB - bodyACOM;
-        btMultibodyLink&   link = mMultiBody->getLink(getBoneID() - 1);
+        btMultibodyLink&   link = mMultiBody->getLink(getJointIndex() - 1);
 
-        mMultiBody->setupSpherical(getBoneID() - 1,
+        mMultiBody->setupSpherical(getJointIndex() - 1,
                                    mLink->m_mass,
                                    mLink->m_inertiaLocal,
-                                   jointA->getBoneID() - 1,
+                                   jointA->getJointIndex() - 1,
                                    rotA,
                                    diffCOM,
                                    -pivotB, true);
@@ -554,10 +554,10 @@ namespace sxr {
         btVector3           diffCOM = bodyBCOM + pivotB - bodyACOM;
         btVector3           hingeAxis(mAxis.x, mAxis.y, mAxis.z);
 
-        mMultiBody->setupRevolute(getBoneID() - 1,
+        mMultiBody->setupRevolute(getJointIndex() - 1,
                           mLink->m_mass,
                           mLink->m_inertiaLocal,
-                          jointA->getBoneID() - 1,
+                                  jointA->getJointIndex() - 1,
                           rotA,
                           hingeAxis.normalized(),
                           diffCOM,
@@ -581,10 +581,10 @@ namespace sxr {
         btVector3           diffCOM = bodyBCOM + pivotB - bodyACOM;
         btVector3           sliderAxis(bodyBCOM - bodyACOM);
 
-        mMultiBody->setupPrismatic(getBoneID() - 1,
+        mMultiBody->setupPrismatic(getJointIndex() - 1,
                                   mLink->m_mass,
                                   mLink->m_inertiaLocal,
-                                  jointA->getBoneID() - 1,
+                                   jointA->getJointIndex() - 1,
                                   rotA,
                                   sliderAxis.normalized(),
                                   diffCOM,

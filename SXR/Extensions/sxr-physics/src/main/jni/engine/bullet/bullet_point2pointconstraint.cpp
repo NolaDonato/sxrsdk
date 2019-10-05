@@ -98,7 +98,8 @@ void BulletPoint2PointConstraint::updateConstructionInfo(PhysicsWorld* world)
             btRigidBody* rbB = bodyB->getRigidBody();
             BulletJoint* jointA = reinterpret_cast<BulletJoint*>(mBodyA);
             btMultiBody* mbA = jointA->getMultiBody();
-            btMultiBodyPoint2Point* constraint = new btMultiBodyPoint2Point(mbA, jointA->getBoneID() - 1, rbB, pA, pB);
+            btMultiBodyPoint2Point* constraint = new btMultiBodyPoint2Point(mbA,
+                                                                            jointA->getJointIndex() - 1, rbB, pA, pB);
             mMBConstraint = constraint;
             constraint->setMaxAppliedImpulse(mBreakingImpulse);
         }
@@ -115,8 +116,8 @@ void BulletPoint2PointConstraint::updateConstructionInfo(PhysicsWorld* world)
             BulletJoint* jointA = reinterpret_cast<BulletJoint *>(mBodyA);
             btMultiBody* mbA = jointA->getMultiBody();
             btMultiBodyPoint2Point* constraint = new btMultiBodyPoint2Point(
-                    mbA, jointA->getBoneID() - 1,
-                    mbB, jointB->getBoneID() - 1,
+                    mbA, jointA->getJointIndex() - 1,
+                    mbB, jointB->getJointIndex() - 1,
                     pA, pB);
             constraint->setMaxAppliedImpulse(mBreakingImpulse);
             mMBConstraint = constraint;
@@ -126,7 +127,7 @@ void BulletPoint2PointConstraint::updateConstructionInfo(PhysicsWorld* world)
             btRigidBody* rbA = reinterpret_cast<BulletRigidBody *>(mBodyA)->getRigidBody();
             btMultiBody* mbB = jointB->getMultiBody();
             btMultiBodyPoint2Point* constraint = new btMultiBodyPoint2Point(
-                    mbB, jointB->getBoneID() - 1,
+                    mbB, jointB->getJointIndex() - 1,
                     rbA, pB, pA);
             constraint->setMaxAppliedImpulse(mBreakingImpulse);
             mMBConstraint = constraint;
