@@ -46,7 +46,7 @@ namespace sxr {
     BulletHingeConstraint::BulletHingeConstraint(btHingeConstraint *constraint)
     {
         mConstraint = constraint;
-        mBodyA = reinterpret_cast<PhysicsCollidable*>(constraint->getRigidBodyA().getUserPointer());
+        mBodyA = static_cast<PhysicsCollidable*>(constraint->getRigidBodyA().getUserPointer());
         constraint->setUserConstraintPtr(this);
     }
 
@@ -126,7 +126,7 @@ namespace sxr {
         if (bodyB)
         {
             btRigidBody* rbB = bodyB->getRigidBody();
-            btRigidBody* rbA = reinterpret_cast<BulletRigidBody*>(mBodyA)->getRigidBody();
+            btRigidBody* rbA = static_cast<BulletRigidBody*>(mBodyA)->getRigidBody();
             btVector3    pA(mPivotA.x, mPivotA.y, mPivotA.z);
             btVector3    pB(mPivotB.x, mPivotB.y, mPivotB.z);
             btVector3    axisA(mHingeAxis.x, mHingeAxis.y, mHingeAxis.z);

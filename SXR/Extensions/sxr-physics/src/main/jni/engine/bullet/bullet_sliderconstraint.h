@@ -62,7 +62,7 @@ namespace sxr {
 
         virtual float getBreakingImpulse() const;
 
-        void* getUnderlying() { return mMBConstraint ? reinterpret_cast<void*>(mMBConstraint) : reinterpret_cast<void*>(mConstraint); }
+        void* getUnderlying() { return mMBConstraint ? static_cast<void*>(mMBConstraint) : static_cast<void*>(mConstraint); }
 
         virtual void updateConstructionInfo(PhysicsWorld*);
 

@@ -19,19 +19,18 @@ namespace sxr {
 extern "C"
 {
 JNIEXPORT jlong JNICALL
-Java_com_samsungxr_physics_NativePhysicsJoint_ctorRoot(JNIEnv *env, jclass obj, jfloat mass,
-                                                       jint numBones)
+Java_com_samsungxr_physics_NativePhysicsJoint_ctorRoot(JNIEnv *env, jclass obj, jfloat mass, jint numBones)
 {
-    return reinterpret_cast<jlong>(new BulletJoint(mass, numBones));
+    return reinterpret_cast<jlong>(new BulletRootJoint(mass, numBones));
 }
 
 JNIEXPORT jlong JNICALL
 Java_com_samsungxr_physics_NativePhysicsJoint_ctorLink(JNIEnv *env, jclass obj, jobject jparent,
-                                                       jint jointType, jint boneID, jfloat mass)
+                                                       jint jointType, jint jointIndex, jfloat mass)
 {
     BulletJoint *parent = reinterpret_cast<BulletJoint *>(jparent);
     return reinterpret_cast<jlong>(new BulletJoint(parent, PhysicsJoint::JointType(jointType),
-                                                   boneID, mass));
+                                                   jointIndex, mass));
 }
 
 JNIEXPORT jlong JNICALL

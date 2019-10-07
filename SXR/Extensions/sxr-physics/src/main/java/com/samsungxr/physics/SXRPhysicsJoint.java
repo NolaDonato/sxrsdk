@@ -113,9 +113,9 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     /**
      * Constructs the root joint of a multibody chain.
      *
-     * @param ctx            The context of the app.
+     * @param skel           {@!link SXRSkeleton} driven by this multibody chain.
      * @param mass           mass of the root joint.
-     * @oaran numBones       number of child joints in the hierarchy.
+     * @oaran numJoints      number of child joints in the hierarchy.
      * @param collisionGroup inteeger between 0 and 16 indicating which
      *                       collision group the joint belongs to
      */
@@ -334,7 +334,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     /**
      * Returns the 0 based index of this joint.
      */
-    public int getJointIndex() { return NativePhysicsJoint.getJointIndex(getNative()); }
+    public int getJointIndex() { return NativePhysicsJoint.getJointIndex(getNative()) + 1; }
 
     /**
      * Returns the bone index of this joint with respect to the {@link SXRSkeleton} it belongs to.

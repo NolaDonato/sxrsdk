@@ -18,7 +18,7 @@ namespace sxr {
     {
         mConstraint =  nullptr;
         mMBConstraint = nullptr;
-        mBodyA = reinterpret_cast<BulletRigidBody*>(bodyA);
+        mBodyA = static_cast<BulletRigidBody*>(bodyA);
         mBreakingImpulse = SIMD_INFINITY;
         mPivotA = pivotA;
         mPivotB = pivotB;
@@ -80,7 +80,7 @@ void BulletPoint2PointConstraint::updateConstructionInfo(PhysicsWorld* world)
     btTransform  worldFrameB = convertTransform2btTransform(owner_object()->transform());
     btVector3    pA(mPivotA.x, mPivotA.y, mPivotA.z);
     btVector3    pB(mPivotB.x, mPivotB.y, mPivotB.z);
-    BulletRigidBody* bodyB = reinterpret_cast<BulletRigidBody*>
+    BulletRigidBody* bodyB = static_cast<BulletRigidBody*>
                                 (owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
 
     if (bodyB)
@@ -88,7 +88,7 @@ void BulletPoint2PointConstraint::updateConstructionInfo(PhysicsWorld* world)
         if (mBodyA->getType() == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
         {
             btRigidBody* rbB = bodyB->getRigidBody();
-            btRigidBody* rbA = reinterpret_cast<BulletRigidBody*>(mBodyA)->getRigidBody();
+            btRigidBody* rbA = static_cast<BulletRigidBody*>(mBodyA)->getRigidBody();
             btPoint2PointConstraint* constraint = new btPoint2PointConstraint(*rbA, *rbB, pA, pB);
             constraint->setBreakingImpulseThreshold(mBreakingImpulse);
             mConstraint = constraint;
@@ -96,16 +96,16 @@ void BulletPoint2PointConstraint::updateConstructionInfo(PhysicsWorld* world)
         else if (mBodyA->getType() == COMPONENT_TYPE_PHYSICS_JOINT)
         {
             btRigidBody* rbB = bodyB->getRigidBody();
-            BulletJoint* jointA = reinterpret_cast<BulletJoint*>(mBodyA);
+            BulletJoint* jointA = static_cast<BulletJoint*>(mBodyA);
             btMultiBody* mbA = jointA->getMultiBody();
             btMultiBodyPoint2Point* constraint = new btMultiBodyPoint2Point(mbA,
-                                                                            jointA->getJointIndex() - 1, rbB, pA, pB);
+                                                                            jointA->getJointIndex(), rbB, pA, pB);
             mMBConstraint = constraint;
             constraint->setMaxAppliedImpulse(mBreakingImpulse);
         }
         return;
     }
-    BulletJoint* jointB = reinterpret_cast<BulletJoint*>
+    BulletJoint* jointB = static_cast<BulletJoint*>
     (owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT));
     if (jointB)
     {
@@ -113,21 +113,21 @@ void BulletPoint2PointConstraint::updateConstructionInfo(PhysicsWorld* world)
 
         if (mBodyA->getType() == COMPONENT_TYPE_PHYSICS_JOINT)
         {
-            BulletJoint* jointA = reinterpret_cast<BulletJoint *>(mBodyA);
+            BulletJoint* jointA = static_cast<BulletJoint *>(mBodyA);
             btMultiBody* mbA = jointA->getMultiBody();
             btMultiBodyPoint2Point* constraint = new btMultiBodyPoint2Point(
-                    mbA, jointA->getJointIndex() - 1,
-                    mbB, jointB->getJointIndex() - 1,
+                    mbA, jointA->getJointIndex(),
+                    mbB, jointB->getJointIndex(),
                     pA, pB);
             constraint->setMaxAppliedImpulse(mBreakingImpulse);
             mMBConstraint = constraint;
         }
         else if (mBodyA->getType() == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
         {
-            btRigidBody* rbA = reinterpret_cast<BulletRigidBody *>(mBodyA)->getRigidBody();
+            btRigidBody* rbA = static_cast<BulletRigidBody *>(mBodyA)->getRigidBody();
             btMultiBody* mbB = jointB->getMultiBody();
             btMultiBodyPoint2Point* constraint = new btMultiBodyPoint2Point(
-                    mbB, jointB->getJointIndex() - 1,
+                    mbB, jointB->getJointIndex(),
                     rbA, pB, pA);
             constraint->setMaxAppliedImpulse(mBreakingImpulse);
             mMBConstraint = constraint;

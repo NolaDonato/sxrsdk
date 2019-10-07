@@ -210,7 +210,7 @@ void BulletSliderConstraint::updateConstructionInfo(PhysicsWorld* world)
 
         if (typeA == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
         {
-            btRigidBody* rbA = reinterpret_cast<BulletRigidBody *>(mBodyA)->getRigidBody();
+            btRigidBody* rbA = static_cast<BulletRigidBody *>(mBodyA)->getRigidBody();
             btMatrix3x3 rotX2SliderAxis;
             btVector3 Xaxis(1, 0, 0);
             btVector3 negXaxis(-1, 0, 0);
@@ -231,9 +231,9 @@ void BulletSliderConstraint::updateConstructionInfo(PhysicsWorld* world)
         }
         else if (typeA == COMPONENT_TYPE_PHYSICS_JOINT)
         {
-            BulletJoint* jointA = reinterpret_cast<BulletJoint*>(mBodyA);
+            BulletJoint* jointA = static_cast<BulletJoint*>(mBodyA);
             btMultiBody* mbA = jointA->getMultiBody();
-            mMBConstraint = new btMultiBodySliderConstraint(mbA, jointA->getJointIndex() - 1, rbB,
+            mMBConstraint = new btMultiBodySliderConstraint(mbA, jointA->getJointIndex(), rbB,
                                                             pivotA, pivotB,
                                                             localFrameA.getBasis(), localFrameB.getBasis(),
                                                             sliderAxisB);
@@ -248,9 +248,9 @@ void BulletSliderConstraint::updateConstructionInfo(PhysicsWorld* world)
 
         if (typeA == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
         {
-            BulletRigidBody* rigidBodyA = reinterpret_cast<BulletRigidBody*>(mBodyA);
+            BulletRigidBody* rigidBodyA = static_cast<BulletRigidBody*>(mBodyA);
             btRigidBody* rbA = rigidBodyA->getRigidBody();
-            mMBConstraint = new btMultiBodySliderConstraint(mbB, jointB->getJointIndex() - 1, rbA,
+            mMBConstraint = new btMultiBodySliderConstraint(mbB, jointB->getJointIndex(), rbA,
                                                             pivotB, pivotA,
                                                             localFrameB.getBasis(), localFrameA.getBasis(),
                                                             sliderAxisB);
@@ -258,10 +258,10 @@ void BulletSliderConstraint::updateConstructionInfo(PhysicsWorld* world)
         }
         else if (typeA == COMPONENT_TYPE_PHYSICS_JOINT)
         {
-            BulletJoint* jointA = reinterpret_cast<BulletJoint*>(mBodyA);
+            BulletJoint* jointA = static_cast<BulletJoint*>(mBodyA);
             btMultiBody* mbA = jointA->getMultiBody();
-            mMBConstraint = new btMultiBodySliderConstraint(mbA, jointA->getJointIndex() - 1,
-                                                            mbB, jointB->getJointIndex() - 1,
+            mMBConstraint = new btMultiBodySliderConstraint(mbA, jointA->getJointIndex(),
+                                                            mbB, jointB->getJointIndex(),
                                                             pivotA, pivotB,
                                                             localFrameA.getBasis(), localFrameB.getBasis(),
                                                             sliderAxisA);

@@ -73,7 +73,7 @@ namespace sxr
         }
         btTransform  worldFrameA = convertTransform2btTransform(mBodyA->owner_object()->transform());
         btTransform  worldFrameB = convertTransform2btTransform(owner_object()->transform());
-        BulletRigidBody* bodyB = reinterpret_cast<BulletRigidBody*>
+        BulletRigidBody* bodyB = static_cast<BulletRigidBody*>
                                     (owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
         btVector3    pA(mPivotA.x, mPivotA.y, mPivotA.z);
         btVector3    pB(mPivotB.x, mPivotB.y, mPivotB.z);
@@ -87,7 +87,7 @@ namespace sxr
             if (mBodyA->getType() == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
             {
                 btRigidBody* rbB = bodyB->getRigidBody();
-                btRigidBody* rbA = reinterpret_cast<BulletRigidBody*>(mBodyA)->getRigidBody();
+                btRigidBody* rbA = static_cast<BulletRigidBody*>(mBodyA)->getRigidBody();
                 btFixedConstraint* constraint = new btFixedConstraint(*rbA, *rbB, frameA, frameB);
                 constraint->setBreakingImpulseThreshold(mBreakingImpulse);
                 mConstraint = constraint;
@@ -95,7 +95,7 @@ namespace sxr
             else if (mBodyA->getType() == COMPONENT_TYPE_PHYSICS_JOINT)
             {
                 btRigidBody* rbB = bodyB->getRigidBody();
-                BulletJoint* jointA = reinterpret_cast<BulletJoint*>(mBodyA);
+                BulletJoint* jointA = static_cast<BulletJoint*>(mBodyA);
                 btMultiBody* mbA = jointA->getMultiBody();
                 btMultiBodyFixedConstraint* constraint = new btMultiBodyFixedConstraint(mbA,
                                                                                         jointA->getJointIndex() - 1, rbB,
@@ -105,7 +105,7 @@ namespace sxr
             }
             return;
         }
-        BulletJoint* jointB = reinterpret_cast<BulletJoint*>
+        BulletJoint* jointB = static_cast<BulletJoint*>
                                 (owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT));
         if (jointB)
         {
@@ -113,11 +113,11 @@ namespace sxr
 
             if (mBodyA->getType() == COMPONENT_TYPE_PHYSICS_JOINT)
             {
-                BulletJoint *jointA = reinterpret_cast<BulletJoint *>(mBodyA);
+                BulletJoint *jointA = static_cast<BulletJoint *>(mBodyA);
                 btMultiBody *mbA = jointA->getMultiBody();
                 btMultiBodyFixedConstraint *constraint = new btMultiBodyFixedConstraint(
-                        mbA, jointA->getJointIndex() - 1,
-                        mbB, jointB->getJointIndex() - 1,
+                        mbA, jointA->getJointIndex(),
+                        mbB, jointB->getJointIndex(),
                         pA, pB,
                         frameA.getBasis(), frameB.getBasis());
                 constraint->setMaxAppliedImpulse(mBreakingImpulse);
@@ -125,10 +125,10 @@ namespace sxr
             }
             else if (mBodyA->getType() == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
             {
-                btRigidBody *rbA = reinterpret_cast<BulletRigidBody *>(mBodyA)->getRigidBody();
+                btRigidBody *rbA = static_cast<BulletRigidBody *>(mBodyA)->getRigidBody();
                 btMultiBody *mbB = jointB->getMultiBody();
                 btMultiBodyFixedConstraint *constraint = new btMultiBodyFixedConstraint(
-                        mbB, jointB->getJointIndex() - 1,
+                        mbB, jointB->getJointIndex(),
                         rbA, pB, pA,
                         frameB.getBasis(), frameA.getBasis());
                 constraint->setMaxAppliedImpulse(mBreakingImpulse);
