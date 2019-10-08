@@ -77,7 +77,6 @@ namespace sxr {
       mJointType(jointType),
       mWorld(nullptr)
     {
-        mMultiBody = parent->getMultiBody();
     }
 
     BulletRootJoint* BulletJoint::findRoot()
@@ -154,7 +153,6 @@ namespace sxr {
         btVector3 pos = t.getOrigin();
         btQuaternion rot = t.getRotation();
         Node* parent = owner->parent();
-        const BulletJoint* root = findRoot();
         float matrixData[16];
 
         t.getOpenGLMatrix(matrixData);
@@ -209,13 +207,14 @@ namespace sxr {
     {
         Node* owner = owner_object();
         BulletJoint* parent = static_cast<BulletJoint*>(getParent());
+        const char* name = owner->name().c_str();
         mWorld = static_cast<BulletWorld*>(world);
         mMultiBody = parent->getMultiBody();
         btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
-        updateCollider(owner);
-        link.m_linkName = owner->name().c_str();
-        link.m_jointName = owner->name().c_str();
 
+        link.m_linkName = name;
+        link.m_jointName = name;
+        updateCollider(owner);
         switch (mJointType)
         {
             case JointType::fixedJoint: setupFixed(); break;

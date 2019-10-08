@@ -140,7 +140,7 @@ namespace sxr {
             getPhysicsTransform();
             for (int j = 0; j < mNumJoints; ++j)
             {
-                BulletJoint* joint = mJoints[j];
+                BulletJoint* joint = mJoints.at(j);
                 joint->getPhysicsTransform();
             }
         }
@@ -232,14 +232,13 @@ namespace sxr {
             Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
             if (collider)
             {
-                mCollider = new btMultiBodyLinkCollider(mMultiBody, mJointIndex);
+                mCollider = new btMultiBodyLinkCollider(mMultiBody, -1);
                 btCollisionShape* shape = convertCollider2CollisionShape(collider);
                 btVector3 ownerScale;
                 Transform* trans = owner->transform();
 
                 mCollider->setCollisionShape(shape);
                 mCollider->setIslandTag(0);
-                mCollider->m_link = getJointIndex();
                 ownerScale.setValue(trans->scale_x(),
                                     trans->scale_y(),
                                     trans->scale_z());
@@ -278,7 +277,7 @@ namespace sxr {
 
     bool BulletRootJoint::addLink(PhysicsJoint* joint, PhysicsWorld* world)
     {
-        mWorld = reinterpret_cast<BulletWorld*>(world);
+        mWorld = static_cast<BulletWorld*>(world);
         if (joint == this)
         {
             if (mNumJoints == 0)
@@ -289,8 +288,8 @@ namespace sxr {
             return false;
         }
         int linkIndex = joint->getJointIndex();
-        mJoints[linkIndex] = reinterpret_cast<BulletJoint*>(joint);
-        if ((++mLinksAdded == mNumJoints) &&  (mMultiBody == nullptr))
+        mJoints[linkIndex] = static_cast<BulletJoint*>(joint);
+        if ((++mLinksAdded == mNumJoints) && (mMultiBody == nullptr))
         {
             finalize();
             return true;

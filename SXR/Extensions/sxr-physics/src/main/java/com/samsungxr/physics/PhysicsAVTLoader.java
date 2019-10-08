@@ -35,7 +35,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -52,8 +55,6 @@ class PhysicsAVTLoader
     private final Map<String, JSONObject> mTargetBones = new HashMap<String, JSONObject>();
     private float mAngularDamping;
     private float mLinearDamping;
-    private SXRNode mAttachNode = null;
-    private SXRPhysicsCollidable mRootCollider;
 
     public PhysicsAVTLoader(SXRContext ctx, boolean isMultiBody)
     {
@@ -125,46 +126,83 @@ class PhysicsAVTLoader
 
     private SXRSkeleton parseSkeleton(JSONObject basebone, JSONArray bonelist) throws JSONException
     {
-        int numbones = bonelist.length() + 1;
-        String bonenames[] = new String[numbones];
-        int boneparents[] = new int[numbones];
-        SXRNode bones[] = new SXRNode[numbones];
+        int maxInputBones = bonelist.length() + 1;
+        String bonenames[] = new String[maxInputBones];
+        int boneparents[] = new int[maxInputBones];
+        SXRNode boneNodes[] = new SXRNode[maxInputBones];
         Matrix4f worldMtx = new Matrix4f();
+        int numInputBones = 0;
 
         boneparents[0] = -1;
         mTargetBones.clear();
         mTargetBones.put(basebone.getString("Name"), basebone);
 
-        for (int i = 0; i <  numbones; ++i)
+        for (int i = 0; i <  maxInputBones; ++i)
         {
             JSONObject bone = (i == 0) ? basebone : bonelist.getJSONObject(i - 1).getJSONObject("value");
             String parentName = bone.optString("Parent", "");
-            String boneName = bone.getString("Target Bone");
-            bonenames[i] = boneName;
-            boneparents[i] = -1;
-            SXRNode node = new SXRNode(mContext);
-            bones[i] = node;
-            node.setName(bonenames[i]);
+            String targetBone = bone.getString("Target Bone");
+            JSONObject parent = mTargetBones.get(parentName);
+
+            boneparents[numInputBones] = -1;
+            parentName = (parent != null) ? parent.getString("Target Bone") : "";
             mTargetBones.put(bone.getString("Name"), bone);
+            if (mSkeleton != null)
+            {
+                int boneIndex = mSkeleton.getBoneIndex(targetBone);
+                if (boneIndex >= 0)
+                {
+                    boneparents[numInputBones] = mSkeleton.getParentBoneIndex(boneIndex);
+                    if (targetBone.equals(mAttachBoneName))
+                    {
+                        targetBone = "attachTo_" + targetBone;
+                        bone.put("Target Bone", targetBone);
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+            }
+            SXRNode node = new SXRNode(mContext);
+
+            bonenames[numInputBones] = targetBone;
+            boneNodes[numInputBones] = node;
+            node.setName(bonenames[numInputBones]);
             if (!parentName.isEmpty())
             {
-                JSONObject parentBone = mTargetBones.get(parentName);
-                parentName = parentBone.getString("Target Bone");
                 for (int j = 0; j < i; ++j)
                 {
                     if (parentName.equals(bonenames[j]))
                     {
-                        boneparents[i] = j;
-                        bones[j].addChildObject(bones[i]);
+                        SXRNode p = boneNodes[j];
+                        boneparents[numInputBones] = j;
+
+                        if (p == null)
+                        {
+                            if (mSkeleton == null)
+                            {
+                                break;
+                            }
+                            p = mSkeleton.getBone(mSkeleton.getBoneIndex(parentName));
+                        }
+                        p.addChildObject(boneNodes[numInputBones]);
                         break;
                     }
                 }
             }
+            ++numInputBones;
+        }
+        if (numInputBones < maxInputBones)
+        {
+            bonenames = Arrays.copyOfRange(bonenames, 0, numInputBones);
+            boneNodes = Arrays.copyOfRange(boneNodes, 0, numInputBones);
+            boneparents = Arrays.copyOfRange(boneparents, 0, numInputBones);
         }
         SXRSkeleton skel = new SXRSkeleton(mContext, boneparents);
         SXRPose worldPose = new SXRPose(skel);
 
-        for (int i = 0; i <  numbones; ++i)
+        for (int i = 0; i <  numInputBones; ++i)
         {
             JSONObject bone = (i == 0) ? basebone : bonelist.getJSONObject(i - 1).getJSONObject("value");
             JSONObject xform = bone.getJSONObject("Transform");
@@ -180,24 +218,20 @@ class PhysicsAVTLoader
                                        (float) orientation.getDouble("W"));
             worldPose.setWorldMatrix(i, worldMtx);
             skel.setBoneName(i, bonenames[i]);
-            skel.setBone(i, bones[i]);
+            skel.setBone(i, boneNodes[i]);
         }
         worldPose.sync();
         skel.setPose(worldPose);
         skel.poseToBones();
         if (mSkeleton != null)
         {
-            if (mSkeleton.getBoneIndex(mAttachBoneName) < 0)
-            {
-                mAttachBoneName = mSkeleton.getBoneName(0);
-            }
             mSkeleton.merge(skel, mAttachBoneName);
         }
         else
         {
             mSkeleton = skel;
-            bones[0].attachComponent(skel);
-            mRoot.addChildObject(bones[0]);
+            boneNodes[0].attachComponent(skel);
+            mRoot.addChildObject(boneNodes[0]);
         }
         return skel;
     }
@@ -209,78 +243,48 @@ class PhysicsAVTLoader
         JSONArray childbones = multibody.getJSONObject("Child Bones").getJSONArray("property_value");
         int collisionGroup = basebone.optInt("Collision Layer ID", 0);
         float mass = (float) basebone.getDouble("Mass");
-        SXRPhysicsJoint attachJoint = null;
         int attachIndex = 0;
-        JSONObject rootBone = null;
+        int firstBoneIndex = 0;
+        SXRPhysicsJoint rootJoint = null;
+        List<JSONObject> newJoints = new ArrayList<JSONObject>();
 
         if ((mSkeleton != null) && (mAttachBoneName != null))
         {
             attachIndex = mSkeleton.getBoneIndex(mAttachBoneName);
-            if (attachIndex >= 0)
-            {
-                SXRNode attachNode = mSkeleton.getBone(attachIndex);
-                if (attachNode != null)
-                {
-                    attachJoint = (SXRPhysicsJoint) attachNode
-                        .getComponent(SXRPhysicsJoint.getComponentType());
-                }
-            }
+            firstBoneIndex = mSkeleton.getNumBones();
         }
         parseSkeleton(basebone, childbones);
-        mTargetBones.clear();
+        JSONObject link = basebone;
+        int i = -1;
+        int jointIndex = 0;
 
-        /*
-         * Gather all the links which do not already have joints associated with them.
-         */
-        String nodeName = basebone.getString("Target Bone");
-        int boneID = mSkeleton.getBoneIndex(nodeName);
-        SXRNode node = mSkeleton.getBone(boneID);
-        SXRPhysicsJoint body = (SXRPhysicsJoint) node.getComponent(SXRPhysicsJoint.getComponentType());
-
-        if (body == null)
+        while (true)
         {
-            rootBone = basebone;
-        }
-        for (int i = 0; i < childbones.length(); ++i)
-        {
-            JSONObject link = childbones.getJSONObject(i).getJSONObject("value");
-            nodeName = link.getString("Target Bone");
-            boneID = mSkeleton.getBoneIndex(nodeName);
+            String nodeName = link.getString("Target Bone");
+            int boneID = mSkeleton.getBoneIndex(nodeName);
 
             if (boneID < 0)
             {
                 throw new IllegalArgumentException("AVT file skeleton missing bone " + nodeName + " referenced by MultiBody physics");
             }
-            node = mSkeleton.getBone(boneID);
-            body = (SXRPhysicsJoint) node.getComponent(SXRPhysicsJoint.getComponentType());
-            if (body == null)
+            if ((attachIndex <= 0) ||
+                (boneID > attachIndex))
             {
-                if (rootBone == null)
-                {
-                    rootBone = link;
-                }
-                else
-                {
-                    mTargetBones.put(link.getString("Name"), link);
-                }
+                newJoints.add(link);
             }
+            if (++i >= childbones.length())
+            {
+                break;
+            }
+            link = childbones.getJSONObject(i).getJSONObject("value");
         }
+        rootJoint = new SXRPhysicsJoint(mSkeleton, mass, newJoints.size(), collisionGroup);
+        parseBone(newJoints.get(0), rootJoint, firstBoneIndex);
+        rootJoint.setBoneIndex(firstBoneIndex);
 
-        SXRPhysicsJoint rootJoint = new SXRPhysicsJoint(mSkeleton, mass, mTargetBones.size(), collisionGroup);
-        SXRNode rootNode = parseBone(basebone, rootJoint, attachIndex);
-        int jointIndex = 0;
-
-        mRootCollider = rootJoint;
-        rootJoint.setBoneIndex(attachIndex);
-        for (Map.Entry<String, JSONObject> entry : mTargetBones.entrySet())
+        for (int j = 1; j < newJoints.size(); ++j)
         {
-            JSONObject link = entry.getValue();
-            parseJoint(link, ++jointIndex);
-        }
-        if (attachJoint != null)
-        {
-            SXRFixedConstraint attachConstraint = new SXRFixedConstraint(mContext, attachJoint);
-            rootNode.attachComponent(attachConstraint);
+            parseJoint(newJoints.get(j), ++jointIndex);
         }
         rootJoint.getSkeleton();
         return rootJoint;
@@ -414,6 +418,7 @@ class PhysicsAVTLoader
     {
         JSONObject parent = mTargetBones.get(parentName);
         String nodeName = parent.getString("Target Bone");
+
         int boneIndex = mSkeleton.getBoneIndex(nodeName);
         SXRNode parentNode = mSkeleton.getBone(boneIndex);
 

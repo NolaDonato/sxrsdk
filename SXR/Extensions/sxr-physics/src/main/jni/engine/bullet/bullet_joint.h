@@ -138,10 +138,11 @@ public:
 
     void getPhysicsTransforms();
 
+    virtual void setPhysicsTransform();
+
 	bool addLink(PhysicsJoint* joint, PhysicsWorld* world);
 
 protected:
-	virtual void setPhysicsTransform();
 	virtual void updateCollider(Node* owner);
     void finalize();
     void destroy();
