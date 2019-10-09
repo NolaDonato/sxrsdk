@@ -351,7 +351,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
      * </p>
      * @param index  0-based bone index in skeleton
      */
-    public void setBoneIndex(int index) { mBoneIndex = 0; }
+    public void setBoneIndex(int index) { mBoneIndex = index; }
 
     @Override
     public void onAttach(SXRNode newOwner)
@@ -364,7 +364,8 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     }
 
     @Override
-    public void onDisable() {
+    public void onDisable()
+    {
         super.onDisable();
 
         if (getJointIndex() == 0)

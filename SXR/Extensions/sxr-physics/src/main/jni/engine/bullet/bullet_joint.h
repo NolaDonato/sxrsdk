@@ -89,7 +89,7 @@ class BulletJoint : public PhysicsJoint
 
 	virtual void updateConstructionInfo(PhysicsWorld* world);
 
-    BulletRootJoint* findRoot();
+    virtual BulletRootJoint* findRoot();
 
 	void setCollisionProperties(int collisionGroup, int collidesWith);
 
@@ -139,6 +139,8 @@ public:
     void getPhysicsTransforms();
 
     virtual void setPhysicsTransform();
+
+    virtual BulletRootJoint* findRoot();
 
 	bool addLink(PhysicsJoint* joint, PhysicsWorld* world);
 

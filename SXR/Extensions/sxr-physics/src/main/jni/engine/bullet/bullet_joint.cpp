@@ -81,10 +81,6 @@ namespace sxr {
 
     BulletRootJoint* BulletJoint::findRoot()
     {
-        if ((mJointIndex < 0) || (mParent == nullptr))
-        {
-            return reinterpret_cast<BulletRootJoint*>(this);
-        }
         return mParent->findRoot();
     }
 
@@ -231,7 +227,7 @@ namespace sxr {
         btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
         if (mCollider == nullptr)
         {
-            Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
+            Collider* collider = static_cast<Collider*>(owner->getComponent(COMPONENT_TYPE_COLLIDER));
             if (collider)
             {
                 mCollider = new btMultiBodyLinkCollider(mMultiBody, mJointIndex);

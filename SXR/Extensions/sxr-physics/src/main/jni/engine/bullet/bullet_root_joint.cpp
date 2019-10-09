@@ -76,6 +76,12 @@ namespace sxr {
     {
         destroy();
     }
+
+    BulletRootJoint* BulletRootJoint::findRoot()
+    {
+        return this;
+    }
+
     Skeleton* BulletRootJoint::getSkeleton()
     {
         Skeleton* skel = static_cast<Skeleton*>(owner_object()->getComponent(COMPONENT_TYPE_SKELETON));
@@ -272,7 +278,7 @@ namespace sxr {
             }
         }
         mMultiBody->finalizeMultiDof();
-        reinterpret_cast<btMultiBodyDynamicsWorld *>(mWorld->getPhysicsWorld())->addMultiBody(mMultiBody);
+        dynamic_cast<btMultiBodyDynamicsWorld *>(mWorld->getPhysicsWorld())->addMultiBody(mMultiBody);
     }
 
     bool BulletRootJoint::addLink(PhysicsJoint* joint, PhysicsWorld* world)

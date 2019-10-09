@@ -108,7 +108,7 @@ void BulletWorld::finalize()
 
     if (isMultiBody())
     {
-        btMultiBodyDynamicsWorld* world = static_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld);
+        btMultiBodyDynamicsWorld* world = dynamic_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld);
         for (int i = 0; i < world->getNumMultibodies(); ++i)
         {
             btMultiBody* mb = world->getMultiBody(i);
@@ -154,7 +154,7 @@ void BulletWorld::addConstraint(PhysicsConstraint *constraint)
          (type == COMPONENT_TYPE_PHYSICS_JOINT)))
     {
         btMultiBodyConstraint* constr = static_cast<btMultiBodyConstraint *>(constraint->getUnderlying());
-        static_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld)->addMultiBodyConstraint(constr);
+        dynamic_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld)->addMultiBodyConstraint(constr);
     }
     else if (body != nullptr)
     {
@@ -176,7 +176,7 @@ void BulletWorld::removeConstraint(PhysicsConstraint *constraint)
     }
     else if (mIsMultiBody && (joint != nullptr))
     {
-        static_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld)->removeMultiBodyConstraint(static_cast<btMultiBodyConstraint *>(constraint->getUnderlying()));
+        dynamic_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld)->removeMultiBodyConstraint(static_cast<btMultiBodyConstraint *>(constraint->getUnderlying()));
     }
 }
 
@@ -247,7 +247,7 @@ void BulletWorld::addJointWithMask(PhysicsJoint *joint, int collisionGroup, int 
         if (root->addLink(joint, this))
         {
             ((BulletJoint*) joint)->setCollisionProperties(collisionGroup, collidesWith);
-            mMultiBodies.push_back((BulletRootJoint*) joint);
+            mMultiBodies.push_back(root);
         }
     }
 }
@@ -256,8 +256,8 @@ void BulletWorld::removeJoint(PhysicsJoint *body)
 {
     if (isMultiBody() && (body->getJointIndex() < 0))
     {
-        btMultiBodyDynamicsWorld* world = static_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld);
-        btMultiBody* mb = static_cast<BulletJoint*>(body)->getMultiBody();
+        btMultiBodyDynamicsWorld* world = dynamic_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld);
+        btMultiBody* mb = dynamic_cast<BulletJoint*>(body)->getMultiBody();
         world->removeMultiBody(mb);
     }
 }
@@ -312,7 +312,7 @@ void BulletWorld::setupDebugDraw(Node* node)
     if (node && mPhysicsWorld && (mDebugDraw == nullptr) && !mIsMultiBody)
     {
         mDebugDraw = new GLDebugDrawer(node);
-        static_cast<btDiscreteDynamicsWorld*>(mPhysicsWorld)->setDebugDrawer(mDebugDraw);
+        dynamic_cast<btDiscreteDynamicsWorld*>(mPhysicsWorld)->setDebugDrawer(mDebugDraw);
     }
 }
 
@@ -320,7 +320,7 @@ void BulletWorld::debugDrawWorld()
 {
     if (!mIsMultiBody && mDebugDraw)
     {
-        static_cast<btDiscreteDynamicsWorld*>(mPhysicsWorld)->debugDrawWorld();
+        dynamic_cast<btDiscreteDynamicsWorld*>(mPhysicsWorld)->debugDrawWorld();
     }
 }
 
