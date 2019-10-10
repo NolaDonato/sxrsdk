@@ -224,9 +224,11 @@ namespace sxr {
     void BulletRootJoint::updateConstructionInfo(PhysicsWorld* world)
     {
         Node* owner = owner_object();
+
         mWorld = static_cast<BulletWorld*>(world);
-        updateCollider(owner);
         mMultiBody->setBaseName(owner->name().c_str());
+        mMultiBody->setBaseMass(mMass);
+        updateCollider(owner);
         setPhysicsTransform();
     }
 

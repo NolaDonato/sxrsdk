@@ -216,6 +216,7 @@ namespace sxr {
         link.m_jointName = name;
         link.m_parent = getJointIndex();
         link.m_userPtr = this;
+        link.m_mass = mMass;
         updateCollider(owner);
         switch (mJointType)
         {
