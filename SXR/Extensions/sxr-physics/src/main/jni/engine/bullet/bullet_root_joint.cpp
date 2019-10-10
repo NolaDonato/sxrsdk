@@ -253,7 +253,7 @@ namespace sxr {
                 mCollider->setUserPointer(this);
                 mMultiBody->setBaseCollider(mCollider);
                 mMultiBody->setBaseInertia(localInertia);
-                mWorld->getPhysicsWorld()->addCollisionObject(mCollider);
+                mWorld->getPhysicsWorld()->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
             }
             else
             {

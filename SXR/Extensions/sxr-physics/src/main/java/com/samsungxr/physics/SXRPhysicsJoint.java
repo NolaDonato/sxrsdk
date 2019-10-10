@@ -91,7 +91,8 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
      */
     public SXRPhysicsJoint(SXRContext ctx, float mass, int numJoints)
     {
-        this(ctx, mass, numJoints, -1);
+        this(ctx, mass, numJoints,
+             (mass > 0) ? SXRCollisionMatrix.DEFAULT_GROUP : SXRCollisionMatrix.STATIC_GROUP);
     }
 
     /**
@@ -139,7 +140,8 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
      */
     public SXRPhysicsJoint(SXRPhysicsJoint parent, int jointType, int jointIndex, float mass)
     {
-        this(parent, jointType, jointIndex, mass, -1);
+        this(parent, jointType, jointIndex, mass,
+             (mass > 0) ? SXRCollisionMatrix.DEFAULT_GROUP : SXRCollisionMatrix.STATIC_GROUP);
     }
 
     /**

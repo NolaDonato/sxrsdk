@@ -61,6 +61,8 @@ namespace sxr {
       mPivot(0, 0, 0),
       mWorld(nullptr),
       mMass(mass),
+      mCollisionGroup(btBroadphaseProxy::DefaultFilter),
+      mCollisionMask(btBroadphaseProxy::AllFilter),
       mJointType(JointType::sphericalJoint)
     {
     }
@@ -74,6 +76,8 @@ namespace sxr {
       mAxis(1, 0, 0),
       mMass(mass),
       mPivot(0, 0, 0),
+      mCollisionGroup(btBroadphaseProxy::DefaultFilter),
+      mCollisionMask(btBroadphaseProxy::AllFilter),
       mJointType(jointType),
       mWorld(nullptr)
     {
@@ -241,12 +245,12 @@ namespace sxr {
                 mCollider->setIslandTag(0);
                 mCollider->m_link = getJointIndex();
                 ownerScale.setValue(trans->scale_x(), trans->scale_y(), trans->scale_z());
-                mCollider->getCollisionShape()->setLocalScaling(ownerScale);
+                shape->setLocalScaling(ownerScale);
                 shape->calculateLocalInertia(getMass(), localInertia);
                 link.m_inertiaLocal = localInertia;
                 link.m_collider = mCollider;
                 mCollider->setUserPointer(this);
-                mWorld->getPhysicsWorld()->addCollisionObject(mCollider);
+                mWorld->getPhysicsWorld()->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
             }
             else
             {
@@ -257,6 +261,8 @@ namespace sxr {
 
     void BulletJoint::setCollisionProperties(int collisionGroup, int collidesWith)
     {
+        mCollisionGroup = collisionGroup;
+        mCollisionMask = collidesWith;
         if (mCollider)
         {
             mCollider->getBroadphaseHandle()->m_collisionFilterGroup = collisionGroup;

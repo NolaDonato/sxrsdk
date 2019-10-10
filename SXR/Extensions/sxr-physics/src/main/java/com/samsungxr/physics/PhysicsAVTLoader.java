@@ -288,7 +288,7 @@ class PhysicsAVTLoader
                 link = childbones.getJSONObject(i).getJSONObject("value");
             }
         }
-        rootJoint = new SXRPhysicsJoint(mSkeleton, mass, newJoints.size(), collisionGroup);
+        rootJoint = new SXRPhysicsJoint(mSkeleton, mass, newJoints.size(), SXRCollisionMatrix.DEFAULT_GROUP);
         parseBone(newJoints.get(0), rootJoint, firstBoneIndex);
         rootJoint.setBoneIndex(firstBoneIndex);
 
@@ -537,7 +537,7 @@ class PhysicsAVTLoader
         {
             throw new JSONException(type + " is an unknown constraint type");
         }
-        SXRPhysicsJoint joint = new SXRPhysicsJoint(parentJoint, jointType, jointIndex, mass, collisionGroup);
+        SXRPhysicsJoint joint = new SXRPhysicsJoint(parentJoint, jointType, jointIndex, mass, SXRCollisionMatrix.DEFAULT_GROUP);
         joint.setPivot(pivotB[0], pivotB[1], pivotB[2]);
         if (axis != null)
         {
@@ -562,7 +562,7 @@ class PhysicsAVTLoader
         float mass = (float) link.getDouble("Mass");
         SXRRigidBody parentBody = findParentBody(parentName);
         int collisionGroup = link.optInt("Collision Layer ID", 0);
-        SXRRigidBody body = new SXRRigidBody(mContext, mass, collisionGroup);
+        SXRRigidBody body = new SXRRigidBody(mContext, mass, SXRCollisionMatrix.DEFAULT_GROUP);
         JSONObject props = link.getJSONObject("Physic Material");
         JSONObject v;
         float PIover2 = (float) Math.PI / 2;

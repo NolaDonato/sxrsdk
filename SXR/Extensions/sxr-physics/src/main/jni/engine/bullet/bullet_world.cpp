@@ -234,7 +234,7 @@ void BulletWorld::addJoint(PhysicsJoint *joint)
         BulletRootJoint* root = static_cast<BulletJoint*>(joint)->findRoot();
         if (root->addLink(joint, this))
         {
-            mMultiBodies.push_back((BulletRootJoint*) root);
+            mMultiBodies.push_back(root);
         }
     }
 }
@@ -244,9 +244,10 @@ void BulletWorld::addJointWithMask(PhysicsJoint *joint, int collisionGroup, int 
     if (isMultiBody())
     {
         BulletRootJoint* root = static_cast<BulletJoint*>(joint)->findRoot();
+
+        ((BulletJoint*) joint)->setCollisionProperties(collisionGroup, collidesWith);
         if (root->addLink(joint, this))
         {
-            ((BulletJoint*) joint)->setCollisionProperties(collisionGroup, collidesWith);
             mMultiBodies.push_back(root);
         }
     }

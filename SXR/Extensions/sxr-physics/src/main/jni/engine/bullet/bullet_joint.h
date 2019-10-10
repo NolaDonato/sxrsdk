@@ -111,6 +111,8 @@ protected:
     glm::vec3                mPivot;
     int                      mJointIndex;
     float                    mMass;
+    int 					 mCollisionGroup;
+    int 					 mCollisionMask;
 };
 
 class BulletRootJoint : public BulletJoint
