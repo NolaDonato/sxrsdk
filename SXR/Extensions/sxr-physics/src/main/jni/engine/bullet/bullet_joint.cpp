@@ -210,6 +210,8 @@ namespace sxr {
 
         link.m_linkName = name;
         link.m_jointName = name;
+        link.m_parent = getJointIndex();
+        link.m_userPtr = this;
         updateCollider(owner);
         switch (mJointType)
         {

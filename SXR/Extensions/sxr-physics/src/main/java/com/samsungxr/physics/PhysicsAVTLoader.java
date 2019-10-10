@@ -257,8 +257,7 @@ class PhysicsAVTLoader
                     if (boneID < 0)
                     {
                         throw new IllegalArgumentException("AVT file skeleton missing bone " +
-                                                               nodeName +
-                                                               " referenced by MultiBody physics");
+                                                           nodeName + " referenced by MultiBody physics");
                     }
                     newJoints.add(link);
                 }
@@ -279,8 +278,7 @@ class PhysicsAVTLoader
                 if ((boneID < 0) && (newJoints.size() > 0))
                 {
                     throw new IllegalArgumentException("AVT file skeleton missing bone " +
-                                                           nodeName +
-                                                           " referenced by MultiBody physics");
+                                                       nodeName + " referenced by MultiBody physics");
                 }
                 newJoints.add(link);
                 if (++i >= childbones.length())

@@ -309,7 +309,7 @@ void BulletWorld::setDebugMode(int mode)
 
 void BulletWorld::setupDebugDraw(Node* node)
 {
-    if (node && mPhysicsWorld && (mDebugDraw == nullptr) && !mIsMultiBody)
+    if (node && mPhysicsWorld && (mDebugDraw == nullptr))
     {
         mDebugDraw = new GLDebugDrawer(node);
         dynamic_cast<btDiscreteDynamicsWorld*>(mPhysicsWorld)->setDebugDrawer(mDebugDraw);
@@ -318,7 +318,7 @@ void BulletWorld::setupDebugDraw(Node* node)
 
 void BulletWorld::debugDrawWorld()
 {
-    if (!mIsMultiBody && mDebugDraw)
+    if (mDebugDraw)
     {
         dynamic_cast<btDiscreteDynamicsWorld*>(mPhysicsWorld)->debugDrawWorld();
     }
