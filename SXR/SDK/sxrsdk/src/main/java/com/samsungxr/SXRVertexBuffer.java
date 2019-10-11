@@ -131,6 +131,12 @@ public class SXRVertexBuffer extends SXRHybridObject implements PrettyPrint
         }
     }
 
+    public SXRVertexBuffer(SXRContext ctx, long nativePtr)
+    {
+        super(ctx, nativePtr);
+        mDescriptor = NativeVertexBuffer.getDescriptor(nativePtr);
+    }
+
     /**
      * Check if a vertex attribute is present in this buffer'
      * and has data.
@@ -627,6 +633,7 @@ public class SXRVertexBuffer extends SXRHybridObject implements PrettyPrint
 class NativeVertexBuffer {
     static native long ctor(String descriptor, int vertexCount);
 
+    static native String getDescriptor(long vbuf);
     static native int getVertexCount(long vbuf);
 
     static native boolean isSet(long vbuf, String name);

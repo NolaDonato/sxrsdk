@@ -148,9 +148,9 @@ private:
 
 private:
     btRigidBody::btRigidBodyConstructionInfo mConstructionInfo;
-    btRigidBody* mRigidBody;
-    SimulationType mSimType;
-    BulletWorld* mWorld;
+    btRigidBody*    mRigidBody;
+    SimulationType  mSimType;
+    BulletWorld*    mWorld;
 
     friend class BulletWorld;
 };

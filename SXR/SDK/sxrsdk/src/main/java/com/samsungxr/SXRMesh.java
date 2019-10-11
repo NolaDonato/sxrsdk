@@ -103,7 +103,7 @@ public class SXRMesh extends SXRHybridObject implements PrettyPrint {
 
     /**
      * Construct a mesh with specified vertex layout.
-     * @param gvrContext SXRContext to associate mesh with
+     * @param context SXRContext to associate mesh with
      * @param vertexDescriptor string describing vertex layout.
      *                         Each vertex attribute has a name and a type.
      *                         The types may be "int", "float" or "mat"
@@ -114,8 +114,20 @@ public class SXRMesh extends SXRHybridObject implements PrettyPrint {
      * <li>float3 a_position, int4 a_bone_indices, float4 a_bone_weights</li>
      * </ul>
      */
-    public SXRMesh(SXRContext gvrContext, String vertexDescriptor) {
-        this(new SXRVertexBuffer(gvrContext, vertexDescriptor, 0), null);
+    public SXRMesh(SXRContext context, String vertexDescriptor)
+    {
+        this(new SXRVertexBuffer(context, vertexDescriptor, 0), null);
+    }
+
+    public SXRMesh(SXRContext context, long nativePtr)
+    {
+        super(context, nativePtr);
+        mVertices = new SXRVertexBuffer(context, NativeMesh.getVertexBuffer(nativePtr));
+        long nativeIndices = NativeMesh.getIndexBuffer(nativePtr);
+        if (nativeIndices != 0)
+        {
+            mIndices = new SXRIndexBuffer(context, nativeIndices);
+        }
     }
 
     /**
@@ -889,4 +901,8 @@ class NativeMesh
     static native void setIndexBuffer(long mesh, long ibuf);
 
     static native void setVertexBuffer(long mesh, long vbuf);
+
+    static native long getVertexBuffer(long mesh);
+
+    static native long getIndexBuffer(long mesh);
 }

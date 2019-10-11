@@ -23,6 +23,7 @@ namespace sxr {
 class PhysicsWorld;
 class PhysicsRigidBody;
 class PhysicsConstraint;
+class PhysicsJoint;
 
 class PhysicsLoader
 {
@@ -32,13 +33,19 @@ public:
 
     virtual PhysicsRigidBody* getNextRigidBody() = 0;
 
-    virtual const char* getRigidBodyName(PhysicsRigidBody *body) const = 0;
+    virtual PhysicsJoint* getNextJoint() = 0;
+
+    virtual Collider* getCollider() = 0;
+
+    virtual const char* getRigidBodyName(PhysicsRigidBody* body) const = 0;
+
+    virtual const char* getJointName(PhysicsJoint* joint) const = 0;
 
     virtual PhysicsConstraint* getNextConstraint() = 0;
 
-    virtual PhysicsRigidBody* getConstraintBodyA(PhysicsConstraint *constraint) = 0;
+    virtual PhysicsRigidBody* getConstraintBodyA(PhysicsConstraint* constraint) = 0;
 
-    virtual PhysicsRigidBody* getConstraintBodyB(PhysicsConstraint *constraint) = 0;
+    virtual PhysicsRigidBody* getConstraintBodyB(PhysicsConstraint* constraint) = 0;
 };
 
 }

@@ -35,9 +35,17 @@ namespace sxr {
 
     BulletPoint2PointConstraint::BulletPoint2PointConstraint(btMultiBodyPoint2Point* constraint)
     {
+        btVector3 pA(constraint->getPivotInA());
+        btVector3 pB(constraint->getPivotInB());
+        btMultiBody* mbA = constraint->getMultiBodyA();
+
         mMBConstraint = constraint;
-        mConstraint =  nullptr;
+        mBodyA = reinterpret_cast<PhysicsCollidable*>(mbA->getUserPointer());
+        mPivotA = glm::vec3(pA.x(), pA.y(), pA.z());
+        mPivotB = glm::vec3(pB.x(), pB.y(), pB.z());
+        mBreakingImpulse = SIMD_INFINITY;
     }
+
     BulletPoint2PointConstraint::~BulletPoint2PointConstraint()
     {
         if (mConstraint)
@@ -49,7 +57,6 @@ namespace sxr {
             delete mMBConstraint;
         }
     };
-
 
     void BulletPoint2PointConstraint::setBreakingImpulse(float impulse)
     {
@@ -76,8 +83,6 @@ void BulletPoint2PointConstraint::updateConstructionInfo(PhysicsWorld* world)
     {
         return;
     }
-    btTransform  worldFrameA = convertTransform2btTransform(mBodyA->owner_object()->transform());
-    btTransform  worldFrameB = convertTransform2btTransform(owner_object()->transform());
     btVector3    pA(mPivotA.x, mPivotA.y, mPivotA.z);
     btVector3    pB(mPivotB.x, mPivotB.y, mPivotB.z);
     BulletRigidBody* bodyB = static_cast<BulletRigidBody*>

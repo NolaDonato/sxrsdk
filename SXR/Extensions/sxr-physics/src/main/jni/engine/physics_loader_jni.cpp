@@ -62,6 +62,24 @@ Java_com_samsungxr_physics_NativePhysics3DLoader_getNextRigidBody(JNIEnv* env, j
     return reinterpret_cast<jlong>(loader->getNextRigidBody());
 }
 
+JNIEXPORT jlong JNICALL
+Java_com_samsungxr_physics_NativePhysics3DLoader_getNextJoint(JNIEnv* env, jclass clazz,
+                                                                  jlong jloader)
+{
+    PhysicsLoader *loader = reinterpret_cast<PhysicsLoader*>(jloader);
+
+    return reinterpret_cast<jlong>(loader->getNextJoint());
+}
+
+JNIEXPORT jlong JNICALL
+Java_com_samsungxr_physics_NativePhysics3DLoader_getCollider(JNIEnv* env, jclass clazz,
+                                                              jlong jloader)
+{
+    PhysicsLoader *loader = reinterpret_cast<PhysicsLoader*>(jloader);
+
+    return reinterpret_cast<jlong>(loader->getCollider());
+}
+
 JNIEXPORT jstring JNICALL
 Java_com_samsungxr_physics_NativePhysics3DLoader_getRigidBodyName(JNIEnv* env, jclass clazz,
         jlong jloader, jlong jrigid_body)
@@ -69,9 +87,17 @@ Java_com_samsungxr_physics_NativePhysics3DLoader_getRigidBodyName(JNIEnv* env, j
     PhysicsLoader *loader = reinterpret_cast<PhysicsLoader*>(jloader);
     PhysicsRigidBody *body = reinterpret_cast<PhysicsRigidBody*>(jrigid_body);
 
-    jstring name = env->NewStringUTF(loader->getRigidBodyName(body));
+    return env->NewStringUTF(loader->getRigidBodyName(body));
+}
 
-    return name;
+JNIEXPORT jstring JNICALL
+Java_com_samsungxr_physics_NativePhysics3DLoader_getJointName(JNIEnv* env, jclass clazz,
+                                                                  jlong jloader, jlong jjoint)
+{
+    PhysicsLoader *loader = reinterpret_cast<PhysicsLoader*>(jloader);
+    PhysicsJoint *body = reinterpret_cast<PhysicsJoint*>(jjoint);
+
+    return env->NewStringUTF(loader->getJointName(body));
 }
 
 JNIEXPORT jlong JNICALL

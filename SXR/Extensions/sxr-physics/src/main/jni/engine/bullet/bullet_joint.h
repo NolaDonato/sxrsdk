@@ -45,6 +45,8 @@ class BulletJoint : public PhysicsJoint
  public:
     BulletJoint(BulletJoint* parent, JointType type, int jointIndex, float mass);
 
+	BulletJoint(BulletJoint* parent, int jointIndex, btMultibodyLink* link);
+
     virtual ~BulletJoint() { }
 
     btMultiBody* getMultiBody() const { return mMultiBody; }

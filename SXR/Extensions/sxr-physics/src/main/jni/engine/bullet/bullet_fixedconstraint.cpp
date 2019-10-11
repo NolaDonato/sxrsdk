@@ -32,7 +32,6 @@ namespace sxr
     {
         mMBConstraint = constraint;
         mBodyA = nullptr;         // TODO: figure out how to assign to mBodyA
-
     }
 
     BulletFixedConstraint::~BulletFixedConstraint()

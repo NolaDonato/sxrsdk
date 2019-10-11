@@ -196,34 +196,67 @@ public class SXRPhysicsLoader {
         ArrayMap<Long, SXRNode> rbObjects = new ArrayMap<>();
 
         long nativeRigidBody;
-        while ((nativeRigidBody = NativePhysics3DLoader.getNextRigidBody(loader)) != 0) {
+        long nativeCollider;
+        while ((nativeRigidBody = NativePhysics3DLoader.getNextRigidBody(loader)) != 0)
+        {
             String name = NativePhysics3DLoader.getRigidBodyName(loader, nativeRigidBody);
             SXRNode sceneObject = sceneRoot.getNodeByName(name);
-            if (sceneObject == null) {
+
+            if (sceneObject == null)
+            {
                 Log.w(TAG, "Didn't find node for rigid body '" + name + "'");
                 continue;
             }
 
-            if (sceneObject.getComponent(SXRCollider.getComponentType()) == null) {
-                SXRMeshCollider collider = new SXRMeshCollider(ctx, true);
-                // Collider for picking.
-                sceneObject.attachComponent(collider);
+            if (sceneObject.getComponent(SXRCollider.getComponentType()) == null)
+            {
+                nativeCollider = NativePhysics3DLoader.getCollider(loader);
+                if (nativeCollider == 0)
+                {
+                    SXRMeshCollider collider = new SXRMeshCollider(ctx, true);
+                    // Collider for picking.
+                    sceneObject.attachComponent(collider);
+                }
             }
             SXRRigidBody rigidBody = new SXRRigidBody(ctx, nativeRigidBody);
             sceneObject.attachComponent(rigidBody);
             rbObjects.put(nativeRigidBody, sceneObject);
         }
 
+        long nativeMultiBody;
+        while ((nativeMultiBody = NativePhysics3DLoader.getNextJoint(loader)) != 0)
+        {
+            String name = NativePhysics3DLoader.getJointName(loader, nativeRigidBody);
+            SXRNode sceneObject = sceneRoot.getNodeByName(name);
+            if (sceneObject == null)
+            {
+                Log.w(TAG, "Didn't find node for joint '" + name + "'");
+                continue;
+            }
+
+            if (sceneObject.getComponent(SXRCollider.getComponentType()) == null)
+            {
+                SXRMeshCollider collider = new SXRMeshCollider(ctx, true);
+                // Collider for picking.
+                sceneObject.attachComponent(collider);
+            }
+            SXRPhysicsJoint rootJoint = new SXRPhysicsJoint(ctx, nativeMultiBody);
+            sceneObject.attachComponent(rootJoint);
+            rbObjects.put(nativeMultiBody, sceneObject);
+        }
+
         long nativeConstraint;
         long nativeRigidBodyB;
 
-        while ((nativeConstraint = NativePhysics3DLoader.getNextConstraint(loader)) != 0) {
+        while ((nativeConstraint = NativePhysics3DLoader.getNextConstraint(loader)) != 0)
+        {
             nativeRigidBody = NativePhysics3DLoader.getConstraintBodyA(loader, nativeConstraint);
             nativeRigidBodyB = NativePhysics3DLoader.getConstraintBodyB(loader, nativeConstraint);
             SXRNode sceneObject = rbObjects.get(nativeRigidBody);
             SXRNode sceneObjectB = rbObjects.get(nativeRigidBodyB);
 
-            if (sceneObject == null || sceneObjectB == null) {
+            if (sceneObject == null || sceneObjectB == null)
+            {
                 // There is no node to own this constraint
                 Log.w(TAG, "Ignoring constraint with missing rigid body.");
                 continue;
@@ -232,28 +265,45 @@ public class SXRPhysicsLoader {
             int constraintType = Native3DConstraint.getConstraintType(nativeConstraint);
             SXRConstraint constraint = null;
 
-            if (constraintType == SXRConstraint.fixedConstraintId) {
+            if (constraintType == SXRConstraint.fixedConstraintId)
+            {
                 constraint = new SXRFixedConstraint(ctx, nativeConstraint);
-            } else if (constraintType == SXRConstraint.point2pointConstraintId) {
+            }
+            else if (constraintType == SXRConstraint.point2pointConstraintId)
+            {
                 constraint = new SXRPoint2PointConstraint(ctx, nativeConstraint);
-            } else if (constraintType == SXRConstraint.sliderConstraintId) {
+            }
+            else if (constraintType == SXRConstraint.sliderConstraintId)
+            {
                 constraint = new SXRSliderConstraint(ctx, nativeConstraint);
-            } else if (constraintType == SXRConstraint.hingeConstraintId) {
+            }
+            else if (constraintType == SXRConstraint.hingeConstraintId)
+            {
                 constraint = new SXRHingeConstraint(ctx, nativeConstraint);
-            } else if (constraintType == SXRConstraint.coneTwistConstraintId) {
+            }
+            else if (constraintType == SXRConstraint.coneTwistConstraintId)
+            {
                 constraint = new SXRConeTwistConstraint(ctx, nativeConstraint);
-            } else if (constraintType == SXRConstraint.genericConstraintId) {
+            }
+            else if (constraintType == SXRConstraint.genericConstraintId)
+            {
                 constraint = new SXRGenericConstraint(ctx, nativeConstraint);
-            } else if (constraintType == SXRConstraint.universalConstraintId) {
+            }
+            else if (constraintType == SXRConstraint.universalConstraintId)
+            {
                 constraint = new SXRGenericConstraint(ctx, nativeConstraint);
-            } else if (constraintType == SXRConstraint.jointMotorId) {
+            }
+            else if (constraintType == SXRConstraint.jointMotorId)
+            {
                 constraint = new SXRPhysicsJointMotor(ctx, nativeConstraint);
             }
 
-            if (constraint != null) {
+            if (constraint != null)
+            {
                 SXRComponentGroup<SXRConstraint> group;
                 group = (SXRComponentGroup)sceneObject.getComponent(SXRConstraint.getComponentType());
-                if (group == null) {
+                if (group == null)
+                {
                     group = new SXRComponentGroup<>(ctx, SXRConstraint.getComponentType());
                     sceneObject.attachComponent(group);
                 }
@@ -296,7 +346,13 @@ class NativePhysics3DLoader {
 
     static native long getNextRigidBody(long loader);
 
+    static native long getNextJoint(long loader);
+
+    static native long getCollider(long loader);
+
     static native String getRigidBodyName(long loader, long rigid_body);
+
+    static native String getJointName(long loader, long rigid_body);
 
     static native long getNextConstraint(long loader);
 

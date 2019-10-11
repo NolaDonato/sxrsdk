@@ -64,12 +64,19 @@ namespace sxr {
 
     BulletRootJoint::BulletRootJoint(btMultiBody* multiBody)
     : BulletJoint(multiBody->getNumLinks(), multiBody->getBaseMass()),
-      mLinksAdded(0)
+      mLinksAdded(multiBody->getNumLinks())
     {
         mMultiBody = multiBody;
-        mJoints.reserve(multiBody->getNumLinks());
-        mJoints.resize(multiBody->getNumLinks());
+        mJoints.reserve(mLinksAdded);
+        mJoints.resize(mLinksAdded);
         mMultiBody->setUserPointer(this);
+        for (int i = 0; i < mLinksAdded; ++i)
+        {
+            btMultibodyLink& link = mMultiBody->getLink(i);
+            BulletJoint* parent = (link.m_parent >= 0) ? mJoints[link.m_parent] : this;
+            BulletJoint* joint = new BulletJoint(parent, (JointType) link.m_jointType, i, link.m_mass);
+            mJoints[i] = joint;
+        }
     }
 
     BulletRootJoint::~BulletRootJoint()
@@ -284,6 +291,10 @@ namespace sxr {
     bool BulletRootJoint::addLink(PhysicsJoint* joint, PhysicsWorld* world)
     {
         mWorld = static_cast<BulletWorld*>(world);
+        if (mJoints[joint->getJointIndex()] != nullptr)
+        {
+            return false;
+        }
         if (joint == this)
         {
             if (mNumJoints == 0)

@@ -47,7 +47,9 @@ public class SXRSphereCollider extends SXRCollider
     {
         super(context, NativeSphereCollider.ctor());
     }
-    
+
+    public SXRSphereCollider(SXRContext context, long nativePtr) { super(context, nativePtr); }
+
     /**
      * Set the radius of the collision sphere.
      * 

@@ -63,11 +63,22 @@ namespace sxr
         mSimType(SimulationType::DYNAMIC)
     {
         mRigidBody->setUserPointer(this);
-        mConstructionInfo.m_mass = rigidBody->isStaticObject() ? 0.f : 1.f / rigidBody->getInvMass();
         mConstructionInfo.m_friction = rigidBody->getFriction();
         mConstructionInfo.m_restitution = rigidBody->getRestitution();
         mConstructionInfo.m_linearDamping = rigidBody->getLinearDamping();
         mConstructionInfo.m_angularDamping = rigidBody->getAngularDamping();
+        mConstructionInfo.m_rollingFriction = rigidBody->getRollingFriction();
+        mConstructionInfo.m_restitution = rigidBody->getRestitution();
+        mConstructionInfo.m_linearSleepingThreshold = rigidBody->getLinearSleepingThreshold();
+        mConstructionInfo.m_angularSleepingThreshold = rigidBody->getAngularSleepingThreshold();
+        mConstructionInfo.m_additionalDamping = false;
+        mConstructionInfo.m_localInertia = rigidBody->getLocalInertia();
+        mConstructionInfo.m_additionalDamping = false;
+        mConstructionInfo.m_additionalDampingFactor = 0.005f;
+        mConstructionInfo.m_additionalLinearDampingThresholdSqr = 0;
+        mConstructionInfo. m_additionalAngularDampingThresholdSqr = 0;
+        mConstructionInfo.m_additionalAngularDampingFactor = 0.01f;
+
         if (rigidBody->isStaticObject())
         {
             mSimType = SimulationType::STATIC;

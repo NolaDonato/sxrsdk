@@ -20,7 +20,10 @@ public class SXRBoxCollider extends SXRCollider {
         super(context, NativeBoxCollider.ctor());
     }
 
-    public void setHalfExtents(float x, float y, float z) {
+    public SXRBoxCollider(SXRContext context, long nativePtr) { super(context, nativePtr); }
+
+    public void setHalfExtents(float x, float y, float z)
+    {
         NativeBoxCollider.setHalfExtents(getNative(), x, y, z);
     }
 }

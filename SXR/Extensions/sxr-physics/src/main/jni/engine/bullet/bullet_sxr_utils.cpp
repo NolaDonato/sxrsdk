@@ -19,7 +19,7 @@
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <contrib/glm/gtc/type_ptr.hpp>
 #include <BulletCollision/CollisionShapes/btEmptyShape.h>
-
+#include "objects/vertex_buffer.h"
 #include "util/sxr_log.h"
 
 namespace sxr {
@@ -158,7 +158,6 @@ btConvexHullShape *createConvexHullShapeFromMesh(Mesh *mesh)
     {
         btConvexHullShape *initial_hull_shape = NULL;
         btShapeHull *hull_shape_optimizer = NULL;
-        unsigned short vertex_index;
 
         initial_hull_shape = new btConvexHullShape();
         mesh->getVertexBuffer()->forAllVertices("a_position", [initial_hull_shape](int iter, const float* v)

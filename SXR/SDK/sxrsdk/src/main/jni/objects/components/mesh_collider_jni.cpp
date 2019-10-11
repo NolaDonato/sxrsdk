@@ -18,48 +18,45 @@
 
 namespace sxr {
 extern "C" {
-    JNIEXPORT jlong JNICALL
-    Java_com_samsungxr_NativeMeshCollider_ctorMesh(JNIEnv * env,
-            jobject obj, jlong jmesh);
-
-    JNIEXPORT jlong JNICALL
-    Java_com_samsungxr_NativeMeshCollider_ctorMeshPicking(JNIEnv * env,
-             jobject obj, jlong jmesh, jboolean pickCoordinates);
-
-    JNIEXPORT jlong JNICALL
-    Java_com_samsungxr_NativeMeshCollider_ctor(JNIEnv * env,
-            jobject obj, jboolean useBounds);
-
-    JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeMeshCollider_setMesh(JNIEnv * env,
-            jobject obj, jlong jmesh_collider, jlong jmesh);
-}
 
 JNIEXPORT jlong JNICALL
-Java_com_samsungxr_NativeMeshCollider_ctorMesh(JNIEnv * env,
-        jobject obj, jlong jmesh) {
-    Mesh* mesh = reinterpret_cast<Mesh*>(jmesh);
+Java_com_samsungxr_NativeMeshCollider_ctorMesh(JNIEnv *env, jclass obj, jlong jmesh)
+{
+    Mesh *mesh = reinterpret_cast<Mesh *>(jmesh);
     return reinterpret_cast<jlong>(new MeshCollider(mesh));
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_samsungxr_NativeMeshCollider_ctorMeshPicking(JNIEnv * env,
-                                             jobject obj, jlong jmesh, jboolean pickCoordinates) {
-    Mesh* mesh = reinterpret_cast<Mesh*>(jmesh);
+Java_com_samsungxr_NativeMeshCollider_ctorMeshPicking(JNIEnv *env, jclass obj,
+                                                      jlong jmesh, jboolean pickCoordinates)
+{
+    Mesh *mesh = reinterpret_cast<Mesh *>(jmesh);
     return reinterpret_cast<jlong>(new MeshCollider(mesh, pickCoordinates));
 }
 
+JNIEXPORT long JNICALL
+Java_com_samsungxr_NativeMeshCollider_getMesh(JNIEnv *env,
+                                              jclass obj, jlong jmesh_collider)
+{
+    MeshCollider *meshcollider = reinterpret_cast<MeshCollider *>(jmesh_collider);
+    return reinterpret_cast<long>(meshcollider->mesh());
+}
+
+
 JNIEXPORT void JNICALL
-Java_com_samsungxr_NativeMeshCollider_setMesh(JNIEnv * env,
-        jobject obj, jlong jmesh_collider, jlong jmesh) {
-    MeshCollider* meshcollider = reinterpret_cast<MeshCollider*>(jmesh_collider);
-    Mesh* mesh = reinterpret_cast<Mesh*>(jmesh);
+Java_com_samsungxr_NativeMeshCollider_setMesh(JNIEnv *env,
+                                              jclass obj, jlong jmesh_collider, jlong jmesh)
+{
+    MeshCollider *meshcollider = reinterpret_cast<MeshCollider *>(jmesh_collider);
+    Mesh *mesh = reinterpret_cast<Mesh *>(jmesh);
     meshcollider->set_mesh(mesh);
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_samsungxr_NativeMeshCollider_ctor(JNIEnv * env,
-        jobject obj, jboolean useBounds) {
+Java_com_samsungxr_NativeMeshCollider_ctor(JNIEnv *env,
+                                           jclass obj, jboolean useBounds)
+{
     return reinterpret_cast<jlong>(new MeshCollider(useBounds));
+}
 }
 }

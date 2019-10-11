@@ -79,6 +79,19 @@ namespace sxr {
     {
     }
 
+    BulletJoint::BulletJoint(BulletJoint* parent, int jointIndex, btMultibodyLink* link)
+    :   PhysicsJoint(parent, (JointType) link->m_jointType, jointIndex, link->m_mass),
+        mParent(parent),
+        mMass(link->m_mass),
+        mMultiBody(parent->getMultiBody()),
+        mJointIndex(jointIndex),
+        mJointType((JointType) link->m_jointType),
+        mCollider(link->m_collider),
+        mWorld(nullptr)
+    {
+        link->m_userPtr = this;
+    }
+
     BulletRootJoint* BulletJoint::findRoot()
     {
         return mParent->findRoot();

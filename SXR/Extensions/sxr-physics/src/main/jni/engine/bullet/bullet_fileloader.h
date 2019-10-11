@@ -17,19 +17,37 @@
 #define EXTENSIONS_BULLET_FILELOADER_H
 
 #include "../physics_loader.h"
+#include "util/jni_utils.h"
 
-class btBulletWorldImporter;
+class btMultiBodyWorldImporter;
+class btMultiBodyDynamicsWorld;
+class btCollisionShape;
 
-namespace sxr{
+namespace sxr
+{
+class PhysicsCollidable;
+class Collider;
+class BulletRigidBody;
+class BulletJoint;
+
 class BulletFileLoader : public PhysicsLoader
 {
 public:
-    BulletFileLoader(char *buffer, size_t length, bool ignoreUpAxis);
+    BulletFileLoader(jobject context, JNIEnv* env, char *buffer, size_t length, bool ignoreUpAxis);
+
+    BulletFileLoader(jobject context, JNIEnv* env, btMultiBodyDynamicsWorld* world, char *buffer, size_t length, bool ignoreUpAxis);
+
     virtual ~BulletFileLoader();
 
     PhysicsRigidBody* getNextRigidBody();
 
+    PhysicsJoint* getNextJoint();
+
+    Collider* getCollider();
+
     const char* getRigidBodyName(PhysicsRigidBody *body) const;
+
+    const char* getJointName(PhysicsJoint *joint) const;
 
     PhysicsConstraint* getNextConstraint();
 
@@ -38,9 +56,39 @@ public:
     PhysicsRigidBody* getConstraintBodyB(PhysicsConstraint *constraint);
 
 private:
-    btBulletWorldImporter *mImporter;
+    struct Collidable
+    {
+        SmartLocalRef Body;
+        SmartLocalRef CollisionShape;
+
+        Collidable(JNIEnv* env, jobject context, BulletRigidBody* body);
+        Collidable(JNIEnv* env, jobject context, BulletJoint* joint);
+        void      makeCollider(JNIEnv* env, jobject context, btCollisionShape*);
+        jobject   createInstance(JNIEnv* env, const char* className, const char* signature, ...);
+    };
+    void createBulletRigidBodies();
+    void createBulletMultiBodies();
+    void createBulletP2pConstraint(btPoint2PointConstraint *p2p);
+    void createBulletHingeConstraint(btHingeConstraint *hg);
+    void createBulletConeTwistConstraint(btConeTwistConstraint *ct);
+    void createBulletFixedConstraint(btFixedConstraint *fix);
+    void createBulletSliderConstraint(btSliderConstraint *sld);
+    void createBulletGenericConstraint(btGeneric6DofConstraint *gen);
+    void createBulletConstraints();
+
+    btMultiBodyDynamicsWorld* mWorld;
+    btBulletWorldImporter*  mImporter;
+    std::vector<Collidable> mRigidBodies;
+    std::vector<Collidable> mJoints;
+    JNIEnv*                 mEnv;
+    SmartLocalRef           mContext;
+
+    bool mNeedRotate;
     int mCurrRigidBody;
+    int mCurrJoint;
     int mCurrConstraint;
+    int mFirstMultiBody;
+    Collider* mCurrCollider;
 };
 
 }

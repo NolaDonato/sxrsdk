@@ -49,15 +49,39 @@ namespace sxr {
 
     BulletSliderConstraint::BulletSliderConstraint(btSliderConstraint* constraint)
     {
+        btTransform& tA = constraint->getFrameOffsetA();
+        btVector3 v(tA.getOrigin());
+        btTransform& tB = constraint->getFrameOffsetB();
+
         mConstraint = constraint;
         mBodyA = static_cast<BulletRigidBody*>(constraint->getRigidBodyA().getUserPointer());
+        mLowerAngularLimit = constraint->getLowerAngLimit();
+        mUpperAngularLimit = constraint->getUpperAngLimit();
+        mLowerLinearLimit = constraint->getLowerLinLimit();
+        mUpperLinearLimit = constraint->getUpperLinLimit();
+        mBreakingImpulse = constraint->getBreakingImpulseThreshold();
+        mPivotA = glm::vec3(v.x(), v.y(), v.z());
+        v = tB.getOrigin();
+        mPivotB = glm::vec3(v.x(), v.y(), v.z());
         constraint->setUserConstraintPtr(this);
     }
 
     BulletSliderConstraint::BulletSliderConstraint(btMultiBodySliderConstraint* constraint)
     {
+        btVector3 pA(constraint->getPivotInA());
+        btVector3 pB(constraint->getPivotInB());
+
         mMBConstraint = constraint;
-        // TODO: figure out how to assign to mBodyA
+        mBodyA = static_cast<BulletJoint*>(constraint->getMultiBodyA()->getUserPointer());
+        mBreakingImpulse = SIMD_INFINITY;
+
+        // Default values from btSliderConstraint
+        mLowerAngularLimit = 0.0f;
+        mUpperAngularLimit = 0.0f;
+        mLowerLinearLimit = 1.0f;
+        mUpperLinearLimit = -1.0f;
+        mPivotA = glm::vec3(pA.x(), pA.y(), pA.z());
+        mPivotB = glm::vec3(pB.x(), pB.y(), pB.z());
     }
 
     BulletSliderConstraint::~BulletSliderConstraint()

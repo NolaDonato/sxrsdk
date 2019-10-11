@@ -25,23 +25,14 @@
 
 namespace sxr {
     extern "C" {
-    JNIEXPORT jlong JNICALL
-    Java_com_samsungxr_NativeMesh_ctorBuffers(JNIEnv* env, jobject obj, jlong vbuf, jlong ibuf);
-
-    JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeMesh_setVertexBuffer(JNIEnv* env,
-                                                jobject obj, jlong jmesh, jlong vertices);
-    JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeMesh_setIndexBuffer(JNIEnv* env,
-                                               jobject obj, jlong jmesh, jlong indices);
-};
 
     JNIEXPORT jlong JNICALL
-    Java_com_samsungxr_NativeMesh_ctorBuffers(JNIEnv* env, jobject obj, jlong jvertices, jlong jindices)
+    Java_com_samsungxr_NativeMesh_ctorBuffers(JNIEnv *env, jclass obj,
+                                              jlong jvertices, jlong jindices)
     {
-        VertexBuffer* vbuf = reinterpret_cast<VertexBuffer*>(jvertices);
-        IndexBuffer* ibuf = reinterpret_cast<IndexBuffer*>(jindices);
-        Mesh* mesh = new Mesh(*vbuf);
+        VertexBuffer *vbuf = reinterpret_cast<VertexBuffer *>(jvertices);
+        IndexBuffer *ibuf = reinterpret_cast<IndexBuffer *>(jindices);
+        Mesh *mesh = new Mesh(*vbuf);
         if (ibuf)
         {
             mesh->setIndexBuffer(ibuf);
@@ -49,30 +40,47 @@ namespace sxr {
         return reinterpret_cast<jlong>(mesh);
     }
 
-    JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeMesh_setVertexBuffer(JNIEnv * env,
-                                            jobject obj, jlong jmesh, jlong jverts)
+    JNIEXPORT jlong JNICALL
+    Java_com_samsungxr_NativeMesh_getVertexBuffer(JNIEnv *env, jclass obj,
+                                                  jlong jmesh)
     {
-        Mesh* mesh = reinterpret_cast<Mesh*>(jmesh);
-        VertexBuffer* vbuf = reinterpret_cast<VertexBuffer*>(jverts);
+        Mesh *mesh = reinterpret_cast<Mesh *>(jmesh);
+        return reinterpret_cast<long>(mesh->getVertexBuffer());
+    }
+
+    JNIEXPORT jlong JNICALL
+    Java_com_samsungxr_NativeMesh_getIndexBuffer(JNIEnv *env, jclass obj,
+                                                  jlong jmesh)
+    {
+        Mesh *mesh = reinterpret_cast<Mesh *>(jmesh);
+        return reinterpret_cast<long>(mesh->getIndexBuffer());
+    }
+
+    JNIEXPORT void JNICALL
+    Java_com_samsungxr_NativeMesh_setVertexBuffer(JNIEnv *env, jclass obj,
+                                                  jlong jmesh, jlong jverts)
+    {
+        Mesh *mesh = reinterpret_cast<Mesh *>(jmesh);
+        VertexBuffer *vbuf = reinterpret_cast<VertexBuffer *>(jverts);
         mesh->setVertexBuffer(vbuf);
     }
 
     JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeMesh_setIndexBuffer(JNIEnv * env,
-                                                jobject obj, jlong jmesh, jlong jindices)
+    Java_com_samsungxr_NativeMesh_setIndexBuffer(JNIEnv *env,
+                                                 jclass obj, jlong jmesh, jlong jindices)
     {
-        Mesh* mesh = reinterpret_cast<Mesh*>(jmesh);
-        IndexBuffer* ibuf = reinterpret_cast<IndexBuffer*>(jindices);
+        Mesh *mesh = reinterpret_cast<Mesh *>(jmesh);
+        IndexBuffer *ibuf = reinterpret_cast<IndexBuffer *>(jindices);
         mesh->setIndexBuffer(ibuf);
     }
 
     JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeMesh_getSphereBound(JNIEnv * env,
-                                               jobject obj, jlong jmesh, jfloatArray jsphere) {
-        Mesh* mesh = reinterpret_cast<Mesh*>(jmesh);
-        const BoundingVolume& bvol = mesh->getBoundingVolume();
-        float   sphere[4];
+    Java_com_samsungxr_NativeMesh_getSphereBound(JNIEnv *env,
+                                                 jobject obj, jlong jmesh, jfloatArray jsphere)
+    {
+        Mesh *mesh = reinterpret_cast<Mesh *>(jmesh);
+        const BoundingVolume &bvol = mesh->getBoundingVolume();
+        float sphere[4];
 
         sphere[0] = bvol.center().x;
         sphere[1] = bvol.center().y;
@@ -81,5 +89,5 @@ namespace sxr {
         env->SetFloatArrayRegion(jsphere, 0, 4, sphere);
     }
 
-
+    }
 }

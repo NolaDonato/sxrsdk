@@ -21,6 +21,49 @@
 
 namespace sxr {
 
+// Automatically deletes a local ref when it goes out of scope
+class SmartLocalRef
+{
+protected:
+    JNIEnv* mJniEnv;
+    jobject& mJavaObj;
+    SmartLocalRef(const SmartLocalRef& src);
+    JNIEnv* getEnv() const { return mJniEnv; }
+
+public:
+    template<class T> SmartLocalRef(JNIEnv* env, T& object)
+    : mJniEnv(env),
+      mJavaObj((jobject&)object)
+    {
+    };
+
+    ~SmartLocalRef()
+    {
+        if (mJavaObj != NULL)
+        {
+            mJniEnv->DeleteLocalRef(mJavaObj);
+        }
+    }
+
+    SmartLocalRef()
+    :    mJniEnv(nullptr),
+         mJavaObj(0)
+    {
+    }
+
+    SmartLocalRef& operator=(const SmartLocalRef& src)
+    {
+        if (mJavaObj != NULL)
+        {
+            mJniEnv->DeleteLocalRef(mJavaObj);
+        }
+        mJniEnv = src.getEnv();
+        mJavaObj = mJniEnv->NewLocalRef(src.getObject());
+    }
+
+    jobject getObject() const { return mJavaObj; }
+};
+
 jmethodID GetStaticMethodID(JNIEnv& env, jclass clazz, const char * name,
         const char * signature);
 

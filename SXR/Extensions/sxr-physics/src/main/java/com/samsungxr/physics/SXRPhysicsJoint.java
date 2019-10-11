@@ -175,6 +175,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
         super(ctx, nativeJoint);
         mPhysicsContext = SXRPhysicsContext.getInstance();
         mCollisionGroup = -1;
+        mBoneIndex = 0;
     }
 
     /**
