@@ -30,8 +30,14 @@ namespace sxr
 
     BulletFixedConstraint::BulletFixedConstraint(btMultiBodyFixedConstraint* constraint)
     {
+        btVector3 pA(constraint->getPivotInA());
+        btVector3 pB(constraint->getPivotInB());
+
         mMBConstraint = constraint;
-        mBodyA = nullptr;         // TODO: figure out how to assign to mBodyA
+        mBodyA = static_cast<BulletJoint*>(constraint->getMultiBodyA()->getUserPointer());
+        mBreakingImpulse = SIMD_INFINITY;
+        mPivotA = glm::vec3(pA.x(), pA.y(), pA.z());
+        mPivotB = glm::vec3(pB.x(), pB.y(), pB.z());
     }
 
     BulletFixedConstraint::~BulletFixedConstraint()

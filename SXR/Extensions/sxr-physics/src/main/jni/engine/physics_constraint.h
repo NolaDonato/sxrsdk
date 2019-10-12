@@ -45,7 +45,12 @@ namespace sxr {
         virtual PhysicsCollidable* getBodyA() const { return mBodyA; }
         virtual const glm::vec3& getPivotA() const { return mPivotA; }
         virtual const glm::vec3& getPivotB() const { return mPivotB; }
+        virtual void setPivotA(const glm::vec3& v) { mPivotA = v; }
+        virtual void setPivotB(const glm::vec3& v) { mPivotB = v; }
         virtual void  updateConstructionInfo(PhysicsWorld*) = 0;
+        int getNumChildren() { return mConstraints.size(); }
+        PhysicsConstraint* getChildAt(int i) { return mConstraints.at(i); }
+
         virtual void  addChildComponent(Component* constraint)
         {
             mConstraints.push_back(static_cast<PhysicsConstraint*>(constraint));
@@ -56,10 +61,6 @@ namespace sxr {
             mConstraints.erase(std::remove(mConstraints.begin(), mConstraints.end(),
                                            static_cast<PhysicsConstraint*>(constraint)), mConstraints.end());
         }
-
-        int getNumChildren() { return mConstraints.size(); }
-        PhysicsConstraint* getChildAt(int i) { return mConstraints.at(i); }
-
 
         enum ConstraintType
         {

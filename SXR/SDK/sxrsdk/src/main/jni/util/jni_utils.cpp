@@ -18,15 +18,18 @@
 
 namespace sxr {
 
-JNIEnv* getCurrentEnv(JavaVM *javaVm) {
+JNIEnv* getCurrentEnv(JavaVM *javaVm)
+{
     JNIEnv* result;
-    if (JNI_OK != javaVm->GetEnv(reinterpret_cast<void**>(&result), JNI_VERSION_1_6)) {
+    if (JNI_OK != javaVm->GetEnv(reinterpret_cast<void**>(&result), JNI_VERSION_1_6))
+    {
         FAIL("GetEnv failed");
     }
     return result;
 }
 
-jclass GetGlobalClassReference(JNIEnv &env, const char *className) {
+jclass GetGlobalClassReference(JNIEnv &env, const char *className)
+{
     jclass lc = env.FindClass(className);
     if (0 == lc) {
         FAIL("unable to find class %s", className);
@@ -38,20 +41,43 @@ jclass GetGlobalClassReference(JNIEnv &env, const char *className) {
     return gc;
 }
 
-jmethodID GetMethodId(JNIEnv &env, const jclass clazz, const char *name, const char *signature) {
+jmethodID GetMethodId(JNIEnv &env, const jclass clazz, const char *name, const char *signature)
+{
     const jmethodID mid = env.GetMethodID(clazz, name, signature);
-    if (nullptr == mid) {
+    if (nullptr == mid)
+    {
         FAIL("unable to find method %s", name);
     }
     return mid;
 }
 
-jmethodID GetStaticMethodID(JNIEnv &env, jclass clazz, const char *name, const char *signature) {
+jmethodID GetStaticMethodID(JNIEnv &env, jclass clazz, const char *name, const char *signature)
+{
     jmethodID mid = env.GetStaticMethodID(clazz, name, signature);
-    if (!mid) {
+    if (!mid)
+    {
         FAIL("unable to find static method %s", name);
     }
     return mid;
+}
+
+jobject CreateInstance(JNIEnv* env, const char* className, const char* signature, ...)
+{
+    jclass clazz = GetGlobalClassReference(*env, className);
+
+    if (NULL == clazz)
+    {
+        return 0;
+    }
+    jmethodID ctr_id = env->GetMethodID(clazz, "<init>", signature);
+
+    if (NULL == ctr_id)
+    {
+        return 0;
+    }
+    va_list args;
+    va_start(args, signature);
+    return env->NewObjectV(clazz, ctr_id, args);
 }
 
 jint throwOutOfMemoryError(JNIEnv* env, const char *message)

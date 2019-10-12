@@ -16,21 +16,44 @@
 #ifndef EXTENSIONS_BULLET_FILELOADER_H
 #define EXTENSIONS_BULLET_FILELOADER_H
 
-#include "../physics_loader.h"
 #include "util/jni_utils.h"
+#include <unordered_map>
+#include <vector>
 
+class btBulletWorldImporter;
 class btMultiBodyWorldImporter;
 class btMultiBodyDynamicsWorld;
-class btCollisionShape;
+class btMultiBodyFixedConstraint;
+class btGeneric6DofConstraint;
+class btPoint2PointConstraint;
+class btSliderConstraint;
+class btConeTwistConstraint;
+class btHingeConstraint;
+class btFixedConstraint;
+class btCollisionObject;
+
+namespace std
+{
+    template <>
+    struct hash<sxr::SmartLocalRef>
+    {
+        size_t operator()(const sxr::SmartLocalRef& k) const
+        {
+            long l = reinterpret_cast<long>(k.getObject());
+            return std::hash<long>{}(l);
+        }
+    };
+}
 
 namespace sxr
 {
 class PhysicsCollidable;
+class PhysicsConstraint;
 class Collider;
 class BulletRigidBody;
 class BulletJoint;
 
-class BulletFileLoader : public PhysicsLoader
+class BulletFileLoader
 {
 public:
     BulletFileLoader(jobject context, JNIEnv* env, char *buffer, size_t length, bool ignoreUpAxis);
@@ -39,56 +62,51 @@ public:
 
     virtual ~BulletFileLoader();
 
-    PhysicsRigidBody* getNextRigidBody();
+    const char* getRigidBodyName(BulletRigidBody* body);
 
-    PhysicsJoint* getNextJoint();
+    const char* getJointName(BulletJoint* joint);
 
-    Collider* getCollider();
+    const char* getConstraintName(PhysicsConstraint* constraint);
 
-    const char* getRigidBodyName(PhysicsRigidBody *body) const;
+    jobject getRigidBody(const char* name);
 
-    const char* getJointName(PhysicsJoint *joint) const;
+    jobject getJoint(const char* name);
 
-    PhysicsConstraint* getNextConstraint();
+    jobject getCollider(const char* name);
 
-    PhysicsRigidBody* getConstraintBodyA(PhysicsConstraint *constraint);
+    jobject getConstraint(const char* name);
 
-    PhysicsRigidBody* getConstraintBodyB(PhysicsConstraint *constraint);
+    jobjectArray getRigidBodies();
+
+    jobjectArray getJoints();
+
+    jobjectArray getConstraints();
+
+    jobject getConstraintBodyA(PhysicsConstraint*);
 
 private:
-    struct Collidable
-    {
-        SmartLocalRef Body;
-        SmartLocalRef CollisionShape;
+    jobject    createP2PConstraint(btPoint2PointConstraint* p2p);
+    jobject    createHingeConstraint(btHingeConstraint* hg);
+    jobject    createConeTwistConstraint(btConeTwistConstraint* ct);
+    jobject    createFixedConstraint(btFixedConstraint* fix);
+    jobject    createSliderConstraint(btSliderConstraint* sld);
+    jobject    createGenericConstraint(btGeneric6DofConstraint* gen);
+    void       createRigidBodies();
+    void       createJoints();
+    void       createConstraints();
+    void       createMultiBodyConstraints();
+    jobject    createCollider(btCollisionObject*);
 
-        Collidable(JNIEnv* env, jobject context, BulletRigidBody* body);
-        Collidable(JNIEnv* env, jobject context, BulletJoint* joint);
-        void      makeCollider(JNIEnv* env, jobject context, btCollisionShape*);
-        jobject   createInstance(JNIEnv* env, const char* className, const char* signature, ...);
-    };
-    void createBulletRigidBodies();
-    void createBulletMultiBodies();
-    void createBulletP2pConstraint(btPoint2PointConstraint *p2p);
-    void createBulletHingeConstraint(btHingeConstraint *hg);
-    void createBulletConeTwistConstraint(btConeTwistConstraint *ct);
-    void createBulletFixedConstraint(btFixedConstraint *fix);
-    void createBulletSliderConstraint(btSliderConstraint *sld);
-    void createBulletGenericConstraint(btGeneric6DofConstraint *gen);
-    void createBulletConstraints();
-
-    btMultiBodyDynamicsWorld* mWorld;
-    btBulletWorldImporter*  mImporter;
-    std::vector<Collidable> mRigidBodies;
-    std::vector<Collidable> mJoints;
-    JNIEnv*                 mEnv;
-    SmartLocalRef           mContext;
-
-    bool mNeedRotate;
-    int mCurrRigidBody;
-    int mCurrJoint;
-    int mCurrConstraint;
-    int mFirstMultiBody;
-    Collider* mCurrCollider;
+    std::unordered_map<std::string, SmartLocalRef>  mRigidBodies;
+    std::unordered_map<std::string, SmartLocalRef>  mJoints;
+    std::unordered_map<std::string, SmartLocalRef>  mColliders;
+    std::unordered_map<std::string, SmartLocalRef>  mConstraints;
+    btMultiBodyDynamicsWorld*   mWorld;
+    btBulletWorldImporter*      mImporter;
+    JNIEnv*                     mEnv;
+    SmartLocalRef               mContext;
+    bool                        mNeedRotate;
+    int                         mFirstMultiBody;
 };
 
 }

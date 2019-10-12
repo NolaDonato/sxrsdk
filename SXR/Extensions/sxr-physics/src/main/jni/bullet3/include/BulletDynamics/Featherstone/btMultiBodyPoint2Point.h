@@ -48,11 +48,6 @@ public:
 									  btMultiBodyJacobianData & data,
 									  const btContactSolverInfo& infoGlobal);
 
-	btRigidBody* getRigidBodyA() const
-	{
-		return m_rigidBodyA;
-	}
-
 	btRigidBody* getRigidBodyB() const
 	{
 		return m_rigidBodyB;

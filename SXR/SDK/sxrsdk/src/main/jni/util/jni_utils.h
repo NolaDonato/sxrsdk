@@ -24,18 +24,18 @@ namespace sxr {
 // Automatically deletes a local ref when it goes out of scope
 class SmartLocalRef
 {
+
 protected:
     JNIEnv* mJniEnv;
-    jobject& mJavaObj;
-    SmartLocalRef(const SmartLocalRef& src);
+    jobject mJavaObj;
     JNIEnv* getEnv() const { return mJniEnv; }
 
 public:
-    template<class T> SmartLocalRef(JNIEnv* env, T& object)
+    SmartLocalRef(JNIEnv* env, jobject object)
     : mJniEnv(env),
-      mJavaObj((jobject&)object)
+      mJavaObj(object)
     {
-    };
+    }
 
     ~SmartLocalRef()
     {
@@ -47,22 +47,44 @@ public:
 
     SmartLocalRef()
     :    mJniEnv(nullptr),
-         mJavaObj(0)
+         mJavaObj(nullptr)
     {
     }
 
+    SmartLocalRef(const SmartLocalRef& src)
+    :   mJniEnv(src.getEnv()),
+        mJavaObj(nullptr)
+    {
+        if (src.getObject())
+        {
+            mJavaObj = mJniEnv->NewLocalRef(src.getObject());
+        }
+    }
+
+
     SmartLocalRef& operator=(const SmartLocalRef& src)
     {
-        if (mJavaObj != NULL)
+        if (mJavaObj != nullptr)
         {
             mJniEnv->DeleteLocalRef(mJavaObj);
         }
         mJniEnv = src.getEnv();
-        mJavaObj = mJniEnv->NewLocalRef(src.getObject());
+        if (src.getObject())
+        {
+            mJavaObj = mJniEnv->NewLocalRef(src.getObject());
+        }
+        return *this;
     }
 
     jobject getObject() const { return mJavaObj; }
+
+    bool operator==(const SmartLocalRef& r)
+    {
+        return r.getObject() == getObject();
+    }
 };
+
+jobject   CreateInstance(JNIEnv* env, const char* className, const char* signature, ...);
 
 jmethodID GetStaticMethodID(JNIEnv& env, jclass clazz, const char * name,
         const char * signature);

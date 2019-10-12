@@ -74,6 +74,15 @@ abstract class SXRConstraint extends SXRPhysicsWorldObject
         super.onAttach(newOwner);
     }
 
+    /**
+     * Internal function used by the physics file loader.
+     * @param bodyA BodyA for the constraint
+     */
+    void setBodyA(SXRPhysicsCollidable bodyA)
+    {
+        mBodyA = bodyA;
+    }
+
     @Override
     protected void addToWorld(SXRPhysicsContent world)
     {

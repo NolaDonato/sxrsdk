@@ -74,8 +74,7 @@ namespace sxr {
         {
             btMultibodyLink& link = mMultiBody->getLink(i);
             BulletJoint* parent = (link.m_parent >= 0) ? mJoints[link.m_parent] : this;
-            BulletJoint* joint = new BulletJoint(parent, (JointType) link.m_jointType, i, link.m_mass);
-            mJoints[i] = joint;
+            mJoints[i] = new BulletJoint(parent, i);
         }
     }
 

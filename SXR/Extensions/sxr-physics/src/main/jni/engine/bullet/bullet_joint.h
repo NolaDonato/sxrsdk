@@ -45,7 +45,7 @@ class BulletJoint : public PhysicsJoint
  public:
     BulletJoint(BulletJoint* parent, JointType type, int jointIndex, float mass);
 
-	BulletJoint(BulletJoint* parent, int jointIndex, btMultibodyLink* link);
+	BulletJoint(BulletJoint* parent, int jointIndex);
 
     virtual ~BulletJoint() { }
 
