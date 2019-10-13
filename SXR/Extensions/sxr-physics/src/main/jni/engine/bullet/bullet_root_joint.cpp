@@ -230,9 +230,11 @@ namespace sxr {
     void BulletRootJoint::updateConstructionInfo(PhysicsWorld* world)
     {
         Node* owner = owner_object();
+
         mWorld = static_cast<BulletWorld*>(world);
-        updateCollider(owner);
         mMultiBody->setBaseName(owner->name().c_str());
+        mMultiBody->setBaseMass(mMass);
+        updateCollider(owner);
         setPhysicsTransform();
     }
 
@@ -259,7 +261,7 @@ namespace sxr {
                 mCollider->setUserPointer(this);
                 mMultiBody->setBaseCollider(mCollider);
                 mMultiBody->setBaseInertia(localInertia);
-                mWorld->getPhysicsWorld()->addCollisionObject(mCollider);
+                mWorld->getPhysicsWorld()->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
             }
             else
             {
@@ -290,7 +292,8 @@ namespace sxr {
     bool BulletRootJoint::addLink(PhysicsJoint* joint, PhysicsWorld* world)
     {
         mWorld = static_cast<BulletWorld*>(world);
-        if (mJoints[joint->getJointIndex()] != nullptr)
+        int linkIndex = joint->getJointIndex();
+        if (mJoints.size() > linkIndex)
         {
             return false;
         }
@@ -303,7 +306,6 @@ namespace sxr {
             }
             return false;
         }
-        int linkIndex = joint->getJointIndex();
         mJoints[linkIndex] = static_cast<BulletJoint*>(joint);
         if ((++mLinksAdded == mNumJoints) && (mMultiBody == nullptr))
         {

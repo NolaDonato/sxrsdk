@@ -10,14 +10,65 @@ package com.samsungxr.physics;
  */
 public class SXRCollisionMatrix
 {
+
+    /*
+     * Enable collision with dynamic bodies.
+     */
+        public static final int DEFAULT_GROUP = 0;
+
+    /*
+     * Enable collision with static bodies.
+     */
+    public static final int STATIC_GROUP = 1;
+
+    /*
+     * Enable collision with kinematic bodies.
+     */
+    public static final int KINEMATIC_GBROUP = 2;
+
+    /*
+     * Enable collision with debris.
+     */
+    public static final int DEBRIS_GROUP = 3;
+
+    /*
+     * Enable collision with sensor triggers.
+     */
+    public static final int SENSOR_TRIGGER = 4;
+
+    /*
+     * Enable collision with characters.
+     */
+    public static final int CHARACTER_GROUP = 5;
+
+    /*
+     * Enable collision with everything.
+     */
+    public static final int COLLISION_ALL_FILTER  = -1;
+
+    public static final int NEXT_COLLISION_GROUP  = 6;
+
+
     // By default a rigid body that belongs to a group collides only with other rigid
     // body of the same group.
     private int[] mCollisionFilterMasks =
     {
-            1 << 0, 1 << 1, 1 << 2, 1 << 3,
-            1 << 4, 1 << 5, 1 << 6, 1 << 7,
-            1 << 8, 1 << 9, 1 << 10, 1 << 11,
-            1 << 12, 1 << 13, 1 << 14, 1 << 15
+            1 << DEFAULT_GROUP,
+            1 << STATIC_GROUP,
+            1 << KINEMATIC_GBROUP,
+            1 << DEBRIS_GROUP,
+            1 << SENSOR_TRIGGER,
+            1 << CHARACTER_GROUP,
+            1 << NEXT_COLLISION_GROUP,
+            1 << 7,
+            1 << 8,
+            1 << 9,
+            1 << 10,
+            1 << 11,
+            1 << 12,
+            1 << 13,
+            1 << 14,
+            1 << 15
     };
 
     /**

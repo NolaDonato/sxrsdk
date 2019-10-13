@@ -25,7 +25,7 @@ Java_com_samsungxr_physics_NativePhysicsJoint_ctorRoot(JNIEnv *env, jclass obj, 
 }
 
 JNIEXPORT jlong JNICALL
-Java_com_samsungxr_physics_NativePhysicsJoint_ctorLink(JNIEnv *env, jclass obj, jobject jparent,
+Java_com_samsungxr_physics_NativePhysicsJoint_ctorLink(JNIEnv *env, jclass obj, jlong jparent,
                                                        jint jointType, jint jointIndex, jfloat mass)
 {
     BulletJoint *parent = reinterpret_cast<BulletJoint *>(jparent);

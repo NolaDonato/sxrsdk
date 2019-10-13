@@ -89,7 +89,7 @@ public class SXRRigidBody extends SXRPhysicsCollidable
     public SXRRigidBody(SXRContext ctx, float mass)
     {
         super(ctx, NativeRigidBody.ctor(mass));
-        mCollisionGroup = -1;
+        mCollisionGroup = (mass > 0) ? SXRCollisionMatrix.DEFAULT_GROUP : SXRCollisionMatrix.STATIC_GROUP;
         mPhysicsContext = SXRPhysicsContext.getInstance();
         mLoaded = false;
     }

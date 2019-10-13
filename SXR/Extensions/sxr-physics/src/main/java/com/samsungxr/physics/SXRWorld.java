@@ -719,7 +719,6 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
             simulationTime = SystemClock.uptimeMillis();
             timeStep  = simulationTime - lastSimulTime;
             maxSubSteps = (int) (timeStep * 60) / 1000 + 1;
-timeStep = 1 / 60.0f;
             NativePhysics3DWorld.step(getNative(), timeStep, maxSubSteps);
 
             if (mDoDebugDraw)

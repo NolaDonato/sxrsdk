@@ -38,6 +38,7 @@ namespace sxr {
         mPivotA = pivotA;
         mPivotB = pivotB;
         mConstraint = nullptr;
+        mMBConstraint = nullptr;
         mBreakingImpulse = SIMD_INFINITY;
 
         // Default values from btSliderConstraint
@@ -53,6 +54,7 @@ namespace sxr {
         btVector3 v(tA.getOrigin());
         btTransform& tB = constraint->getFrameOffsetB();
 
+        mMBConstraint = nullptr;
         mConstraint = constraint;
         mBodyA = static_cast<BulletRigidBody*>(constraint->getRigidBodyA().getUserPointer());
         mLowerAngularLimit = constraint->getLowerAngLimit();
@@ -71,6 +73,7 @@ namespace sxr {
         btVector3 pA(constraint->getPivotInA());
         btVector3 pB(constraint->getPivotInB());
 
+        mConstraint = nullptr;
         mMBConstraint = constraint;
         mBodyA = static_cast<BulletJoint*>(constraint->getMultiBodyA()->getUserPointer());
         mBreakingImpulse = SIMD_INFINITY;
@@ -215,7 +218,7 @@ void BulletSliderConstraint::updateConstructionInfo(PhysicsWorld* world)
     {
         return;
     }
-    BulletRigidBody* rigidBodyB = (BulletRigidBody*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY);
+    BulletRigidBody* rigidBodyB = static_cast<BulletRigidBody*>(owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
     btTransform  worldFrameA = convertTransform2btTransform(mBodyA->owner_object()->transform());
     btTransform  worldFrameB = convertTransform2btTransform(owner_object()->transform());
     btTransform  localFrameA = worldFrameB.inverse() * worldFrameA;
@@ -234,7 +237,7 @@ void BulletSliderConstraint::updateConstructionInfo(PhysicsWorld* world)
 
         if (typeA == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
         {
-            btRigidBody* rbA = static_cast<BulletRigidBody *>(mBodyA)->getRigidBody();
+            btRigidBody* rbA = static_cast<BulletRigidBody*>(mBodyA)->getRigidBody();
             btMatrix3x3 rotX2SliderAxis;
             btVector3 Xaxis(1, 0, 0);
             btVector3 negXaxis(-1, 0, 0);
