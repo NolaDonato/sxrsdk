@@ -293,7 +293,8 @@ namespace sxr {
     {
         mWorld = static_cast<BulletWorld*>(world);
         int linkIndex = joint->getJointIndex();
-        if (mJoints.size() > linkIndex)
+
+        if (static_cast<BulletJoint*>(joint)->getMultiBody() != nullptr)
         {
             return false;
         }
@@ -307,7 +308,7 @@ namespace sxr {
             return false;
         }
         mJoints[linkIndex] = static_cast<BulletJoint*>(joint);
-        if ((++mLinksAdded == mNumJoints) && (mMultiBody == nullptr))
+        if (++mLinksAdded == mNumJoints)
         {
             finalize();
             return true;

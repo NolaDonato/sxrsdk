@@ -188,15 +188,16 @@ namespace sxr {
         Node* owner = owner_object();
         BulletJoint* joint = reinterpret_cast<BulletJoint*>(owner->getComponent(COMPONENT_TYPE_PHYSICS_JOINT));
         BulletWorld* bw = reinterpret_cast<BulletWorld*>(world);
+
         if ((joint != nullptr) && (mDOFCount == 0))
         {
-            btMultibodyLink* link = joint->getLink();
             btMultiBody* mb = joint->getMultiBody();
-            btMultiBodyDynamicsWorld* w = static_cast<btMultiBodyDynamicsWorld*>(bw->getPhysicsWorld());
             int linkIndex = joint->getJointIndex();
+            btMultibodyLink& link = mb->getLink(linkIndex);
+            btMultiBodyDynamicsWorld* w = static_cast<btMultiBodyDynamicsWorld*>(bw->getPhysicsWorld());
 
-            mSpherical = link->m_jointType == btMultibodyLink::eSpherical;
-            mDOFCount = (link->m_dofCount > 4) ? 4 : link->m_dofCount;
+            mSpherical = link.m_jointType == btMultibodyLink::eSpherical;
+            mDOFCount = (link.m_dofCount > 4) ? 4 : link.m_dofCount;
             if (mDOFCount == 0)
             {
                 return;

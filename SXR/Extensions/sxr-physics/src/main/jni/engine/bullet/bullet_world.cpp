@@ -206,17 +206,17 @@ void BulletWorld::stopDrag()
     mDraggingConstraint = nullptr;
 }
 
-void BulletWorld::addRigidBody(PhysicsRigidBody *body)
+void BulletWorld::addRigidBody(PhysicsRigidBody* body)
 {
-    BulletRigidBody* rb = static_cast<BulletRigidBody *>(body);
+    BulletRigidBody* rb = static_cast<BulletRigidBody*>(body);
     body->updateConstructionInfo(this);
     mPhysicsWorld->addRigidBody(rb->getRigidBody());
     rb->mWorld = this;
 }
 
-void BulletWorld::addRigidBody(PhysicsRigidBody *body, int collisionGroup, int collidesWith)
+void BulletWorld::addRigidBody(PhysicsRigidBody* body, int collisionGroup, int collidesWith)
 {
-    BulletRigidBody* rb = static_cast<BulletRigidBody *>(body);
+    BulletRigidBody* rb = static_cast<BulletRigidBody*>(body);
     body->updateConstructionInfo(this);
     mPhysicsWorld->addRigidBody(rb->getRigidBody(), collisionGroup, collidesWith);
     rb->mWorld = this;
@@ -239,7 +239,7 @@ void BulletWorld::addJoint(PhysicsJoint *joint)
     }
 }
 
-void BulletWorld::addJointWithMask(PhysicsJoint *joint, int collisionGroup, int collidesWith)
+void BulletWorld::addJointWithMask(PhysicsJoint* joint, int collisionGroup, int collidesWith)
 {
     if (isMultiBody())
     {

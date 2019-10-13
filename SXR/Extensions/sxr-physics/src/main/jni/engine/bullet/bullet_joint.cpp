@@ -82,7 +82,7 @@ namespace sxr {
     }
 
     BulletJoint::BulletJoint(BulletJoint* parent, int jointIndex)
-    :   PhysicsJoint(parent, (JointType) (parent->getMultiBody()->getLink(jointIndex).m_jointType), jointIndex, 0),
+    :   PhysicsJoint(parent, (JointType) parent->getMultiBody()->getLink(jointIndex).m_jointType, jointIndex, 0),
         mParent(parent),
         mMultiBody(parent->getMultiBody()),
         mJointIndex(jointIndex),
