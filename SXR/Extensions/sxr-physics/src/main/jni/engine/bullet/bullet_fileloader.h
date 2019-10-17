@@ -53,12 +53,16 @@ class Collider;
 class BulletRigidBody;
 class BulletJoint;
 
-class BulletFileLoader
+class BulletFileLoader : public HybridObject
 {
 public:
-    BulletFileLoader(jobject context, JNIEnv* env, char *buffer, size_t length, bool ignoreUpAxis);
+    BulletFileLoader(jobject context, JNIEnv* env);
 
-    BulletFileLoader(jobject context, JNIEnv* env, btMultiBodyDynamicsWorld* world, char *buffer, size_t length, bool ignoreUpAxis);
+    bool parse(btMultiBodyDynamicsWorld* world, char *buffer, size_t length, bool ignoreUpAxis);
+
+    bool parse(char *buffer, size_t length, bool ignoreUpAxis);
+
+    void clear();
 
     virtual ~BulletFileLoader();
 

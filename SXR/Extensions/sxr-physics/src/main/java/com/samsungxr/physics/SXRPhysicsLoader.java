@@ -22,6 +22,7 @@ import com.samsungxr.SXRAndroidResource;
 import com.samsungxr.SXRCollider;
 import com.samsungxr.SXRComponentGroup;
 import com.samsungxr.SXRContext;
+import com.samsungxr.SXRHybridObject;
 import com.samsungxr.SXRMeshCollider;
 import com.samsungxr.SXRResourceVolume;
 import com.samsungxr.SXRScene;
@@ -32,11 +33,17 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class SXRPhysicsLoader {
+public class SXRPhysicsLoader extends SXRHybridObject
+{
     static private final String TAG = SXRPhysicsLoader.class.getSimpleName();
 
     static {
         System.loadLibrary("sxr-physics");
+    }
+
+    public SXRPhysicsLoader(SXRContext ctx)
+    {
+        super(ctx, NativeBulletLoader.ctor(ctx));
     }
 
     /**
@@ -50,7 +57,7 @@ public class SXRPhysicsLoader {
      * @param fileName Name of file containing physics content.
      * @param scene    The scene containing the objects to attach physics components.
      */
-    public static void loadBulletFile(SXRScene scene, String fileName) throws IOException
+    public void loadBulletFile(SXRScene scene, String fileName) throws IOException
     {
         SXRAndroidResource resource = toAndroidResource(scene.getSXRContext(), fileName);
         byte[] inputData = toByteArray(resource);
@@ -73,7 +80,7 @@ public class SXRPhysicsLoader {
      * @param resource {@link SXRAndroidResource} containing the physics content..
      * @param scene    The scene containing the objects to attach physics components.
      */
-    public static void loadBulletFile(SXRScene scene, SXRAndroidResource resource) throws IOException
+    public void loadBulletFile(SXRScene scene, SXRAndroidResource resource) throws IOException
     {
         byte[] inputData = toByteArray(resource);
 
@@ -89,12 +96,11 @@ public class SXRPhysicsLoader {
      * <p>
      * Avatar files describe physics for articulated bodies.
      * Each file has a skeleton and joints with collision geometries.
-     * @param ctx         {@link SXRContext} to use
      * @param resource    {@link SXRAndroidResource} containing the physics components.
      * @param isMultibody If true, use {@link SXRPhysicsJoint} and Bullet multibody support,
      *                    otherwise use {@link SXRRigidBody} and discrete dynamics simulation.
      */
-    public static SXRPhysicsContent loadAvatarFile(SXRContext ctx, SXRAndroidResource resource, boolean isMultibody) throws IOException
+    public SXRPhysicsContent loadAvatarFile(SXRAndroidResource resource, boolean isMultibody) throws IOException
     {
         byte[] inputData = toByteArray(resource);
 
@@ -102,7 +108,7 @@ public class SXRPhysicsLoader {
         {
             throw new IOException("Failed to load physics file " + resource.getResourceFilename());
         }
-        PhysicsAVTLoader loader = new PhysicsAVTLoader(ctx, isMultibody);
+        PhysicsAVTLoader loader = new PhysicsAVTLoader(getSXRContext(), isMultibody);
         return loader.parse(inputData);
     }
 
@@ -118,7 +124,7 @@ public class SXRPhysicsLoader {
      * @param isMultibody If true, use {@link SXRPhysicsJoint} and Bullet multibody support,
      *                    otherwise use {@link SXRRigidBody} and discrete dynamics simulation.
      */
-    public static SXRPhysicsContent loadAvatarFile(SXRSkeleton skel, String attachBone, SXRAndroidResource resource, boolean isMultibody) throws IOException
+    public SXRPhysicsContent loadAvatarFile(SXRSkeleton skel, String attachBone, SXRAndroidResource resource, boolean isMultibody) throws IOException
     {
         byte[] inputData = toByteArray(resource);
 
@@ -138,13 +144,13 @@ public class SXRPhysicsLoader {
      * The contents of the AVT is not added to the current scene.
      * Instead it is imported and contained in a {@link SXRPhysicsContent}
      * object (like a physics world but it cannot simulate, just a container).
-     * @param ctx         {@link SXRContext} to use
      * @param fileName    Physics settings file name.
      * @param isMultibody If true, use {@link SXRPhysicsJoint} and Bullet multibody support,
      *                    otherwise use {@link SXRRigidBody} and discrete dynamics simulation.
      */
-    public static SXRPhysicsContent loadAvatarFile(SXRContext ctx, String fileName, boolean isMultibody) throws IOException
+    public SXRPhysicsContent loadAvatarFile(String fileName, boolean isMultibody) throws IOException
     {
+        SXRContext ctx = getSXRContext();
         SXRAndroidResource resource = toAndroidResource(ctx, fileName);
         byte[] inputData = toByteArray(resource);
 
@@ -171,7 +177,7 @@ public class SXRPhysicsLoader {
      * @param isMultibody If true, use {@link SXRPhysicsJoint} and Bullet multibody support,
      *                    otherwise use {@link SXRRigidBody} and discrete dynamics simulation.
      */
-    public static SXRPhysicsContent loadAvatarFile(SXRSkeleton skel, String fileName, String attachBone, boolean isMultibody) throws IOException
+    public SXRPhysicsContent loadAvatarFile(SXRSkeleton skel, String fileName, String attachBone, boolean isMultibody) throws IOException
     {
         SXRAndroidResource resource = toAndroidResource(skel.getSXRContext(), fileName);
         byte[] inputData = toByteArray(resource);
@@ -184,12 +190,12 @@ public class SXRPhysicsLoader {
         return loader.parse(inputData);
     }
 
-    private static void loadBulletFile(byte[] inputData, SXRNode sceneRoot, boolean ignoreUpAxis) throws IOException
+    private void loadBulletFile(byte[] inputData, SXRNode sceneRoot, boolean ignoreUpAxis) throws IOException
     {
         SXRContext ctx = sceneRoot.getSXRContext();
-        long loader = NativeBulletLoader.ctor(ctx, inputData, inputData.length, ignoreUpAxis);
-
-        if (loader == 0)
+        long loader = getNative();
+        boolean result = NativeBulletLoader.parse(loader, inputData, inputData.length, ignoreUpAxis);
+        if (!result)
         {
             throw new IOException("Failed to parse bullet file");
         }
@@ -254,7 +260,7 @@ public class SXRPhysicsLoader {
             constraint.setBodyA(bodyA);
             sceneObject.attachComponent(constraint);
         }
-        NativeBulletLoader.delete(loader);
+        NativeBulletLoader.clear(loader);
     }
 
     private static byte[] toByteArray(SXRAndroidResource resource) throws IOException {
@@ -284,9 +290,11 @@ public class SXRPhysicsLoader {
 
 class NativeBulletLoader
 {
-    static native long ctor(SXRContext jcontext, byte[] bytes, int len, boolean ignoreUpAxis);
+    static native long ctor(SXRContext jcontext);
 
-    static native long delete(long loader);
+    static native boolean parse(long loader, byte[] bytes, int len, boolean ignoreUpAxis);
+
+    static native void clear(long loader);
 
     static native SXRRigidBody getRigidBody(long loader, String name);
 

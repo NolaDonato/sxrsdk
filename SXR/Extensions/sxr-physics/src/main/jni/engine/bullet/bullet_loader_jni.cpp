@@ -26,8 +26,16 @@ namespace sxr {
 extern "C" {
 
 JNIEXPORT jlong JNICALL
-Java_com_samsungxr_physics_NativeBulletLoader_ctor(JNIEnv* env, jclass clazz,
-                                                   jobject context, jbyteArray byteArr,
+Java_com_samsungxr_physics_NativeBulletLoader_ctor(JNIEnv* env, jclass clazz, jobject context)
+{
+    BulletFileLoader* loader = new BulletFileLoader(context, env);
+    return reinterpret_cast<jlong>(loader);
+}
+
+JNIEXPORT bool JNICALL
+Java_com_samsungxr_physics_NativeBulletLoader_parse(JNIEnv* env, jclass clazz,
+                                                   jlong jloader,
+                                                   jbyteArray byteArr,
                                                    jint len, jboolean ignoreUpAxis)
 {
     jbyte* data = env->GetByteArrayElements(byteArr, NULL);
@@ -36,20 +44,18 @@ Java_com_samsungxr_physics_NativeBulletLoader_ctor(JNIEnv* env, jclass clazz,
     {
         return 0;
     }
-    char *buffer = new char[len];
-    memcpy(buffer, data, len);
-    env->ReleaseByteArrayElements(byteArr, data, JNI_ABORT);
+    BulletFileLoader* loader = reinterpret_cast<BulletFileLoader*>(jloader);
 
-    BulletFileLoader *loader = new BulletFileLoader(context, env, buffer, len, ignoreUpAxis);
-    delete[] buffer;
-    return reinterpret_cast<jlong>(loader);
+    bool result = loader->parse((char*) data, len, ignoreUpAxis);
+    env->ReleaseByteArrayElements(byteArr, data, JNI_ABORT);
+    return result;
 }
 
 JNIEXPORT void JNICALL
-Java_com_samsungxr_physics_NativeBulletLoader_delete(JNIEnv* env, jclass clazz, jlong jloader)
+Java_com_samsungxr_physics_NativeBulletLoader_clear(JNIEnv* env, jclass clazz, jlong jloader)
 {
     BulletFileLoader *loader = reinterpret_cast<BulletFileLoader*>(jloader);
-    delete loader;
+    loader->clear();
 }
 
 JNIEXPORT jobject JNICALL

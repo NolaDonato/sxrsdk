@@ -42,6 +42,7 @@
 #include "objects/components/box_collider.h"
 #include "objects/components/sphere_collider.h"
 #include "objects/components/capsule_collider.h"
+#include "util/sxr_log.h"
 #include "bullet_fileloader.h"
 #include "bullet_world.h"
 #include "bullet_rigidbody.h"
@@ -191,7 +192,6 @@ jobject BulletFileLoader::getConstraintBodyA(PhysicsConstraint* constraint)
     }
     return 0;
 }
-
 
 void BulletFileLoader::createRigidBodies()
 {
@@ -458,75 +458,101 @@ void BulletFileLoader::createConstraints()
     }
 }
 
-    void BulletFileLoader::createMultiBodyConstraints()
+void BulletFileLoader::createMultiBodyConstraints()
+{
+    for (int i = mFirstMultiBody; i < mWorld->getNumMultiBodyConstraints(); ++i)
     {
-        for (int i = mFirstMultiBody; i < mWorld->getNumMultiBodyConstraints(); ++i)
-        {
-            btMultiBodyConstraint* c = mWorld->getMultiBodyConstraint(i);
-            btMultiBody* const mbA = c->getMultiBodyA();
-            btMultiBody* const mbB = c->getMultiBodyB();
-            btRigidBody* rbB = nullptr;
-            PhysicsConstraint* nativeConstraint;
-            jobject javaConstraint;
-            const char* nameB = nullptr;
-            PhysicsCollidable* bodyB;
+        btMultiBodyConstraint* c = mWorld->getMultiBodyConstraint(i);
+        btMultiBody* const mbA = c->getMultiBodyA();
+        btMultiBody* const mbB = c->getMultiBodyB();
+        btRigidBody* rbB = nullptr;
+        jobject javaConstraint;
+        const char* nameB = nullptr;
 
-            if (mbA->getUserPointer() == nullptr)
-            {
-                // This constraint has at least one invalid rigid body and then it must to be ignored
-                continue;
-            }
-            if (typeid(c) == typeid(btMultiBodyFixedConstraint))
-            {
-                btMultiBodyFixedConstraint* fc = dynamic_cast<btMultiBodyFixedConstraint*>(c);
-                BulletFixedConstraint* bfc = new BulletFixedConstraint(fc);
-                javaConstraint =  CreateInstance(mEnv, "com/samsungxr/physics/SXRFixedConstraint",
-                                                "void(Lcom/samsungxr/SXRContext;J)",
-                                                 mContext.getObject(), reinterpret_cast<long>(bfc));
-                rbB = fc->getRigidBodyB();
-            }
-            else if (typeid(c) == typeid(btMultiBodySliderConstraint))
-            {
-                btMultiBodySliderConstraint* sc = dynamic_cast<btMultiBodySliderConstraint*>(c);
-                BulletSliderConstraint* bsc = new BulletSliderConstraint(sc);
-                javaConstraint =  CreateInstance(mEnv, "com/samsungxr/physics/SXRSliderConstraint",
-                                                 "void(Lcom/samsungxr/SXRContext;J)",
-                                                 mContext.getObject(), reinterpret_cast<long>(bsc));
-                rbB = sc->getRigidBodyB();
-            }
-            else if (typeid(c) == typeid(btMultiBodyPoint2Point))
-            {
-                btMultiBodyPoint2Point* p2p = dynamic_cast<btMultiBodyPoint2Point*>(c);
-                BulletPoint2PointConstraint* bp2p = new BulletPoint2PointConstraint(p2p);
-                javaConstraint =  CreateInstance(mEnv, "com/samsungxr/physics/SXRPoint2PointConstraint",
-                                                 "void(Lcom/samsungxr/SXRContext;J)",
-                                                 mContext.getObject(), reinterpret_cast<long>(bp2p));
-                rbB = p2p->getRigidBodyB();
-            }
-            if (mbB != nullptr)
-            {
-                nameB = mbB->getBaseName();
-            }
-            else if (rbB != nullptr)
-            {
-                nameB = mImporter->getNameForPointer(rbB);
-            }
-            if (nameB && javaConstraint)
-            {
-                mConstraints.emplace(std::string(nameB), SmartLocalRef(mEnv, javaConstraint));
-            }
+        if (mbA->getUserPointer() == nullptr)
+        {
+            // This constraint has at least one invalid rigid body and then it must to be ignored
+            continue;
+        }
+        if (typeid(c) == typeid(btMultiBodyFixedConstraint))
+        {
+            btMultiBodyFixedConstraint* fc = dynamic_cast<btMultiBodyFixedConstraint*>(c);
+            BulletFixedConstraint* bfc = new BulletFixedConstraint(fc);
+            javaConstraint =  CreateInstance(mEnv, "com/samsungxr/physics/SXRFixedConstraint",
+                                            "void(Lcom/samsungxr/SXRContext;J)",
+                                             mContext.getObject(), reinterpret_cast<long>(bfc));
+            rbB = fc->getRigidBodyB();
+        }
+        else if (typeid(c) == typeid(btMultiBodySliderConstraint))
+        {
+            btMultiBodySliderConstraint* sc = dynamic_cast<btMultiBodySliderConstraint*>(c);
+            BulletSliderConstraint* bsc = new BulletSliderConstraint(sc);
+            javaConstraint =  CreateInstance(mEnv, "com/samsungxr/physics/SXRSliderConstraint",
+                                             "void(Lcom/samsungxr/SXRContext;J)",
+                                             mContext.getObject(), reinterpret_cast<long>(bsc));
+            rbB = sc->getRigidBodyB();
+        }
+        else if (typeid(c) == typeid(btMultiBodyPoint2Point))
+        {
+            btMultiBodyPoint2Point* p2p = dynamic_cast<btMultiBodyPoint2Point*>(c);
+            BulletPoint2PointConstraint* bp2p = new BulletPoint2PointConstraint(p2p);
+            javaConstraint =  CreateInstance(mEnv, "com/samsungxr/physics/SXRPoint2PointConstraint",
+                                             "void(Lcom/samsungxr/SXRContext;J)",
+                                             mContext.getObject(), reinterpret_cast<long>(bp2p));
+            rbB = p2p->getRigidBodyB();
+        }
+        if (mbB != nullptr)
+        {
+            nameB = mbB->getBaseName();
+        }
+        else if (rbB != nullptr)
+        {
+            nameB = mImporter->getNameForPointer(rbB);
+        }
+        if (nameB && javaConstraint)
+        {
+            mConstraints.emplace(std::string(nameB), SmartLocalRef(mEnv, javaConstraint));
         }
     }
+}
 
-BulletFileLoader::BulletFileLoader(jobject context, JNIEnv* env, char *buffer, size_t length, bool ignoreUpAxis)
-:   mEnv(env),
+BulletFileLoader::BulletFileLoader(jobject context, JNIEnv* env)
+:   HybridObject(),
+    mEnv(env),
     mContext(env, context),
+    mImporter(nullptr),
     mFirstMultiBody(0)
 {
-    bParse::btBulletFile *bullet_file = new bParse::btBulletFile(buffer, length);
+}
 
-    mImporter = new btBulletWorldImporter(nullptr);
-    mImporter->loadFileFromMemory(bullet_file);
+BulletFileLoader::~BulletFileLoader()
+{
+    clear();
+}
+
+bool BulletFileLoader::parse(char *buffer, size_t length, bool ignoreUpAxis)
+{
+    bParse::btBulletFile* bullet_file = nullptr;
+
+    try
+    {
+        bullet_file = new bParse::btBulletFile(buffer, length);
+        mImporter = new btBulletWorldImporter(nullptr);
+        bool result = mImporter->loadFileFromMemory(bullet_file);
+        if (!result)
+        {
+            clear();
+            delete bullet_file;
+            LOGE("BULLET: Bullet parse failed");
+        }
+    }
+    catch (...)
+    {
+        clear();
+        LOGE("BULLET: exception during file load");
+        delete bullet_file;
+        return false;
+    }
     mWorld = nullptr;
     if (ignoreUpAxis)
     {
@@ -551,13 +577,12 @@ BulletFileLoader::BulletFileLoader(jobject context, JNIEnv* env, char *buffer, s
 
     createRigidBodies();
     createConstraints();
+    return true;
 }
 
-BulletFileLoader::BulletFileLoader(jobject context, JNIEnv* env, btMultiBodyDynamicsWorld* world, char *buffer, size_t length, bool ignoreUpAxis)
-:   mEnv(env),
-    mContext(env, context)
+bool BulletFileLoader::parse(btMultiBodyDynamicsWorld* world, char *buffer, size_t length, bool ignoreUpAxis)
 {
-    bParse::btBulletFile *bullet_file = new bParse::btBulletFile(buffer, length);
+    bParse::btBulletFile* bullet_file = new bParse::btBulletFile(buffer, length);
     btMultiBodyWorldImporter* importer = new btMultiBodyWorldImporter(world);
     mWorld = world;
     mImporter = importer;
@@ -571,14 +596,14 @@ BulletFileLoader::BulletFileLoader(jobject context, JNIEnv* env, btMultiBodyDyna
     {
         btDynamicsWorldDoubleData* ddata =
                 reinterpret_cast<btDynamicsWorldDoubleData*>(bullet_file->m_dynamicsWorldInfo[0]);
-        double *gravity = reinterpret_cast<double *>(&ddata->m_gravity);
+        double* gravity = reinterpret_cast<double*>(&ddata->m_gravity);
         mNeedRotate = gravity[2] != 0.0;
     }
     else
     {
         btDynamicsWorldFloatData* fdata =
                 reinterpret_cast<btDynamicsWorldFloatData*>(bullet_file->m_dynamicsWorldInfo[0]);
-        float *gravity = reinterpret_cast<float*>(&fdata->m_gravity);
+        float* gravity = reinterpret_cast<float*>(&fdata->m_gravity);
         mNeedRotate = gravity[2] != 0.f;
     }
     if (world->getNumMultibodies() > 0)
@@ -591,9 +616,10 @@ BulletFileLoader::BulletFileLoader(jobject context, JNIEnv* env, btMultiBodyDyna
     createRigidBodies();
     createJoints();
     createConstraints();
+    return true;
 }
 
-BulletFileLoader::~BulletFileLoader()
+void BulletFileLoader::clear()
 {
     int i;
 
@@ -662,6 +688,7 @@ BulletFileLoader::~BulletFileLoader()
     }
 
     delete mImporter;
+    mImporter = nullptr;
 }
 
 jobject BulletFileLoader::getRigidBody(const char* name)
