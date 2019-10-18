@@ -35,9 +35,9 @@ class btCollisionObject;
 namespace std
 {
     template <>
-    struct hash<sxr::SmartLocalRef>
+    struct hash<sxr::SmartGlobalRef>
     {
-        size_t operator()(const sxr::SmartLocalRef& k) const
+        size_t operator()(const sxr::SmartGlobalRef& k) const
         {
             long l = reinterpret_cast<long>(k.getObject());
             return std::hash<long>{}(l);
@@ -101,14 +101,14 @@ private:
     void       createMultiBodyConstraints();
     jobject    createCollider(btCollisionObject*);
 
-    std::unordered_map<std::string, SmartLocalRef>  mRigidBodies;
-    std::unordered_map<std::string, SmartLocalRef>  mJoints;
-    std::unordered_map<std::string, SmartLocalRef>  mColliders;
-    std::unordered_map<std::string, SmartLocalRef>  mConstraints;
+    std::unordered_map<std::string, SmartGlobalRef>  mRigidBodies;
+    std::unordered_map<std::string, SmartGlobalRef>  mJoints;
+    std::unordered_map<std::string, SmartGlobalRef>  mColliders;
+    std::unordered_map<std::string, SmartGlobalRef>  mConstraints;
     btMultiBodyDynamicsWorld*   mWorld;
     btBulletWorldImporter*      mImporter;
     JNIEnv*                     mEnv;
-    SmartLocalRef               mContext;
+    SmartGlobalRef              mContext;
     bool                        mNeedRotate;
     int                         mFirstMultiBody;
 };

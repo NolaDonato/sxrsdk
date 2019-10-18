@@ -243,6 +243,7 @@ public class SXRPhysicsLoader extends SXRHybridObject
                 }
                 sceneObject.attachComponent(collider);
             }
+            sceneObject.attachComponent(body);
         }
 
         SXRPhysicsJoint[] joints = NativeBulletLoader.getJoints(loader);
@@ -276,14 +277,13 @@ public class SXRPhysicsLoader extends SXRHybridObject
 
             if (sceneObject == null)
             {
-                Log.w(TAG, "Didn't find node for joint '" + name + "'");
+                Log.w(TAG, "Didn't find node for constraint '" + name + "'");
                 continue;
             }
             SXRPhysicsCollidable bodyA = NativeBulletLoader.getConstraintBodyA(loader, constraint.getNative());
             constraint.setBodyA(bodyA);
             sceneObject.attachComponent(constraint);
         }
-        NativeBulletLoader.clear(loader);
     }
 
     private static byte[] toByteArray(SXRAndroidResource resource) throws IOException {
