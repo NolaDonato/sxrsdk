@@ -77,6 +77,29 @@ public class SXRPhysicsLoader extends SXRHybridObject
      * from the Bullet file are added to the nodes in the
      * given scene.
      *
+     * @param fileName Name of file containing physics content.
+     * @param scene    The scene containing the objects to attach physics components.
+     */
+    public void loadBulletFile(SXRScene scene, String fileName, boolean ignoreUpAxis) throws IOException
+    {
+        SXRAndroidResource resource = toAndroidResource(scene.getSXRContext(), fileName);
+        byte[] inputData = toByteArray(resource);
+
+        if (inputData == null || inputData.length == 0)
+        {
+            throw new IOException("Failed to load physics file " + fileName);
+        }
+        loadBulletFile(inputData, scene.getRoot(), ignoreUpAxis);
+    }
+
+    /**
+     * Loads a Bullet physics content file.
+     * <p>
+     * The Bullet binary files only contain physics, there
+     * are no nodes or meshes. The rigid bodies and constraints
+     * from the Bullet file are added to the nodes in the
+     * given scene.
+     *
      * @param resource {@link SXRAndroidResource} containing the physics content..
      * @param scene    The scene containing the objects to attach physics components.
      */
