@@ -145,6 +145,10 @@ public class SXRPhysicsContent extends SXRComponent
         }
     }
 
+    LongSparseArray<SXRPhysicsWorldObject> getWorldObjects()
+    {
+        return mPhysicsObject;
+    }
 
     /**
      * Returns true if the physics world contains the the specified physics component.
@@ -245,7 +249,24 @@ public class SXRPhysicsContent extends SXRComponent
 
     protected void doPhysicsDetach(SXRNode rootNode)
     {
-        rootNode.forAllDescendants(mDetachPhysics);
+        for (int i = 0; i < mPhysicsObject.size(); ++i)
+        {
+            SXRPhysicsWorldObject o = mPhysicsObject.valueAt(i);
+
+            if (o instanceof SXRConstraint)
+            {
+                removeConstraint((SXRConstraint) o);
+            }
+            if (o instanceof SXRRigidBody)
+            {
+                removeBody((SXRRigidBody) o);
+            }
+            else if (o instanceof SXRPhysicsJoint)
+            {
+                removeBody((SXRPhysicsJoint) o);
+            }
+        }
+        mPhysicsObject.clear();
     }
 
     @Override
@@ -302,38 +323,6 @@ public class SXRPhysicsContent extends SXRComponent
             {
                 addConstraint(constraint);
             }
-        }
-    };
-
-    protected SXRNode.SceneVisitor mDetachPhysics = new SXRNode.SceneVisitor()
-    {
-        @Override
-        public boolean visit(SXRNode obj)
-        {
-            SXRRigidBody body = (SXRRigidBody) obj.getComponent(SXRRigidBody.getComponentType());
-
-            if (body != null)
-            {
-                removeBody(body);
-            }
-            else if (mIsMultibody)
-            {
-                SXRPhysicsJoint joint = (SXRPhysicsJoint) obj.getComponent(SXRPhysicsJoint.getComponentType());
-                if (joint != null)
-                {
-                    removeBody(joint);
-                }
-            }
-            else
-            {
-                return true;
-            }
-            SXRConstraint constraint = (SXRConstraint) obj.getComponent(SXRConstraint.getComponentType());
-            if (constraint != null)
-            {
-                removeConstraint(constraint);
-            }
-            return true;
         }
     };
 

@@ -53,7 +53,8 @@ BulletWorld::BulletWorld(bool isMultiBody)
     initialize(isMultiBody);
 }
 
-BulletWorld::~BulletWorld() {
+BulletWorld::~BulletWorld()
+{
     finalize();
 }
 
@@ -90,6 +91,7 @@ void BulletWorld::initialize(bool isMultiBody)
                 mSolver,
                 mCollisionConfiguration);
     }
+    mPhysicsWorld->setWorldUserInfo(this);
     mPhysicsWorld->setGravity(btVector3(0, -9.81f, 0));
     mDraggingConstraint = nullptr;
 }
@@ -98,14 +100,13 @@ void BulletWorld::finalize()
 {
     for (int i = mPhysicsWorld->getNumCollisionObjects() - 1; i >= 0; i--)
     {
-        btCollisionObject *obj = mPhysicsWorld->getCollisionObjectArray()[i];
+        btCollisionObject* obj = mPhysicsWorld->getCollisionObjectArray()[i];
         if (obj)
         {
             mPhysicsWorld->removeCollisionObject(obj);
             delete obj;
         }
     }
-
     if (isMultiBody())
     {
         btMultiBodyDynamicsWorld* world = dynamic_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld);

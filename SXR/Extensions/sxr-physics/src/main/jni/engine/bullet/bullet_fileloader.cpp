@@ -17,6 +17,7 @@
 
 #include <btBulletCollisionCommon.h>
 #include <btBulletDynamicsCommon.h>
+#include <Serialize/BulletWorldImporter/btBulletWorldImporter.h>
 #include <Serialize/BulletWorldImporter/btMultiBodyWorldImporter.h>
 #include <LinearMath/btQuaternion.h>
 #include <BulletDynamics/ConstraintSolver/btConstraintSolver.h>
@@ -64,6 +65,8 @@ namespace sxr {
 jobject BulletFileLoader::createCollider(btCollisionObject* collider)
 {
     jobject o = 0;
+    JNIEnv* env;
+    mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
 
     btCollisionShape* shape = collider->getCollisionShape();
     if (mNeedRotate)
@@ -79,7 +82,7 @@ jobject BulletFileLoader::createCollider(btCollisionObject* collider)
             BoxCollider* bc = new BoxCollider();
             btVector3 he(box->getHalfExtentsWithoutMargin());
             bc->set_half_extents(he.x(), he.y(), he.z());
-            o = CreateInstance(mEnv, "com/samsungxr/SXRBoxCollider",
+            o = CreateInstance(*env, "com/samsungxr/SXRBoxCollider",
                                "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), bc);
             break;
         }
@@ -90,7 +93,7 @@ jobject BulletFileLoader::createCollider(btCollisionObject* collider)
             SphereCollider* sc = new SphereCollider();
             float radius = sphere->getRadius();
             sc->set_radius(radius);
-            o = CreateInstance(mEnv, "com/samsungxr/SXRSphereCollider",
+            o = CreateInstance(*env, "com/samsungxr/SXRSphereCollider",
                                "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), sc);
             break;
         }
@@ -114,7 +117,7 @@ jobject BulletFileLoader::createCollider(btCollisionObject* collider)
             }
             cc->setHeight(h);
             cc->setRadius(r);
-            o = CreateInstance(mEnv, "com/samsungxr/SXRCapsuleCollider",
+            o = CreateInstance(*env, "com/samsungxr/SXRCapsuleCollider",
                               "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), cc);
             break;
         }
@@ -135,7 +138,7 @@ jobject BulletFileLoader::createCollider(btCollisionObject* collider)
             Mesh* mesh = new Mesh(*vb);
             mesh->setIndexBuffer(ib);
             MeshCollider* mc = new MeshCollider(mesh);
-            o = CreateInstance(mEnv, "com/samsungxr/SXRMeshCollider",
+            o = CreateInstance(*env, "com/samsungxr/SXRMeshCollider",
                                "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), mc);
             break;
         }
@@ -143,7 +146,7 @@ jobject BulletFileLoader::createCollider(btCollisionObject* collider)
         default:
         {
             MeshCollider* mc = new MeshCollider(nullptr);
-            o = CreateInstance(mEnv, "com/samsungxr/SXRMeshCollider",
+            o = CreateInstance(*env, "com/samsungxr/SXRMeshCollider",
                                "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), mc);
             break;
         }
@@ -217,15 +220,17 @@ void BulletFileLoader::createRigidBodies()
         {
             continue;
         }
+        JNIEnv* env;
+        mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
         BulletRigidBody* nativeBody = new BulletRigidBody(rb);
-        jobject javaBody = CreateInstance(mEnv, "com/samsungxr/physics/SXRRigidBody",
+        jobject javaBody = CreateInstance(*env, "com/samsungxr/physics/SXRRigidBody",
                                           "(Lcom/samsungxr/SXRContext;J)V",
                                           mContext.getObject(), reinterpret_cast<jlong>(nativeBody));
-        SmartLocalRef r(mEnv, javaBody);
+        SmartLocalRef r(mJavaVM, javaBody);
         std::string s(name);
         mRigidBodies.emplace(s, r);
         jobject javaCollider = createCollider(nativeBody->getRigidBody());
-        SmartLocalRef c(mEnv, javaCollider);
+        SmartLocalRef c(mJavaVM, javaCollider);
 
         s = name;
         mColliders.emplace(s, c);
@@ -234,9 +239,10 @@ void BulletFileLoader::createRigidBodies()
 
 void BulletFileLoader::createJoints()
 {
-    for (int i = mFirstMultiBody; i < mWorld->getNumMultibodies(); i++)
+    btMultiBodyDynamicsWorld* world = dynamic_cast<btMultiBodyDynamicsWorld*>(mWorld);
+    for (int i = mFirstMultiBody; i < world->getNumMultibodies(); i++)
     {
-        btMultiBody* mb = mWorld->getMultiBody(i);
+        btMultiBody* mb = world->getMultiBody(i);
         const char* name = mb->getBaseName();
 
         if (name == nullptr)    // cannot import bodies without names
@@ -251,19 +257,21 @@ void BulletFileLoader::createJoints()
             t *= transformInvIdty;
             mb->setBaseWorldTransform(t);
         }
+        JNIEnv* env;
+        mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
         const BulletJoint* nativeJoint = new BulletRootJoint(mb);
         btMultiBodyLinkCollider* btc = mb->getBaseCollider();
-        jobject javaJoint = CreateInstance(mEnv, "com/samsungxr/physics/SXRPhysicsJoint",
+        jobject javaJoint = CreateInstance(*env, "com/samsungxr/physics/SXRPhysicsJoint",
                                           "(Lcom/samsungxr/SXRContext;J)V",
                                           mContext.getObject(), reinterpret_cast<jlong>(nativeJoint));
         std::string s(name);
-        SmartLocalRef r(mEnv, javaJoint);
+        SmartLocalRef r(mJavaVM, javaJoint);
         auto pair = std::make_pair(s, r);
         mJoints.emplace(pair);
         if (btc != nullptr)
         {
             jobject javaCollider = createCollider(btc);
-            SmartLocalRef c(mEnv, javaCollider);
+            SmartLocalRef c(mJavaVM, javaCollider);
 
             s = name;
             mColliders.emplace(s, c);
@@ -284,10 +292,10 @@ void BulletFileLoader::createJoints()
                 link.m_cachedWorldTransform = t;
             }
             nativeJoint = reinterpret_cast<const BulletJoint*>(link.m_userPtr);
-            javaJoint = CreateInstance(mEnv, "com/samsungxr/physics/SXRPhysicsJoint",
+            javaJoint = CreateInstance(*env, "com/samsungxr/physics/SXRPhysicsJoint",
                                        "(Lcom/samsungxr/SXRContext;J)V",
                                        mContext.getObject(), reinterpret_cast<jlong>(nativeJoint));
-            SmartLocalRef j(mEnv, javaJoint);
+            SmartLocalRef j(mJavaVM, javaJoint);
 
             s = name;
             mJoints.emplace(s, j);
@@ -295,7 +303,7 @@ void BulletFileLoader::createJoints()
             if (btc != nullptr)
             {
                 jobject javaCollider = createCollider(btc);
-                SmartLocalRef r(mEnv, javaCollider);
+                SmartLocalRef r(mJavaVM, javaCollider);
 
                 s = name;
                 mColliders.emplace(s, r);
@@ -324,7 +332,9 @@ jobject BulletFileLoader::createP2PConstraint(btPoint2PointConstraint* p2p)
         pivot.setY(t);
         p2p->setPivotB(pivot);
     }
-    return CreateInstance(mEnv, "com/samsungxr/physics/SXRPoint2PointConstraint",
+    JNIEnv* env;
+    mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
+    return CreateInstance(*env, "com/samsungxr/physics/SXRPoint2PointConstraint",
                           "(Lcom/samsungxr/SXRContext;J)V",
                           mContext.getObject(), reinterpret_cast<jlong>(bp2p));
 }
@@ -341,7 +351,9 @@ jobject BulletFileLoader::createHingeConstraint(btHingeConstraint* hg)
         t = hg->getBFrame();
         hg->getBFrame().mult(transformInvIdty, t);
     }
-    return CreateInstance(mEnv, "com/samsungxr/physics/SXRHingeConstraint",
+    JNIEnv* env;
+    mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
+    return CreateInstance(*env, "com/samsungxr/physics/SXRHingeConstraint",
                           "(Lcom/samsungxr/SXRContext;J)V",
                           mContext.getObject(), reinterpret_cast<jlong>(bhg));
 }
@@ -361,7 +373,9 @@ jobject BulletFileLoader::createConeTwistConstraint(btConeTwistConstraint* ct)
         tB.mult(transformInvIdty, t);
         ct->setFrames(tA, tB);
     }
-    return CreateInstance(mEnv, "com/samsungxr/physics/SXRConeTwistConstraint",
+    JNIEnv* env;
+    mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
+    return CreateInstance(*env, "com/samsungxr/physics/SXRConeTwistConstraint",
                           "(Lcom/samsungxr/SXRContext;J)V",
                           mContext.getObject(), reinterpret_cast<jlong>(bct));
 }
@@ -381,7 +395,9 @@ jobject BulletFileLoader::createGenericConstraint(btGeneric6DofConstraint* gen)
         tB.mult(transformInvIdty, t);
         gen->setFrames(tA, tB);
     }
-    return CreateInstance(mEnv, "com/samsungxr/physics/SXRGenericConstraint",
+    JNIEnv* env;
+    mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
+    return CreateInstance(*env, "com/samsungxr/physics/SXRGenericConstraint",
                           "(Lcom/samsungxr/SXRContext;J)V",
                           mContext.getObject(), reinterpret_cast<jlong>(bct));
 }
@@ -403,7 +419,9 @@ jobject BulletFileLoader::createFixedConstraint(btFixedConstraint* fix)
 
         fix->setFrames(tA, tB);
     }
-    return CreateInstance(mEnv, "com/samsungxr/physics/SXRFixedConstraint",
+    JNIEnv* env;
+    mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
+    return CreateInstance(*env, "com/samsungxr/physics/SXRFixedConstraint",
                           "(Lcom/samsungxr/SXRContext;J)V",
                           mContext.getObject(), reinterpret_cast<jlong>(bfix));
 }
@@ -411,7 +429,9 @@ jobject BulletFileLoader::createFixedConstraint(btFixedConstraint* fix)
 jobject BulletFileLoader::createSliderConstraint(btSliderConstraint* sld)
 {
     BulletSliderConstraint* c = new BulletSliderConstraint(sld);
-    return CreateInstance(mEnv, "com/samsungxr/physics/SXRSliderConstraint",
+    JNIEnv* env;
+    mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
+    return CreateInstance(*env, "com/samsungxr/physics/SXRSliderConstraint",
                           "(Lcom/samsungxr/SXRContext;J)V",
                           mContext.getObject(), reinterpret_cast<jlong>(c));
 }
@@ -466,21 +486,25 @@ void BulletFileLoader::createConstraints()
         }
         if (name && javaConstraint)
         {
-            mConstraints.emplace(std::string(name), SmartLocalRef(mEnv, javaConstraint));
+            mConstraints.emplace(std::string(name), SmartLocalRef(mJavaVM, javaConstraint));
         }
     }
 }
 
 void BulletFileLoader::createMultiBodyConstraints()
 {
-    for (int i = mFirstMultiBody; i < mWorld->getNumMultiBodyConstraints(); ++i)
+    btMultiBodyDynamicsWorld* world = dynamic_cast<btMultiBodyDynamicsWorld*>(mWorld);
+
+    for (int i = mFirstMultiBody; i < world->getNumMultiBodyConstraints(); ++i)
     {
-        btMultiBodyConstraint* c = mWorld->getMultiBodyConstraint(i);
+        btMultiBodyConstraint* c = world->getMultiBodyConstraint(i);
         btMultiBody* const mbA = c->getMultiBodyA();
         btMultiBody* const mbB = c->getMultiBodyB();
         btRigidBody* rbB = nullptr;
         jobject javaConstraint;
         const char* nameB = nullptr;
+        JNIEnv* env;
+        mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
 
         if (mbA->getUserPointer() == nullptr)
         {
@@ -491,7 +515,7 @@ void BulletFileLoader::createMultiBodyConstraints()
         {
             btMultiBodyFixedConstraint* fc = dynamic_cast<btMultiBodyFixedConstraint*>(c);
             BulletFixedConstraint* bfc = new BulletFixedConstraint(fc);
-            javaConstraint =  CreateInstance(mEnv, "com/samsungxr/physics/SXRFixedConstraint",
+            javaConstraint =  CreateInstance(*env, "com/samsungxr/physics/SXRFixedConstraint",
                                             "(Lcom/samsungxr/SXRContext;J)V",
                                              mContext.getObject(), reinterpret_cast<long>(bfc));
             rbB = fc->getRigidBodyB();
@@ -500,7 +524,7 @@ void BulletFileLoader::createMultiBodyConstraints()
         {
             btMultiBodySliderConstraint* sc = dynamic_cast<btMultiBodySliderConstraint*>(c);
             BulletSliderConstraint* bsc = new BulletSliderConstraint(sc);
-            javaConstraint =  CreateInstance(mEnv, "com/samsungxr/physics/SXRSliderConstraint",
+            javaConstraint =  CreateInstance(*env, "com/samsungxr/physics/SXRSliderConstraint",
                                              "(Lcom/samsungxr/SXRContext;J)V",
                                              mContext.getObject(), reinterpret_cast<long>(bsc));
             rbB = sc->getRigidBodyB();
@@ -509,7 +533,7 @@ void BulletFileLoader::createMultiBodyConstraints()
         {
             btMultiBodyPoint2Point* p2p = dynamic_cast<btMultiBodyPoint2Point*>(c);
             BulletPoint2PointConstraint* bp2p = new BulletPoint2PointConstraint(p2p);
-            javaConstraint =  CreateInstance(mEnv, "com/samsungxr/physics/SXRPoint2PointConstraint",
+            javaConstraint =  CreateInstance(*env, "com/samsungxr/physics/SXRPoint2PointConstraint",
                                              "(Lcom/samsungxr/SXRContext;J)V",
                                              mContext.getObject(), reinterpret_cast<long>(bp2p));
             rbB = p2p->getRigidBodyB();
@@ -524,17 +548,18 @@ void BulletFileLoader::createMultiBodyConstraints()
         }
         if (nameB && javaConstraint)
         {
-            mConstraints.emplace(std::string(nameB), SmartLocalRef(mEnv, javaConstraint));
+            mConstraints.emplace(std::string(nameB), SmartLocalRef(mJavaVM, javaConstraint));
         }
     }
 }
 
-BulletFileLoader::BulletFileLoader(jobject context, JNIEnv* env)
+BulletFileLoader::BulletFileLoader(jobject context, JavaVM& jvm)
 :   HybridObject(),
-    mEnv(env),
-    mContext(env, context),
+    mContext(jvm, context),
     mImporter(nullptr),
-    mFirstMultiBody(0)
+    mJavaVM(jvm),
+    mFirstMultiBody(0),
+    mWorld(nullptr)
 {
 }
 
@@ -550,7 +575,7 @@ bool BulletFileLoader::parse(char *buffer, size_t length, bool ignoreUpAxis)
     try
     {
         bullet_file = new bParse::btBulletFile(buffer, length);
-        mImporter = new btBulletWorldImporter(nullptr);
+        mImporter = new btMultiBodyWorldImporter(nullptr);
         bool result = mImporter->loadFileFromMemory(bullet_file);
         if (!result)
         {
@@ -597,7 +622,8 @@ bool BulletFileLoader::parse(btMultiBodyDynamicsWorld* world, char *buffer, size
 {
     bParse::btBulletFile* bullet_file = new bParse::btBulletFile(buffer, length);
     btMultiBodyWorldImporter* importer = new btMultiBodyWorldImporter(world);
-    mWorld = world;
+    BulletWorld* w = new BulletWorld(true);
+    mWorld = w->getPhysicsWorld();
     mImporter = importer;
     mImporter->loadFileFromMemory(bullet_file);
 
@@ -636,113 +662,103 @@ void BulletFileLoader::clear()
 {
     int i;
 
-    for (i = 0; i < mImporter->getNumConstraints(); i++)
+    if (mWorld)
     {
-        btTypedConstraint *constraint = mImporter->getConstraintByIndex(i);
-        PhysicsConstraint *phcons = static_cast<PhysicsConstraint*>(constraint->getUserConstraintPtr());
-        if (nullptr != phcons && ((PhysicsConstraint*)-1) != phcons)
+        for (i = 0; i < mImporter->getNumConstraints(); i++)
         {
-            // Constraint is valid, but was it attached?
-            if (nullptr != phcons->owner_object())
-            {
-                continue;
-            }
-            else
-            {
-                delete phcons;
-            }
+            btTypedConstraint *constraint = mImporter->getConstraintByIndex(i);
+            mWorld->removeConstraint(constraint);
+        }
+        for (i = 0; i < mImporter->getNumRigidBodies(); i++)
+        {
+            btRigidBody *rb = static_cast<btRigidBody *>(mImporter->getRigidBodyByIndex(i));
+            mWorld->removeRigidBody(rb);
+        }
+        btMultiBodyDynamicsWorld* world = dynamic_cast<btMultiBodyDynamicsWorld *>(mWorld);
+        for (i = 0; i < world->getNumMultibodies(); i++)
+        {
+            btMultiBody* mb = world->getMultiBody(i);
+            world->removeMultiBody(mb);
+        }
+        BulletWorld* w = reinterpret_cast<BulletWorld*>(mWorld->getWorldUserInfo());
+        if (w)
+        {
+            delete w;
         }
         else
         {
-            delete constraint;
+            delete mWorld;
         }
+        mWorld = nullptr;
     }
-
-    for (i = 0; i < mImporter->getNumRigidBodies(); i++) {
-        btRigidBody *rb = static_cast<btRigidBody*>(mImporter->getRigidBodyByIndex(i));
-        BulletRigidBody *brb = static_cast<BulletRigidBody*>(rb->getUserPointer());
-        if (nullptr != brb)
-        {
-            // Rigid body is valid, but was it attached?
-            if (nullptr != brb->owner_object())
-            {
-                continue;
-            }
-            else
-            {
-                delete brb;
-            }
-        }
-        else
-        {
-            delete rb;
-        }
+    mConstraints.clear();
+    mRigidBodies.clear();
+    mJoints.clear();
+    if (mImporter)
+    {
+        delete mImporter;
+        mImporter = nullptr;
     }
-
-    for (i = 0; i < mWorld->getNumMultibodies(); i++) {
-        btMultiBody* mb = mWorld->getMultiBody(i);
-        BulletRootJoint* rootJoint = reinterpret_cast<BulletRootJoint*>(mb->getUserPointer());
-        if (nullptr != rootJoint)
-        {
-            // Rigid body is valid, but was it attached?
-            if (nullptr != rootJoint->owner_object())
-            {
-                continue;
-            }
-            else
-            {
-                delete rootJoint;
-            }
-        }
-        else
-        {
-            delete rootJoint;
-        }
-    }
-
-    delete mImporter;
-    mImporter = nullptr;
 }
 
 jobject BulletFileLoader::getRigidBody(const char* name)
 {
     std::string s(name);
     const SmartLocalRef& r = mRigidBodies[s];
-    return mEnv->NewLocalRef(r.getObject());
+    JNIEnv* env;
+
+    mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
+    return env->NewLocalRef(r.getObject());
 }
 
 jobject BulletFileLoader::getJoint(const char* name)
 {
     std::string s(name);
     const SmartLocalRef& r = mJoints[s];
-    return mEnv->NewLocalRef(r.getObject());
+    JNIEnv* env;
+
+    mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
+    return env->NewLocalRef(r.getObject());
 }
 
 jobject BulletFileLoader::getCollider(const char* name)
 {
     std::string s(name);
     const SmartLocalRef& r = mColliders[s];
-    return mEnv->NewLocalRef(r.getObject());
+    JNIEnv* env;
+
+    mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
+    return env->NewLocalRef(r.getObject());
 }
 
 jobject BulletFileLoader::getConstraint(const char* name)
 {
     std::string s(name);
     const SmartLocalRef& r = mConstraints[s];
-    return mEnv->NewLocalRef(r.getObject());
+    JNIEnv* env;
+
+    mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
+    return env->NewLocalRef(r.getObject());
 }
 
 jobjectArray BulletFileLoader::getRigidBodies()
 {
     int n = mRigidBodies.size();
-    jclass clazz = mEnv->FindClass("com/samsungxr/physics/SXRRigidBody");
-    jobjectArray array = mEnv->NewObjectArray(n, clazz, nullptr);
+    JNIEnv* env;
+
+    mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
+    jclass clazz = env->FindClass("com/samsungxr/physics/SXRRigidBody");
+    jobjectArray array = env->NewObjectArray(n, clazz, nullptr);
     int i = 0;
 
     for (const auto& entry : mRigidBodies)
     {
-        SmartLocalRef r(entry.second);
-        mEnv->SetObjectArrayElement(array, i++, r.getObject());
+        jobject o = entry.second.getObject();
+        if (o)
+        {
+            env->SetObjectArrayElement(array, i, env->NewLocalRef(o));
+        }
+        ++i;
     }
     return array;
 }
@@ -750,14 +766,21 @@ jobjectArray BulletFileLoader::getRigidBodies()
 jobjectArray BulletFileLoader::getJoints()
 {
     int n = mJoints.size();
-    jclass clazz = mEnv->FindClass("com/samsungxr/physics/SXRPhysicsJoint");
-    jobjectArray array = mEnv->NewObjectArray(n, clazz, nullptr);
+    JNIEnv* env;
+
+    mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
+    jclass clazz = env->FindClass("com/samsungxr/physics/SXRPhysicsJoint");
+    jobjectArray array = env->NewObjectArray(n, clazz, nullptr);
     int i = 0;
 
     for (const auto& entry : mJoints)
     {
-        SmartLocalRef r(entry.second);
-        mEnv->SetObjectArrayElement(array, i++, r.getObject());
+        jobject o = entry.second.getObject();
+        if (o)
+        {
+            env->SetObjectArrayElement(array, i, env->NewLocalRef(o));
+        }
+        ++i;
     }
     return array;
 }
@@ -765,14 +788,21 @@ jobjectArray BulletFileLoader::getJoints()
 jobjectArray BulletFileLoader::getConstraints()
 {
     int n = mConstraints.size();
-    jclass clazz = mEnv->FindClass("com/samsungxr/physics/SXRConstraint");
-    jobjectArray array = mEnv->NewObjectArray(n, clazz, nullptr);
+    JNIEnv* env;
+
+    mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
+    jclass clazz = env->FindClass("com/samsungxr/physics/SXRConstraint");
+    jobjectArray array = env->NewObjectArray(n, clazz, nullptr);
     int i = 0;
 
     for (const auto& entry : mConstraints)
     {
-        SmartLocalRef r(entry.second);
-        mEnv->SetObjectArrayElement(array, i++, r.getObject());
+        jobject o = entry.second.getObject();
+        if (o)
+        {
+            env->SetObjectArrayElement(array, i, env->NewLocalRef(o));
+        }
+        ++i;
     }
     return array;
 }

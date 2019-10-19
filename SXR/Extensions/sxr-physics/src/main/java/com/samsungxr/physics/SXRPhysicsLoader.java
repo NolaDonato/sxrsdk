@@ -115,6 +115,38 @@ public class SXRPhysicsLoader extends SXRHybridObject
     }
 
     /**
+     * Loads a Bullet physics content file.
+     * <p>
+     * The Bullet binary files only contain physics, there
+     * are no nodes or meshes. The rigid bodies and constraints
+     * from the Bullet file are added to the nodes in the
+     * given scene.
+     *
+     * @param resource {@link SXRAndroidResource} containing the physics content..
+     * @param world    The physics world to attach physics components.
+     *                 This world should be attached to the root of the
+     *                 node hierarchy to attach physics to.
+     */
+    public void loadBulletFile(SXRPhysicsContent world, SXRAndroidResource resource) throws IOException
+    {
+        SXRNode root = world.getOwnerObject();
+
+        if (root == null)
+        {
+            root = new SXRNode(world.getSXRContext());
+            root.setName(resource.getResourceFilename());
+            root.attachComponent(world);
+        }
+        byte[] inputData = toByteArray(resource);
+
+        if (inputData == null || inputData.length == 0)
+        {
+            throw new IOException("Failed to load physics file " + resource.getResourceFilename());
+        }
+        loadBulletFile(inputData, root, false);
+    }
+
+    /**
      * Loads a skeleton and physics components from a JSON file describing the avatar.
      * <p>
      * Avatar files describe physics for articulated bodies.
@@ -218,8 +250,10 @@ public class SXRPhysicsLoader extends SXRHybridObject
         SXRContext ctx = sceneRoot.getSXRContext();
         long loader = getNative();
         boolean result = NativeBulletLoader.parse(loader, inputData, inputData.length, ignoreUpAxis);
+
         if (!result)
         {
+            NativeBulletLoader.clear(loader);
             throw new IOException("Failed to parse bullet file");
         }
 
@@ -284,6 +318,7 @@ public class SXRPhysicsLoader extends SXRHybridObject
             constraint.setBodyA(bodyA);
             sceneObject.attachComponent(constraint);
         }
+        NativeBulletLoader.clear(loader);
     }
 
     private static byte[] toByteArray(SXRAndroidResource resource) throws IOException {

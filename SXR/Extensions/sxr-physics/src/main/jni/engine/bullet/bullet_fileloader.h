@@ -22,6 +22,7 @@
 
 class btBulletWorldImporter;
 class btMultiBodyWorldImporter;
+class btDynamicsWorld;
 class btMultiBodyDynamicsWorld;
 class btMultiBodyFixedConstraint;
 class btGeneric6DofConstraint;
@@ -56,7 +57,7 @@ class BulletJoint;
 class BulletFileLoader : public HybridObject
 {
 public:
-    BulletFileLoader(jobject context, JNIEnv* env);
+    BulletFileLoader(jobject context, JavaVM& jvm);
 
     bool parse(btMultiBodyDynamicsWorld* world, char *buffer, size_t length, bool ignoreUpAxis);
 
@@ -105,9 +106,9 @@ private:
     std::unordered_map<std::string, SmartGlobalRef>  mJoints;
     std::unordered_map<std::string, SmartGlobalRef>  mColliders;
     std::unordered_map<std::string, SmartGlobalRef>  mConstraints;
-    btMultiBodyDynamicsWorld*   mWorld;
-    btBulletWorldImporter*      mImporter;
-    JNIEnv*                     mEnv;
+    btDynamicsWorld*            mWorld;
+    btMultiBodyWorldImporter*   mImporter;
+    JavaVM&                     mJavaVM;
     SmartGlobalRef              mContext;
     bool                        mNeedRotate;
     int                         mFirstMultiBody;

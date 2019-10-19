@@ -296,7 +296,7 @@ namespace sxr {
 
         if (static_cast<BulletJoint*>(joint)->getMultiBody() != nullptr)
         {
-            return false;
+            return true;
         }
         if (joint == this)
         {

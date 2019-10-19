@@ -20,74 +20,66 @@
 
 
 namespace sxr {
+class SmartGlobalRef;
 
 // Automatically deletes a local ref when it goes out of scope
 class SmartLocalRef
 {
-
 protected:
-    JNIEnv* mJniEnv;
+    JavaVM* mJVM;
     jobject mJavaObj;
-    JNIEnv* getEnv() const { return mJniEnv; }
 
 public:
-    SmartLocalRef(JNIEnv* env, jobject object)
-    : mJniEnv(env),
-      mJavaObj(object)
-    {
-    }
-
-    ~SmartLocalRef()
-    {
-        if (mJavaObj != NULL)
-        {
-            mJniEnv->DeleteLocalRef(mJavaObj);
-        }
-    }
+    SmartLocalRef(JavaVM& vm, jobject object);
+    SmartLocalRef(const SmartLocalRef& src);
+    SmartLocalRef(const SmartGlobalRef& src);
 
     SmartLocalRef()
-    :    mJniEnv(nullptr),
-         mJavaObj(nullptr)
-    {
-    }
-
-    SmartLocalRef(const SmartLocalRef& src)
-    :   mJniEnv(src.getEnv()),
-        mJavaObj(nullptr)
-    {
-        if (src.getObject())
-        {
-            mJavaObj = mJniEnv->NewLocalRef(src.getObject());
-        }
-    }
+    : mJVM(nullptr),
+      mJavaObj(nullptr)
+    { }
 
 
-    SmartLocalRef& operator=(const SmartLocalRef& src)
-    {
-        if (mJavaObj != nullptr)
-        {
-            mJniEnv->DeleteLocalRef(mJavaObj);
-        }
-        mJniEnv = src.getEnv();
-        if (src.getObject())
-        {
-            mJavaObj = mJniEnv->NewLocalRef(src.getObject());
-        }
-        return *this;
-    }
+    virtual ~SmartLocalRef();
+    virtual SmartLocalRef& operator=(const SmartLocalRef& src);
+    virtual SmartLocalRef& operator=(const SmartGlobalRef& src);
+    virtual SmartLocalRef& operator=(jobject javaObj);
 
     jobject getObject() const { return mJavaObj; }
 
-    bool operator==(const SmartLocalRef& r)
+    JavaVM* getJVM() const { return mJVM; }
+    JNIEnv* getEnv() const;
+
+    virtual bool operator==(const SmartLocalRef& r)
     {
         return r.getObject() == getObject();
     }
 };
 
-jobject   CreateInstance(JNIEnv* env, const char* className, const char* signature, ...);
+class SmartGlobalRef : public SmartLocalRef
+{
+public:
+    SmartGlobalRef(JavaVM& jvm, jobject object);
+    SmartGlobalRef(const SmartGlobalRef& src);
+    SmartGlobalRef(const SmartLocalRef& src);
+    SmartGlobalRef() { }
 
-jmethodID GetStaticMethodID(JNIEnv& env, jclass clazz, const char * name,
-        const char * signature);
+    jobject getObject() const { return mJavaObj; }
+
+    virtual bool operator==(const SmartGlobalRef& r)
+    {
+        return r.getObject() == getObject();
+    }
+
+    virtual ~SmartGlobalRef();
+    virtual SmartGlobalRef& operator=(const SmartGlobalRef& src);
+    virtual SmartGlobalRef& operator=(const SmartLocalRef& src);
+    virtual SmartGlobalRef& operator=(jobject javaObj);
+};
+
+jobject   CreateInstance(JNIEnv& env, const char* className, const char* signature, ...);
+
+jmethodID GetStaticMethodID(JNIEnv& env, jclass clazz, const char * name, const char * signature);
 
 jmethodID GetMethodId(JNIEnv& env, const jclass clazz, const char* name, const char* signature);
 

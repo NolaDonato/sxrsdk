@@ -28,7 +28,9 @@ extern "C" {
 JNIEXPORT jlong JNICALL
 Java_com_samsungxr_physics_NativeBulletLoader_ctor(JNIEnv* env, jclass clazz, jobject context)
 {
-    BulletFileLoader* loader = new BulletFileLoader(context, env);
+    JavaVM* jvm;
+    env->GetJavaVM(&jvm);
+    BulletFileLoader* loader = new BulletFileLoader(context, *jvm);
     return reinterpret_cast<jlong>(loader);
 }
 
@@ -66,7 +68,7 @@ Java_com_samsungxr_physics_NativeBulletLoader_getRigidBody(JNIEnv* env, jclass c
     const char* name = env->GetStringUTFChars(jname, 0);
     jobject result = loader->getRigidBody(name);
     env->ReleaseStringUTFChars(jname, name);
-    return result;
+    return env->NewLocalRef(result);
 }
 
 JNIEXPORT jobject JNICALL
@@ -77,7 +79,7 @@ Java_com_samsungxr_physics_NativeBulletLoader_getJoint(JNIEnv* env, jclass clazz
     const char* name = env->GetStringUTFChars(jname, 0);
     jobject result = loader->getJoint(name);
     env->ReleaseStringUTFChars(jname, name);
-    return result;
+    return env->NewLocalRef(result);
 }
 
 
@@ -89,7 +91,7 @@ Java_com_samsungxr_physics_NativeBulletLoader_getCollider(JNIEnv* env, jclass cl
     const char* name = env->GetStringUTFChars(jname, 0);
     jobject result = loader->getCollider(name);
     env->ReleaseStringUTFChars(jname, name);
-    return result;
+    return env->NewLocalRef(result);
 }
 
 JNIEXPORT jobject JNICALL
@@ -100,7 +102,7 @@ Java_com_samsungxr_physics_NativeBulletLoader_getConstraint(JNIEnv* env, jclass 
     const char* name = env->GetStringUTFChars(jname, 0);
     jobject result = loader->getConstraint(name);
     env->ReleaseStringUTFChars(jname, name);
-    return result;
+    return env->NewLocalRef(result);
 }
 
 JNIEXPORT jobject JNICALL
@@ -109,7 +111,8 @@ Java_com_samsungxr_physics_NativeBulletLoader_getConstraintBodyA(JNIEnv* env, jc
 {
     BulletFileLoader *loader = reinterpret_cast<BulletFileLoader*>(jloader);
     PhysicsConstraint* constraint = reinterpret_cast<PhysicsConstraint*>(nativeConstraint);
-    return loader->getConstraintBodyA(constraint);
+    jobject result = loader->getConstraintBodyA(constraint);
+    return env->NewLocalRef(result);
 }
 
 JNIEXPORT jobjectArray JNICALL

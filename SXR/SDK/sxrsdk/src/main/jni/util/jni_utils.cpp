@@ -17,6 +17,222 @@
 #include "util/sxr_log.h"
 
 namespace sxr {
+SmartLocalRef::~SmartLocalRef()
+{
+    if (mJavaObj)
+    {
+        JNIEnv* env = getEnv();
+        env->DeleteLocalRef(mJavaObj);
+        mJavaObj = nullptr;
+    }
+}
+
+SmartLocalRef::SmartLocalRef(JavaVM& jvm, jobject object)
+: mJVM(&jvm),
+  mJavaObj(object)
+{
+    if (object)
+    {
+        JNIEnv* env = getEnv();
+        mJavaObj = env->NewLocalRef(object);
+    }
+}
+
+SmartLocalRef::SmartLocalRef(const SmartLocalRef& src)
+:   mJVM(src.getJVM()),
+    mJavaObj(nullptr)
+{
+    if (src.getObject())
+    {
+        JNIEnv* env = getEnv();
+        mJavaObj = env->NewLocalRef(src.getObject());
+    }
+}
+
+SmartLocalRef::SmartLocalRef(const SmartGlobalRef& src)
+:   mJVM(src.getJVM()),
+    mJavaObj(nullptr)
+{
+    if (src.getObject())
+    {
+        JNIEnv* env = getEnv();
+        mJavaObj = env->NewLocalRef(src.getObject());
+    }
+}
+
+JNIEnv* SmartLocalRef::getEnv() const
+{
+        JNIEnv* env = nullptr;
+        env = getCurrentEnv(mJVM);
+        if (env == nullptr)
+        {
+            mJVM->AttachCurrentThread(&env, nullptr);
+            env = getCurrentEnv(mJVM);
+        }
+        return env;
+
+}
+
+SmartLocalRef& SmartLocalRef::operator=(const SmartLocalRef& src)
+{
+    jobject oldObj = mJavaObj;
+
+    JNIEnv* env = getEnv();
+    if (src.getObject())
+    {
+        mJavaObj = env->NewLocalRef(src.getObject());
+    }
+    else
+    {
+        mJavaObj = nullptr;
+    }
+    if (oldObj)
+    {
+        env->DeleteLocalRef(oldObj);
+    }
+    return *this;
+}
+
+SmartLocalRef& SmartLocalRef::operator=(const SmartGlobalRef& src)
+{
+    jobject oldObj = mJavaObj;
+
+    JNIEnv* env = getEnv();
+    if (src.getObject())
+    {
+        mJavaObj = env->NewLocalRef(src.getObject());
+    }
+    else
+    {
+        mJavaObj = nullptr;
+    }
+    if (oldObj)
+    {
+        env->DeleteLocalRef(oldObj);
+    }
+    return *this;
+}
+
+SmartLocalRef& SmartLocalRef::operator=(jobject javaObj)
+{
+    jobject oldObj = mJavaObj;
+    JNIEnv* env = getEnv();
+
+    if (javaObj)
+    {
+        mJavaObj = env->NewLocalRef(javaObj);
+    }
+    else
+    {
+        mJavaObj = nullptr;
+    }
+    if (oldObj)
+    {
+        env->DeleteLocalRef(oldObj);
+    }
+    return *this;
+}
+
+SmartGlobalRef::~SmartGlobalRef()
+{
+    if (mJavaObj)
+    {
+        JNIEnv* env = getEnv();
+        env->DeleteGlobalRef(mJavaObj);
+        mJavaObj = nullptr;
+    }
+}
+
+SmartGlobalRef::SmartGlobalRef(JavaVM& vm, jobject object)
+: SmartLocalRef(vm, nullptr)
+{
+    if (object)
+    {
+        JNIEnv* env = getEnv();
+        mJavaObj = env->NewGlobalRef(object);
+    }
+}
+
+
+SmartGlobalRef::SmartGlobalRef(const SmartGlobalRef& src)
+:   SmartLocalRef(*src.getJVM(), nullptr)
+{
+    if (src.getObject())
+    {
+        JNIEnv* env = getEnv();
+        mJavaObj = env->NewGlobalRef(src.getObject());
+    }
+}
+
+SmartGlobalRef::SmartGlobalRef(const SmartLocalRef& src)
+:   SmartLocalRef(*src.getJVM(), nullptr)
+{
+    if (src.getObject())
+    {
+        JNIEnv* env = getEnv();
+        mJavaObj = env->NewGlobalRef(src.getObject());
+    }
+}
+
+SmartGlobalRef& SmartGlobalRef::operator=(const SmartGlobalRef& src)
+{
+    jobject oldObj = mJavaObj;
+
+    JNIEnv* env = src.getEnv();
+    if (src.getObject())
+    {
+        mJavaObj = env->NewGlobalRef(src.getObject());
+    }
+    else
+    {
+        mJavaObj = nullptr;
+    }
+    if (oldObj != nullptr)
+    {
+        env->DeleteGlobalRef(oldObj);
+    }
+    return *this;
+}
+
+SmartGlobalRef& SmartGlobalRef::operator=(const SmartLocalRef& src)
+{
+    jobject oldObj = mJavaObj;
+    JNIEnv* env = src.getEnv();
+
+    if (src.getObject())
+    {
+        mJavaObj = env->NewGlobalRef(src.getObject());
+    }
+    else
+    {
+        mJavaObj = nullptr;
+    }
+    if (oldObj != nullptr)
+    {
+        env->DeleteGlobalRef(oldObj);
+    }
+    return *this;
+}
+
+SmartGlobalRef& SmartGlobalRef::operator=(jobject javaObj)
+{
+    jobject oldObj = mJavaObj;
+    JNIEnv* env = getEnv();
+
+    if (javaObj)
+    {
+        mJavaObj = env->NewGlobalRef(javaObj);
+    }
+    else
+    {
+        mJavaObj = nullptr;
+    }
+    if (oldObj != nullptr)
+    {
+        env->DeleteGlobalRef(oldObj);
+    }
+    return *this;
+}
 
 JNIEnv* getCurrentEnv(JavaVM *javaVm)
 {
@@ -61,15 +277,15 @@ jmethodID GetStaticMethodID(JNIEnv &env, jclass clazz, const char *name, const c
     return mid;
 }
 
-jobject CreateInstance(JNIEnv* env, const char* className, const char* signature, ...)
+jobject CreateInstance(JNIEnv& env, const char* className, const char* signature, ...)
 {
-    jclass clazz = GetGlobalClassReference(*env, className);
+    jclass clazz = env.FindClass(className);
 
     if (NULL == clazz)
     {
         return 0;
     }
-    jmethodID ctr_id = env->GetMethodID(clazz, "<init>", signature);
+    jmethodID ctr_id = env.GetMethodID(clazz, "<init>", signature);
 
     if (NULL == ctr_id)
     {
@@ -77,7 +293,9 @@ jobject CreateInstance(JNIEnv* env, const char* className, const char* signature
     }
     va_list args;
     va_start(args, signature);
-    return env->NewObjectV(clazz, ctr_id, args);
+    jobject javaObj = env.NewObjectV(clazz, ctr_id, args);
+    va_end(args);
+    return javaObj;
 }
 
 jint throwOutOfMemoryError(JNIEnv* env, const char *message)

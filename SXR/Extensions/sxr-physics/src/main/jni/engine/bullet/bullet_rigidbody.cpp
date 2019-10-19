@@ -135,38 +135,41 @@ namespace sxr
         if (mRigidBody == nullptr)
         {
             mRigidBody = new btRigidBody(mConstructionInfo);
-        }
-        else
-        {
-            collisionFlags = mRigidBody->getCollisionFlags();
-        }
-        mRigidBody->setUserPointer(this);
-        mRigidBody->setIslandTag(0);
-        switch (mSimType)
-        {
-            case SimulationType::DYNAMIC:
-
+            mRigidBody->setUserPointer(this);
+            mRigidBody->setIslandTag(0);
+            switch (mSimType)
+            {
+                case SimulationType::DYNAMIC:
                 mRigidBody->setCollisionFlags(collisionFlags &
                                               ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
                                                 btCollisionObject::CollisionFlags::CF_STATIC_OBJECT));
                 mRigidBody->setActivationState(ACTIVE_TAG);
                 break;
 
-            case SimulationType::STATIC:
+                case SimulationType::STATIC:
                 mRigidBody->setCollisionFlags(
                         (collisionFlags | btCollisionObject::CollisionFlags::CF_STATIC_OBJECT) &
-                        ~btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT
-                );
+                        ~btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT);
                 mRigidBody->setActivationState(ISLAND_SLEEPING);
                 break;
 
-            case SimulationType::KINEMATIC:
+                case SimulationType::KINEMATIC:
                 mRigidBody->setCollisionFlags(
                         (collisionFlags | btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT) &
-                        ~btCollisionObject::CollisionFlags::CF_STATIC_OBJECT
-                );
+                        ~btCollisionObject::CollisionFlags::CF_STATIC_OBJECT);
                 mRigidBody->setActivationState(ISLAND_SLEEPING);
                 break;
+            }
+        }
+        else
+        {
+            collisionFlags = mRigidBody->getCollisionFlags();
+            if ((collisionFlags &
+                 ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
+                 btCollisionObject::CollisionFlags::CF_STATIC_OBJECT)) == 0)
+            {
+                mRigidBody->setActivationState(ACTIVE_TAG);
+            }
         }
     }
 
