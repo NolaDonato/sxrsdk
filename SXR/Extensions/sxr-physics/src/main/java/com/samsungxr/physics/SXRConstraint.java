@@ -32,7 +32,7 @@ import java.util.List;
  * the owner of this constraint (body B).
  */
 abstract class SXRConstraint extends SXRPhysicsWorldObject
-    {
+{
     static final int fixedConstraintId = 1;
     static final int point2pointConstraintId = 2;
     static final int sliderConstraintId = 3;

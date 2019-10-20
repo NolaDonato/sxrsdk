@@ -298,6 +298,26 @@ jobject CreateInstance(JNIEnv& env, const char* className, const char* signature
     return javaObj;
 }
 
+void CallVoidMethod(JNIEnv& env, jobject obj,  const char* className, const char* methodName, const char* signature, ...)
+{
+    jclass clazz = env.FindClass(className);
+
+    if (NULL == clazz)
+    {
+        return;
+    }
+    jmethodID ctr_id = env.GetMethodID(clazz, methodName, signature);
+
+    if (NULL == ctr_id)
+    {
+        return;
+    }
+    va_list args;
+    va_start(args, signature);
+    env.CallVoidMethodV(obj, ctr_id, args);
+    va_end(args);
+}
+
 jint throwOutOfMemoryError(JNIEnv* env, const char *message)
 {
     jclass exClass = env->FindClass("java/lang/OutOfMemoryError");

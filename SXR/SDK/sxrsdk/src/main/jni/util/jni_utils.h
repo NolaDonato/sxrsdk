@@ -79,6 +79,8 @@ public:
 
 jobject   CreateInstance(JNIEnv& env, const char* className, const char* signature, ...);
 
+void CallVoidMethod(JNIEnv& env, jobject obj, const char* className, const char* methodName, const char* signature, ...);
+
 jmethodID GetStaticMethodID(JNIEnv& env, jclass clazz, const char * name, const char * signature);
 
 jmethodID GetMethodId(JNIEnv& env, const jclass clazz, const char* name, const char* signature);

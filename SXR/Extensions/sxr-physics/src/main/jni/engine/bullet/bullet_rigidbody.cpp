@@ -171,6 +171,7 @@ namespace sxr
                 mRigidBody->setActivationState(ACTIVE_TAG);
             }
         }
+        mRigidBody->setMotionState(this);
     }
 
     void BulletRigidBody::finalize()

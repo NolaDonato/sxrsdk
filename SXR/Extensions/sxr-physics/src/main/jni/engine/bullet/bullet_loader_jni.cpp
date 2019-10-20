@@ -53,35 +53,32 @@ Java_com_samsungxr_physics_NativeBulletLoader_parse(JNIEnv* env, jclass clazz,
     return result;
 }
 
+JNIEXPORT bool JNICALL
+Java_com_samsungxr_physics_NativeBulletLoader_parseMB(JNIEnv* env, jclass clazz,
+                                                    jlong jloader,
+                                                    jlong jworld,
+                                                    jbyteArray byteArr,
+                                                    jint len, jboolean ignoreUpAxis)
+{
+    jbyte* data = env->GetByteArrayElements(byteArr, NULL);
+
+    if (data == NULL)
+    {
+        return 0;
+    }
+    BulletFileLoader* loader = reinterpret_cast<BulletFileLoader*>(jloader);
+    BulletWorld* world = reinterpret_cast<BulletWorld*>(jworld);
+    bool result = loader->parse(world, (char*) data, len, ignoreUpAxis);
+    env->ReleaseByteArrayElements(byteArr, data, JNI_ABORT);
+    return result;
+}
+
 JNIEXPORT void JNICALL
 Java_com_samsungxr_physics_NativeBulletLoader_clear(JNIEnv* env, jclass clazz, jlong jloader)
 {
     BulletFileLoader *loader = reinterpret_cast<BulletFileLoader*>(jloader);
     loader->clear();
 }
-
-JNIEXPORT jobject JNICALL
-Java_com_samsungxr_physics_NativeBulletLoader_getRigidBody(JNIEnv* env, jclass clazz,
-        jlong jloader, jstring jname)
-{
-    BulletFileLoader *loader = reinterpret_cast<BulletFileLoader*>(jloader);
-    const char* name = env->GetStringUTFChars(jname, 0);
-    jobject result = loader->getRigidBody(name);
-    env->ReleaseStringUTFChars(jname, name);
-    return env->NewLocalRef(result);
-}
-
-JNIEXPORT jobject JNICALL
-Java_com_samsungxr_physics_NativeBulletLoader_getJoint(JNIEnv* env, jclass clazz,
-                                                           jlong jloader, jstring jname)
-{
-    BulletFileLoader *loader = reinterpret_cast<BulletFileLoader*>(jloader);
-    const char* name = env->GetStringUTFChars(jname, 0);
-    jobject result = loader->getJoint(name);
-    env->ReleaseStringUTFChars(jname, name);
-    return env->NewLocalRef(result);
-}
-
 
 JNIEXPORT jobject JNICALL
 Java_com_samsungxr_physics_NativeBulletLoader_getCollider(JNIEnv* env, jclass clazz,
@@ -91,27 +88,6 @@ Java_com_samsungxr_physics_NativeBulletLoader_getCollider(JNIEnv* env, jclass cl
     const char* name = env->GetStringUTFChars(jname, 0);
     jobject result = loader->getCollider(name);
     env->ReleaseStringUTFChars(jname, name);
-    return env->NewLocalRef(result);
-}
-
-JNIEXPORT jobject JNICALL
-Java_com_samsungxr_physics_NativeBulletLoader_getConstraint(JNIEnv* env, jclass clazz,
-                                                          jlong jloader, jstring jname)
-{
-    BulletFileLoader *loader = reinterpret_cast<BulletFileLoader*>(jloader);
-    const char* name = env->GetStringUTFChars(jname, 0);
-    jobject result = loader->getConstraint(name);
-    env->ReleaseStringUTFChars(jname, name);
-    return env->NewLocalRef(result);
-}
-
-JNIEXPORT jobject JNICALL
-Java_com_samsungxr_physics_NativeBulletLoader_getConstraintBodyA(JNIEnv* env, jclass clazz,
-                                                                 jlong jloader, jlong nativeConstraint)
-{
-    BulletFileLoader *loader = reinterpret_cast<BulletFileLoader*>(jloader);
-    PhysicsConstraint* constraint = reinterpret_cast<PhysicsConstraint*>(nativeConstraint);
-    jobject result = loader->getConstraintBodyA(constraint);
     return env->NewLocalRef(result);
 }
 

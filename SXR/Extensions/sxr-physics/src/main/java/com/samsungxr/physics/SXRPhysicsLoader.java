@@ -97,8 +97,11 @@ public class SXRPhysicsLoader extends SXRHybridObject
      * <p>
      * The Bullet binary files only contain physics, there
      * are no nodes or meshes. The rigid bodies and constraints
-     * from the Bullet file are added to the nodes in the
-     * given scene.
+     * from the Bullet file are added to the nodes in the given scene.
+     * >p?
+     * This function will not import Featherstone multi-body hierarchies.
+     * Use {@link #loadBulletFile(SXRWorld, SXRAndroidResource)} if your
+     * file contains these Bullet objects.
      *
      * @param resource {@link SXRAndroidResource} containing the physics content..
      * @param scene    The scene containing the objects to attach physics components.
@@ -119,18 +122,24 @@ public class SXRPhysicsLoader extends SXRHybridObject
      * <p>
      * The Bullet binary files only contain physics, there
      * are no nodes or meshes. The rigid bodies and constraints
-     * from the Bullet file are added to the nodes in the
-     * given scene.
+     * from the Bullet file are added to the nodes in the given scene.
+     * <p>
+     * This function can import Featherstone multi-body hierarchies.
+     * It throws an exception if the input world does not support multi-body.
      *
      * @param resource {@link SXRAndroidResource} containing the physics content..
      * @param world    The physics world to attach physics components.
      *                 This world should be attached to the root of the
      *                 node hierarchy to attach physics to.
      */
-    public void loadBulletFile(SXRPhysicsContent world, SXRAndroidResource resource) throws IOException
+    public void loadBulletFile(SXRWorld world, SXRAndroidResource resource) throws IOException
     {
         SXRNode root = world.getOwnerObject();
 
+        if (!world.isMultiBody())
+        {
+            throw new IllegalArgumentException("The physics world must support multi-body dynamics to use this function");
+        }
         if (root == null)
         {
             root = new SXRNode(world.getSXRContext());
@@ -143,7 +152,7 @@ public class SXRPhysicsLoader extends SXRHybridObject
         {
             throw new IOException("Failed to load physics file " + resource.getResourceFilename());
         }
-        loadBulletFile(inputData, root, false);
+        loadBulletFile(world, inputData, root, false);
     }
 
     /**
@@ -247,7 +256,10 @@ public class SXRPhysicsLoader extends SXRHybridObject
 
     private void loadBulletFile(byte[] inputData, SXRNode sceneRoot, boolean ignoreUpAxis) throws IOException
     {
-        SXRContext ctx = sceneRoot.getSXRContext();
+        /*
+         * Import the Bullet binary file and construct the Java physics objects.
+         * They are attached to each other but not to nodes in the scene.
+         */
         long loader = getNative();
         boolean result = NativeBulletLoader.parse(loader, inputData, inputData.length, ignoreUpAxis);
 
@@ -256,7 +268,49 @@ public class SXRPhysicsLoader extends SXRHybridObject
             NativeBulletLoader.clear(loader);
             throw new IOException("Failed to parse bullet file");
         }
+        /*
+         * attach physics components to scene objects.
+         */
+        attachPhysics(sceneRoot);
+        NativeBulletLoader.clear(loader);
+    }
 
+    private void loadBulletFile(SXRWorld world, byte[] inputData, SXRNode sceneRoot, boolean ignoreUpAxis) throws IOException
+    {
+        /*
+         * Import the Bullet binary file and construct the Java physics objects.
+         * They are attached to each other but not to nodes in the scene.
+         */
+        long loader = getNative();
+        boolean result = NativeBulletLoader.parseMB(loader, world.getNative(), inputData, inputData.length, ignoreUpAxis);
+
+        if (!result)
+        {
+            NativeBulletLoader.clear(loader);
+            throw new IOException("Failed to parse bullet file");
+        }
+        /*
+         * attach physics components to scene objects.
+         */
+        attachPhysics(sceneRoot);
+        NativeBulletLoader.clear(loader);
+    }
+
+    /**
+     * Attach the SXR physics components to the corresponding scene
+     * nodes based on name matching.
+     * @param sceneRoot root of scene hierarchy to add physics to
+     */
+    private void attachPhysics(SXRNode sceneRoot)
+    {
+        SXRContext ctx = sceneRoot.getSXRContext();
+        long loader = getNative();
+
+        /*
+         * Attach imported SXRRigidBody objects to the corresponding
+         * scene nodes based on name matching. If a collider exists
+         * for the body, attach it to the scene object too.
+         */
         SXRRigidBody[] bodies = NativeBulletLoader.getRigidBodies(loader);
         for (SXRRigidBody body : bodies)
         {
@@ -280,6 +334,11 @@ public class SXRPhysicsLoader extends SXRHybridObject
             sceneObject.attachComponent(body);
         }
 
+        /*
+         * Attach imported SXRRPhysicsJoint objects to the corresponding
+         * scene nodes based on name matching. If a collider exists
+         * for the joint, attach it to the scene object too.
+         */
         SXRPhysicsJoint[] joints = NativeBulletLoader.getJoints(loader);
         for (SXRPhysicsJoint joint : joints)
         {
@@ -303,6 +362,12 @@ public class SXRPhysicsLoader extends SXRHybridObject
             sceneObject.attachComponent(joint);
         }
 
+        /*
+         * Attach imported SXRConstraint objects to the corresponding
+         * scene nodes based on name matching. The Java constraints
+         * are already attached to bodyA, The scene object and its
+         * rigid body / joint is bodyB.
+         */
         SXRConstraint[] constraints = NativeBulletLoader.getConstraints(loader);
         for (SXRConstraint constraint : constraints)
         {
@@ -314,11 +379,8 @@ public class SXRPhysicsLoader extends SXRHybridObject
                 Log.w(TAG, "Didn't find node for constraint '" + name + "'");
                 continue;
             }
-            SXRPhysicsCollidable bodyA = NativeBulletLoader.getConstraintBodyA(loader, constraint.getNative());
-            constraint.setBodyA(bodyA);
             sceneObject.attachComponent(constraint);
         }
-        NativeBulletLoader.clear(loader);
     }
 
     private static byte[] toByteArray(SXRAndroidResource resource) throws IOException {
@@ -352,11 +414,9 @@ class NativeBulletLoader
 
     static native boolean parse(long loader, byte[] bytes, int len, boolean ignoreUpAxis);
 
+    static native boolean parseMB(long loader, long world, byte[] bytes, int len, boolean ignoreUpAxis);
+
     static native void clear(long loader);
-
-    static native SXRRigidBody getRigidBody(long loader, String name);
-
-    static native SXRPhysicsJoint getJoint(long loader, String name);
 
     static native SXRCollider getCollider(long loader, String name);
 
@@ -371,7 +431,4 @@ class NativeBulletLoader
     static native String getJointName(long loader, long nativeJoint);
 
     static native String getConstraintName(long loader, long nativeConstraint);
-
-    static native SXRPhysicsCollidable getConstraintBodyA(long loader, long nativeConstraint);
-
 }

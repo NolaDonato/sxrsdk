@@ -51,15 +51,32 @@ namespace sxr
 class PhysicsCollidable;
 class PhysicsConstraint;
 class Collider;
+class BulletWorld;
 class BulletRigidBody;
 class BulletJoint;
 
+/**
+ * Imports a binary .bullet file and constructs the SXR
+ * Java physics components from it:
+ * btRigidBody          SXRRigidBody
+ * btCollisionShape     SXRCollider
+ * btMultiBody          SXRPhysicsJoint
+ * btTypedConstraint    SXRConstraint
+ * These objects are connected to each other upon return
+ * but are not connected to nodes in the scene.
+ *
+ * The C++ loader maintain maps between the name of
+ * the scene node and the physics components that
+ * should be attached to it. They are used by the
+ * Java part of the physics loader to attach the physics
+ * components to the right nodes.
+ */
 class BulletFileLoader : public HybridObject
 {
 public:
     BulletFileLoader(jobject context, JavaVM& jvm);
 
-    bool parse(btMultiBodyDynamicsWorld* world, char *buffer, size_t length, bool ignoreUpAxis);
+    bool parse(BulletWorld* world, char *buffer, size_t length, bool ignoreUpAxis);
 
     bool parse(char *buffer, size_t length, bool ignoreUpAxis);
 
@@ -87,15 +104,14 @@ public:
 
     jobjectArray getConstraints();
 
-    jobject getConstraintBodyA(PhysicsConstraint*);
-
 private:
-    jobject    createP2PConstraint(btPoint2PointConstraint* p2p);
-    jobject    createHingeConstraint(btHingeConstraint* hg);
-    jobject    createConeTwistConstraint(btConeTwistConstraint* ct);
-    jobject    createFixedConstraint(btFixedConstraint* fix);
-    jobject    createSliderConstraint(btSliderConstraint* sld);
-    jobject    createGenericConstraint(btGeneric6DofConstraint* gen);
+    jobject    getConstraintBodyA(PhysicsConstraint*);
+    jobject    createP2PConstraint(JNIEnv& env, btPoint2PointConstraint* , PhysicsConstraint*& constraint);
+    jobject    createHingeConstraint(JNIEnv& env, btHingeConstraint* hg, PhysicsConstraint*& constraint);
+    jobject    createConeTwistConstraint(JNIEnv& env, btConeTwistConstraint* ct, PhysicsConstraint*& constraint);
+    jobject    createFixedConstraint(JNIEnv& env, btFixedConstraint* fix, PhysicsConstraint*& constraint);
+    jobject    createSliderConstraint(JNIEnv& env, btSliderConstraint* sld, PhysicsConstraint*& constraint);
+    jobject    createGenericConstraint(JNIEnv& env, btGeneric6DofConstraint* gen, PhysicsConstraint*& constraint);
     void       createRigidBodies();
     void       createJoints();
     void       createConstraints();

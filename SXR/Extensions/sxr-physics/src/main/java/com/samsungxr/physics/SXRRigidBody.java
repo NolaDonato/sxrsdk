@@ -60,7 +60,6 @@ public class SXRRigidBody extends SXRPhysicsCollidable
 
     private final int mCollisionGroup;
     private final SXRPhysicsContext mPhysicsContext;
-    private final boolean mLoaded;
 
     /**
      * Constructs a new static rigid body with zero mass.
@@ -91,7 +90,6 @@ public class SXRRigidBody extends SXRPhysicsCollidable
         super(ctx, NativeRigidBody.ctor(mass));
         mCollisionGroup = (mass > 0) ? SXRCollisionMatrix.DEFAULT_GROUP : SXRCollisionMatrix.STATIC_GROUP;
         mPhysicsContext = SXRPhysicsContext.getInstance();
-        mLoaded = false;
     }
 
     /**
@@ -117,16 +115,14 @@ public class SXRRigidBody extends SXRPhysicsCollidable
         super(ctx, NativeRigidBody.ctor(mass));
         mCollisionGroup = collisionGroup;
         mPhysicsContext = SXRPhysicsContext.getInstance();
-        mLoaded = false;
     }
 
     /** Used only by {@link SXRPhysicsLoader} */
-    SXRRigidBody(SXRContext gvrContext, long nativeRigidBody)
+    SXRRigidBody(SXRContext ctx, long nativeRigidBody)
     {
-        super(gvrContext, nativeRigidBody);
-        mCollisionGroup = -1;
+        super(ctx, nativeRigidBody);
+        mCollisionGroup = (getMass() > 0) ? SXRCollisionMatrix.DEFAULT_GROUP : SXRCollisionMatrix.STATIC_GROUP;;
         mPhysicsContext = SXRPhysicsContext.getInstance();
-        mLoaded = true;
     }
 
     static public long getComponentType() {
@@ -620,7 +616,7 @@ public class SXRRigidBody extends SXRPhysicsCollidable
     @Override
     public void onAttach(SXRNode newOwner)
     {
-        if (!mLoaded && newOwner.getCollider() == null)
+        if (newOwner.getCollider() == null)
         {
             throw new UnsupportedOperationException("You must have a collider attached to the node before attaching the rigid body");
         }
