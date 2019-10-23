@@ -65,7 +65,7 @@ dependencies {
 
     implementation 'com.android.support:support-v4:26.0.1'
     implementation "org.joml:joml-android:${jomlVersion}"
-    implementation 'com.google.code.gson:gson:2.8.+'
+    implementation 'com.google.code.gson:gson:2.8.5'
 }
 clean {}.doLast {
     def sxrLibs = project.rootDir.absolutePath + "/../sxr-libs"

@@ -5,6 +5,13 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fexceptions")
 string(TOLOWER ${CMAKE_BUILD_TYPE} buildType)
 set(bulletDir ${CMAKE_CURRENT_SOURCE_DIR}/../jniLibs/${ANDROID_ABI})
 set(strip "${ANDROID_TOOLCHAIN_PREFIX}strip -g -S -d --strip-debug --verbose ${bulletDir}/")
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/bullet3/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/bullet3/urdfimporter)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/bullet3/urdfimporter/meshimport)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../../../../SDK/sxrsdk/src/main/jni)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../../../../SDK/sxrsdk/src/main/jni/contrib)
+
 add_library(sxr-physics SHARED
     engine/bullet/bullet_sxr_utils.cpp
     engine/bullet/bullet_rigidbody.cpp
@@ -33,11 +40,21 @@ add_library(sxr-physics SHARED
     engine/physics_hingeconstraint_jni.cpp
     engine/physics_sliderconstraint_jni.cpp
     engine/physics_conetwistconstraint_jni.cpp
-    engine/physics_genericconstraint_jni.cpp)
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/bullet3/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../../../../SDK/sxrsdk/src/main/jni)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../../../../SDK/sxrsdk/src/main/jni/contrib)
+    engine/physics_genericconstraint_jni.cpp
+    bullet3/urdfimporter/URDFConverter.cpp
+    bullet3/urdfimporter/URDF2Bullet.cpp
+    bullet3/urdfimporter/UrdfParser.cpp
+    bullet3/urdfimporter/urdfStringSplit.cpp
+    bullet3/urdfimporter/BulletUrdfImporter.cpp
+    bullet3/urdfimporter/tinyxml2/tinyxml2.cpp
+    bullet3/urdfimporter/meshimport/b3ResourcePath.cpp
+    bullet3/urdfimporter/meshimport/LoadMeshFromObj.cpp
+    bullet3/urdfimporter/meshimport/LoadMeshFromCollada.cpp
+    bullet3/urdfimporter/meshimport/b3ImportMeshUtility.cpp
+    bullet3/urdfimporter/meshimport/tiny_obj_loader.cpp
+    bullet3/urdfimporter/meshimport/Wavefront2GLInstanceGraphicsShape.cpp
+    bullet3/urdfimporter/stb_image/stb_image.cpp
+    bullet3/urdfimporter/stb_image/stb_image_write.cpp)
 
 add_library(sxrsdk SHARED IMPORTED)
 set_property(TARGET sxrsdk PROPERTY IMPORTED_LOCATION
@@ -73,4 +90,7 @@ set_target_properties(BulletFileLoader PROPERTIES IMPORTED_LOCATION ${bulletDir}
 add_library(BulletWorldImporter SHARED IMPORTED)
 set_target_properties(BulletWorldImporter PROPERTIES IMPORTED_LOCATION ${bulletDir}/libBulletWorldImporter.so)
 
-target_link_libraries(sxr-physics sxrsdk BulletWorldImporter BulletFileLoader Bullet3Dynamics Bullet3Collision Bullet3Geometry Bullet3Common BulletDynamics BulletCollision LinearMath android log  EGL GLESv3)
+
+
+target_link_libraries(sxr-physics sxrsdk BulletWorldImporter BulletFileLoader Bullet3Dynamics Bullet3Collision Bullet3Geometry Bullet3Common BulletDynamics BulletCollision LinearMath android log EGL GLESv3)
+

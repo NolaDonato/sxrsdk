@@ -86,9 +86,6 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
         System.loadLibrary("Bullet3Collision");
         System.loadLibrary("Bullet3Dynamics");
         System.loadLibrary("Bullet3Geometry");
-        System.loadLibrary("BulletSoftBody");
-        System.loadLibrary("Bullet2FileLoader");
-        System.loadLibrary("BulletWorldImporter");
     }
 
     /**
@@ -236,6 +233,24 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
         scene.getRoot().attachComponent(this);
     }
 
+
+    /**
+     * Constructs simulation world and attaches it to the given node.
+     *
+     * @param root            The root node of the hierarchy to add physics.
+     * @param isMultiBody     import articulated bodies as {@link SXRPhysicsJoint} components
+     *                        and use Featherstone multibody simulation. The default is to
+     *                        import everything as {@link SXRRigidBody} components and
+     *                        use discrete dynamics.
+     */
+    SXRWorld(SXRNode root, boolean isMultiBody)
+    {
+        super(root, isMultiBody);
+        mListeners = new SXREventReceiver(this);
+        mCollisionMatrix = null;
+        mWorldTask = new SXRWorldTask(DEFAULT_INTERVAL);
+        root.attachComponent(this);
+    }
 
     /**
      * Enables or disabled debug drawing of the physics world.

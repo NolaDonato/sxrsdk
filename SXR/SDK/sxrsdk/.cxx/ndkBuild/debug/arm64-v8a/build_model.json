@@ -1,0 +1,62 @@
+{
+  "variant": {
+    "module": {
+      "rootBuildGradleFolder": "/home/nola.donato/projects/SXR/dmPhysicsExtension/sxr-dressup",
+      "sdkFolder": "/home/nola.donato/Android/Sdk",
+      "isNativeCompilerSettingsCacheEnabled": false,
+      "isBuildOnlyTargetAbiEnabled": true,
+      "splitsAbiFilterSet": [],
+      "intermediatesFolder": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/build/intermediates",
+      "gradleModulePathName": ":sxrsdk",
+      "moduleRootFolder": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk",
+      "makeFile": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/src/main/jni/Android.mk",
+      "buildSystem": "NDK_BUILD",
+      "compilerSettingsCacheFolder": "/home/nola.donato/projects/SXR/dmPhysicsExtension/sxr-dressup/.cxx",
+      "cxxFolder": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/.cxx",
+      "ndkFolder": "/home/nola.donato/Android/Sdk/ndk-bundle",
+      "ndkVersion": "19.2.5345600",
+      "ndkSupportedAbiList": [
+        "ARMEABI_V7A",
+        "ARM64_V8A",
+        "X86",
+        "X86_64"
+      ],
+      "ndkDefaultAbiList": [
+        "ARMEABI_V7A",
+        "ARM64_V8A",
+        "X86",
+        "X86_64"
+      ],
+      "cmakeToolchainFile": "."
+    },
+    "buildSystemArgumentList": [
+      "-j40"
+    ],
+    "cFlagList": [],
+    "cppFlagsList": [],
+    "variantName": "debug",
+    "soFolder": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/build/intermediates/ndkBuild/debug/lib",
+    "objFolder": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/build/intermediates/ndkBuild/debug/obj/local",
+    "jsonFolder": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/.cxx/ndkBuild/debug",
+    "gradleBuildOutputFolder": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/.cxx/cxx/debug",
+    "isDebuggableEnabled": true,
+    "validAbiList": [
+      "ARMEABI_V7A",
+      "ARM64_V8A",
+      "X86",
+      "X86_64"
+    ],
+    "buildTargetSet": []
+  },
+  "abi": "ARM64_V8A",
+  "abiPlatformVersion": 21,
+  "cxxBuildFolder": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/.cxx/ndkBuild/debug/arm64-v8a",
+  "jsonFile": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/.cxx/ndkBuild/debug/arm64-v8a/android_gradle_build.json",
+  "gradleBuildOutputFolder": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/.cxx/cxx/debug/arm64-v8a",
+  "objFolder": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/build/intermediates/ndkBuild/debug/obj/local/arm64-v8a",
+  "buildCommandFile": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/.cxx/ndkBuild/debug/arm64-v8a/build_command.txt",
+  "buildOutputFile": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/.cxx/ndkBuild/debug/arm64-v8a/build_output.txt",
+  "modelOutputFile": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/.cxx/ndkBuild/debug/arm64-v8a/build_model.json",
+  "jsonGenerationLoggingRecordFile": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/.cxx/ndkBuild/debug/arm64-v8a/json_generation_record.json",
+  "compileCommandsJsonFile": "/home/nola.donato/projects/SXR/sxrsdk/SXR/SDK/sxrsdk/.cxx/ndkBuild/debug/arm64-v8a/compile_commands.json"
+}

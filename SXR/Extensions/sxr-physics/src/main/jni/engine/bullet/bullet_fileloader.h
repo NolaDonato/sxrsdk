@@ -24,6 +24,8 @@ class btBulletWorldImporter;
 class btMultiBodyWorldImporter;
 class btDynamicsWorld;
 class btMultiBodyDynamicsWorld;
+class btTypedConstraint;
+class btMultiBodyConstraint;
 class btMultiBodyFixedConstraint;
 class btGeneric6DofConstraint;
 class btPoint2PointConstraint;
@@ -32,6 +34,9 @@ class btConeTwistConstraint;
 class btHingeConstraint;
 class btFixedConstraint;
 class btCollisionObject;
+class btRigidBody;
+class btSerializer;
+class URDFConverter;
 
 namespace std
 {
@@ -80,6 +85,8 @@ public:
 
     bool parse(char *buffer, size_t length, bool ignoreUpAxis);
 
+    bool parseURDF(BulletWorld* world, const char* xmldata, bool ignoreUpAxis);
+
     void clear();
 
     virtual ~BulletFileLoader();
@@ -112,18 +119,26 @@ private:
     jobject    createFixedConstraint(JNIEnv& env, btFixedConstraint* fix, PhysicsConstraint*& constraint);
     jobject    createSliderConstraint(JNIEnv& env, btSliderConstraint* sld, PhysicsConstraint*& constraint);
     jobject    createGenericConstraint(JNIEnv& env, btGeneric6DofConstraint* gen, PhysicsConstraint*& constraint);
-    void       createRigidBodies();
-    void       createJoints();
-    void       createConstraints();
-    void       createMultiBodyConstraints();
+    void       createRigidBodies(btBulletWorldImporter&);
+    void       createRigidBodies(btMultiBodyDynamicsWorld&);
+    void       createRigidBody(JNIEnv& env, btRigidBody* rb);
+    void       createJoints(btMultiBodyDynamicsWorld&);
+    void       createConstraints(btMultiBodyWorldImporter&);
+    void       createConstraints(btMultiBodyDynamicsWorld&);
+    void       createMultiBodyConstraints(btMultiBodyDynamicsWorld&);
     jobject    createCollider(btCollisionObject*);
+    void       createConstraint(JNIEnv& env, btTypedConstraint* constraint);
+    void       createMultiBodyConstraint(JNIEnv& env, btMultiBodyConstraint* c);
+    const char* getNameForPointer(void* p);
 
     std::unordered_map<std::string, SmartGlobalRef>  mRigidBodies;
     std::unordered_map<std::string, SmartGlobalRef>  mJoints;
     std::unordered_map<std::string, SmartGlobalRef>  mColliders;
     std::unordered_map<std::string, SmartGlobalRef>  mConstraints;
+    btSerializer*               mSerializer;
     btDynamicsWorld*            mWorld;
-    btMultiBodyWorldImporter*   mImporter;
+    btMultiBodyWorldImporter*   mBulletImporter;
+    URDFConverter*              mURDFImporter;
     JavaVM&                     mJavaVM;
     SmartGlobalRef              mContext;
     bool                        mNeedRotate;

@@ -73,6 +73,25 @@ Java_com_samsungxr_physics_NativeBulletLoader_parseMB(JNIEnv* env, jclass clazz,
     return result;
 }
 
+JNIEXPORT bool JNICALL
+Java_com_samsungxr_physics_NativeBulletLoader_parseURDF(JNIEnv* env, jclass clazz,
+                                                      jlong jloader,
+                                                      jlong jworld,
+                                                      jstring jxmldata,
+                                                      jboolean ignoreUpAxis)
+{
+    const char* xmldata = env->GetStringUTFChars(jxmldata, 0);
+    if (xmldata == NULL)
+    {
+        return 0;
+    }
+    BulletFileLoader* loader = reinterpret_cast<BulletFileLoader*>(jloader);
+    BulletWorld* world = reinterpret_cast<BulletWorld*>(jworld);
+    bool result = loader->parseURDF(world, (char*) xmldata, ignoreUpAxis);
+    env->ReleaseStringUTFChars(jxmldata, xmldata);
+    return result;
+}
+
 JNIEXPORT void JNICALL
 Java_com_samsungxr_physics_NativeBulletLoader_clear(JNIEnv* env, jclass clazz, jlong jloader)
 {

@@ -122,7 +122,7 @@ android {
 }
 
 project.ext.jomlVersion = "1.9.3-SNAPSHOT"
-project.ext.gsonVersion = '2.8.2'
+project.ext.gsonVersion = '2.8.5'
 
 dependencies {
     api fileTree(dir: 'src/main/libs', include: ['*.jar'])

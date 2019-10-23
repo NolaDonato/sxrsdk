@@ -2,7 +2,7 @@
 #ifndef URDF_FIND_MESH_FILE_H
 #define URDF_FIND_MESH_FILE_H
 
-#include "../../CommonInterfaces/CommonFileIOInterface.h"
+#include "CommonInterfaces/CommonFileIOInterface.h"
 #include "Bullet3Common/b3Logging.h"
 
 #include <string>
