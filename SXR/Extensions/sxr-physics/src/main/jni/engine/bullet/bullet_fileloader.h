@@ -28,6 +28,7 @@ class btTypedConstraint;
 class btMultiBodyConstraint;
 class btMultiBodyFixedConstraint;
 class btGeneric6DofConstraint;
+class btGeneric6DofSpring2Constraint;
 class btPoint2PointConstraint;
 class btSliderConstraint;
 class btConeTwistConstraint;
@@ -91,10 +92,6 @@ public:
 
     virtual ~BulletFileLoader();
 
-    const char* getRigidBodyName(BulletRigidBody* body);
-
-    const char* getJointName(BulletJoint* joint);
-
     const char* getConstraintName(PhysicsConstraint* constraint);
 
     jobject getRigidBody(const char* name);
@@ -119,6 +116,7 @@ private:
     jobject    createFixedConstraint(JNIEnv& env, btFixedConstraint* fix, PhysicsConstraint*& constraint);
     jobject    createSliderConstraint(JNIEnv& env, btSliderConstraint* sld, PhysicsConstraint*& constraint);
     jobject    createGenericConstraint(JNIEnv& env, btGeneric6DofConstraint* gen, PhysicsConstraint*& constraint);
+    jobject    createSpringConstraint(JNIEnv& env, btGeneric6DofSpring2Constraint* gen, PhysicsConstraint*& constraint);
     void       createRigidBodies(btBulletWorldImporter&);
     void       createRigidBodies(btMultiBodyDynamicsWorld&);
     void       createRigidBody(JNIEnv& env, btRigidBody* rb);

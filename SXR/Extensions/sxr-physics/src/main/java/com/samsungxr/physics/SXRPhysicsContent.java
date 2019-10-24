@@ -247,7 +247,7 @@ public class SXRPhysicsContent extends SXRComponent
         attachConstraints(getCollidables());
     }
 
-    protected void doPhysicsDetach(SXRNode rootNode)
+    protected void doPhysicsDetach(final SXRNode rootNode)
     {
         for (int i = 0; i < mPhysicsObject.size(); ++i)
         {

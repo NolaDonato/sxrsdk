@@ -26,7 +26,10 @@
 #include <glm/mat3x3.hpp>
 
 class btGeneric6DofSpringConstraint;
+class btGeneric6DofSpring2Constraint;
 class btGeneric6DofConstraint;
+class btTypedConstraint;
+
 namespace sxr {
 
     class PhysicsRigidBody;
@@ -38,6 +41,8 @@ namespace sxr {
         BulletGeneric6dofConstraint(PhysicsCollidable* bodyA, const glm::vec3& pivotA, const glm::vec3& pivotB);
 
         BulletGeneric6dofConstraint(btGeneric6DofConstraint *constraint);
+
+        BulletGeneric6dofConstraint(btGeneric6DofSpring2Constraint *constraint);
 
         virtual ~BulletGeneric6dofConstraint();
 
@@ -67,7 +72,7 @@ namespace sxr {
 
     private:
 
-        btGeneric6DofConstraint* mConstraint;
+        btTypedConstraint* mConstraint;
         float             mBreakingImpulse;
         mutable glm::vec3 mLinearLowerLimits;
         mutable glm::vec3 mLinearUpperLimits;

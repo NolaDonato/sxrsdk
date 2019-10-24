@@ -341,12 +341,9 @@ std::string BulletURDFImporter::getJointName(int linkIndex) const
 	if (linkPtr)
 	{
 		UrdfLink* link = *linkPtr;
-		if (link->m_parentJoint)
-		{
-			return link->m_parentJoint->m_name;
-		}
+		return link->m_name;
 	}
-	return "";
+	return getBodyName();
 }
 
 void BulletURDFImporter::getMassAndInertia2(int urdfLinkIndex, btScalar& mass, btVector3& localInertiaDiagonal, btTransform& inertialFrame, int flags) const

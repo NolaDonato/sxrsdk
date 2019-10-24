@@ -139,6 +139,15 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
          * @param world physics world being simulated
          */
         public void onStepPhysics(final SXRWorld world);
+
+        /**
+         * Called after a physics file is loaded.
+         * @param  world    {@link }SXRPhysicsContent} containing the physics objects loaded.
+         *                  May be null if the load failed.
+         * @param filename  Name of file or resource loaded.
+         * @param errors    Errors during loading, null if load was successful.
+         */
+        public void onAssetLoaded(SXRPhysicsContent world, String filename, String errors);
     }
 
 
@@ -307,13 +316,20 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
      */
     public void merge(SXRPhysicsContent world)
     {
-        SXRNode inputRoot = world.getOwnerObject();
+        final SXRNode inputRoot = world.getOwnerObject();
         if (inputRoot == null)
         {
             throw new IllegalArgumentException("The input physics world does not have any scene objects");
         }
         inputRoot.detachComponent(SXRWorld.getComponentType());
-        doPhysicsAttach(inputRoot);
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                doPhysicsAttach(inputRoot);
+            }
+        });
     }
 
     /**
@@ -647,14 +663,6 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
 
     }
 
-    protected void doPhysicsDetach(SXRNode rootNode)
-    {
-        super.doPhysicsDetach(rootNode);
-        if (isEnabled())
-        {
-            stopSimulation();
-        }
-    }
 
     @Override
     public void onAttach(SXRNode newOwner)
@@ -664,6 +672,25 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
             throw new UnsupportedOperationException("SXRWorld must be attached to the scene's root object");
         }
         super.onAttach(newOwner);
+    }
+
+    @Override
+    public void onDetach(SXRNode oldOwner)
+    {
+        final SXRNode node = oldOwner;
+        super.onDetach(oldOwner);
+        if (isEnabled())
+        {
+            stopSimulation();
+        }
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                doPhysicsDetach(node);
+            }
+        });
     }
 
     @Override

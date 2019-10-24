@@ -181,6 +181,35 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     }
 
     /**
+     * Get the name of this joint.
+     * <p>
+     * If the joint is attached to a scene object, the name
+     * of the scene object is returned. Otherwise, the name of the
+     * joint last updated by {@link #setName(String)} is returned.
+     * If the name has never been set, null is returned.
+     * @return name of joint, may be null
+     */
+    public String getName()
+    {
+        return NativePhysicsJoint.getName(getNative());
+    }
+
+    /**
+     * Set the name of this joint.
+     * <p>
+     * If the joint is attached to a scene object,
+     * the name of the scene object is set if it was
+     * previously null. If the joint does not have
+     * an owner, its local name is updated.
+     * If this joint is later attached to a scene
+     * object of a different name, the name is not changed.
+     */
+    public void setName(String name)
+    {
+        NativePhysicsJoint.setName(getNative(), name);
+    }
+
+    /**
      * Set the joint axis for hinge or slider.
      * @param x X direction.
      * @param y Y direction.
@@ -444,4 +473,9 @@ class NativePhysicsJoint
     static native void applyCentralForce(long joint, float x, float y, float z);
 
     static native long getSkeleton(long joint);
+
+    static native String getName(long joint);
+
+    static native void setName(long joint, String name);
+
 }

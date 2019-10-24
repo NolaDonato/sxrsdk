@@ -49,7 +49,11 @@ class BulletJoint : public PhysicsJoint
 
     virtual ~BulletJoint() { }
 
-    btMultiBody* getMultiBody() const { return mMultiBody; }
+	virtual const char* getName() const;
+
+	virtual void setName(const char*);
+
+	btMultiBody* getMultiBody() const { return mMultiBody; }
 
     btMultibodyLink* getLink() const { return &(mMultiBody->getLink(mJointIndex)); }
 
@@ -108,6 +112,7 @@ protected:
     BulletJoint*             mParent;
     btMultiBodyLinkCollider* mCollider;
     btMultiBody*             mMultiBody;
+    std::string				 mName;
     JointType                mJointType;
     glm::vec3                mAxis;
     glm::vec3                mPivot;

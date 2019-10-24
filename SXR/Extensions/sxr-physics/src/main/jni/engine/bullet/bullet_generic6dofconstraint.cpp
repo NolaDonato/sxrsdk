@@ -24,6 +24,7 @@
 
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <BulletDynamics/ConstraintSolver/btGeneric6DofSpringConstraint.h>
+#include <BulletDynamics/ConstraintSolver/btGeneric6DofSpring2Constraint.h>
 #include <glm/glm.hpp>
 #include <glm/vec3.hpp>
 #include "glm/gtc/type_ptr.hpp"
@@ -49,6 +50,13 @@ namespace sxr {
         constraint->setUserConstraintPtr(this);
     }
 
+    BulletGeneric6dofConstraint::BulletGeneric6dofConstraint(btGeneric6DofSpring2Constraint* constraint)
+    {
+        mConstraint = constraint;
+        mBodyA = static_cast<BulletRigidBody*>(constraint->getRigidBodyA().getUserPointer());
+        constraint->setUserConstraintPtr(this);
+    }
+
     BulletGeneric6dofConstraint::~BulletGeneric6dofConstraint()
     {
         if (mConstraint)
@@ -59,89 +67,161 @@ namespace sxr {
 
     void BulletGeneric6dofConstraint::setLinearLowerLimits(float limitX, float limitY, float limitZ)
     {
-        if (mConstraint)
-        {
-            mConstraint->setLinearLowerLimit(btVector3(limitX, limitY, limitZ));
-        }
+        btGeneric6DofConstraint* c = dynamic_cast<btGeneric6DofConstraint*>(mConstraint);
+        btGeneric6DofSpring2Constraint* sc = dynamic_cast<btGeneric6DofSpring2Constraint*>(mConstraint);
+
         mLinearLowerLimits = glm::vec3(limitX, limitY, limitZ);
+        if (c)
+        {
+            c->setLinearLowerLimit(btVector3(limitX, limitY, limitZ));
+        }
+        else if (sc)
+        {
+            sc->setLinearLowerLimit(btVector3(limitX, limitY, limitZ));
+        }
     }
 
     const glm::vec3& BulletGeneric6dofConstraint::getLinearLowerLimits() const
     {
-        if (mConstraint)
+        btVector3 t;
+        btGeneric6DofConstraint* c = dynamic_cast<btGeneric6DofConstraint*>(mConstraint);
+        btGeneric6DofSpring2Constraint* sc = dynamic_cast<btGeneric6DofSpring2Constraint*>(mConstraint);
+
+        if (c)
         {
-            btVector3 t;
-            mConstraint->getLinearLowerLimit(t);
-            mLinearLowerLimits.x = t.x();
-            mLinearLowerLimits.y = t.y();
-            mLinearLowerLimits.z = t.z();
+            c->getLinearLowerLimit(t);
         }
+        else if (sc)
+        {
+            sc->getLinearLowerLimit(t);
+        }
+        else
+        {
+           return mLinearLowerLimits;
+        }
+        mLinearLowerLimits.x = t.x();
+        mLinearLowerLimits.y = t.y();
+        mLinearLowerLimits.z = t.z();
         return mLinearLowerLimits;
     }
 
     void BulletGeneric6dofConstraint::setLinearUpperLimits(float limitX, float limitY, float limitZ)
     {
-        if (mConstraint)
-        {
-            mConstraint->setLinearUpperLimit(btVector3(limitX, limitY, limitZ));
-        }
+        btGeneric6DofConstraint* c = dynamic_cast<btGeneric6DofConstraint*>(mConstraint);
+        btGeneric6DofSpring2Constraint* sc = dynamic_cast<btGeneric6DofSpring2Constraint*>(mConstraint);
+
         mLinearUpperLimits = glm::vec3(limitX, limitY, limitZ);
+        if (c)
+        {
+            c->setLinearUpperLimit(btVector3(limitX, limitY, limitZ));
+        }
+        else if (sc)
+        {
+            sc->setLinearUpperLimit(btVector3(limitX, limitY, limitZ));
+        }
     }
 
     const glm::vec3& BulletGeneric6dofConstraint::getLinearUpperLimits() const
     {
-        if (mConstraint)
+        btVector3 t;
+        btGeneric6DofConstraint* c = dynamic_cast<btGeneric6DofConstraint*>(mConstraint);
+        btGeneric6DofSpring2Constraint* sc = dynamic_cast<btGeneric6DofSpring2Constraint*>(mConstraint);
+
+        if (c)
         {
-            btVector3 t;
-            mConstraint->getLinearUpperLimit(t);
-            mLinearUpperLimits.x = t.x();
-            mLinearUpperLimits.y = t.y();
-            mLinearUpperLimits.z = t.z();
+            c->getLinearUpperLimit(t);
         }
+        else if (sc)
+        {
+            sc->getLinearUpperLimit(t);
+        }
+        else
+        {
+            return mLinearUpperLimits;
+        }
+        mLinearUpperLimits.x = t.x();
+        mLinearUpperLimits.y = t.y();
+        mLinearUpperLimits.z = t.z();
         return mLinearUpperLimits;
     }
 
     void BulletGeneric6dofConstraint::setAngularLowerLimits(float limitX, float limitY, float limitZ)
     {
-        if (mConstraint)
-        {
-            mConstraint->setAngularLowerLimit(btVector3(limitX, limitY, limitZ));
-        }
+        btGeneric6DofConstraint* c = dynamic_cast<btGeneric6DofConstraint*>(mConstraint);
+        btGeneric6DofSpring2Constraint* sc = dynamic_cast<btGeneric6DofSpring2Constraint*>(mConstraint);
+
         mAngularLowerLimits = glm::vec3(limitX, limitY, limitZ);
+        if (c)
+        {
+            c->setAngularUpperLimit(btVector3(limitX, limitY, limitZ));
+        }
+        else if (sc)
+        {
+            sc->setAngularUpperLimit(btVector3(limitX, limitY, limitZ));
+        }
     }
 
     const glm::vec3&  BulletGeneric6dofConstraint::getAngularLowerLimits() const
     {
-        if (mConstraint)
+        btVector3 t;
+        btGeneric6DofConstraint* c = dynamic_cast<btGeneric6DofConstraint*>(mConstraint);
+        btGeneric6DofSpring2Constraint* sc = dynamic_cast<btGeneric6DofSpring2Constraint*>(mConstraint);
+
+        if (c)
         {
-            btVector3 t;
-            mConstraint->getAngularLowerLimit(t);
-            mAngularLowerLimits.x = t.x();
-            mAngularLowerLimits.y = t.y();
-            mAngularLowerLimits.z = t.z();
+            c->getAngularLowerLimit(t);
         }
+        else if (sc)
+        {
+            sc->getAngularLowerLimit(t);
+        }
+        else
+        {
+            return mAngularLowerLimits;
+        }
+        mAngularLowerLimits.x = t.x();
+        mAngularLowerLimits.y = t.y();
+        mAngularLowerLimits.z = t.z();
         return mAngularLowerLimits;
     }
 
     void BulletGeneric6dofConstraint::setAngularUpperLimits(float limitX, float limitY, float limitZ)
     {
-        if ( mConstraint)
-        {
-            mConstraint->setAngularUpperLimit(btVector3(limitX, limitY, limitZ));
-        }
+        btGeneric6DofConstraint* c = dynamic_cast<btGeneric6DofConstraint*>(mConstraint);
+        btGeneric6DofSpring2Constraint* sc = dynamic_cast<btGeneric6DofSpring2Constraint*>(mConstraint);
+
         mAngularUpperLimits = glm::vec3(limitX, limitY, limitZ);
+        if (c)
+        {
+            c->setAngularUpperLimit(btVector3(limitX, limitY, limitZ));
+        }
+        else if (sc)
+        {
+            sc->setAngularUpperLimit(btVector3(limitX, limitY, limitZ));
+        }
     }
 
     const glm::vec3& BulletGeneric6dofConstraint::getAngularUpperLimits() const
     {
-        if (mConstraint)
+        btVector3 t;
+        btGeneric6DofConstraint* c = dynamic_cast<btGeneric6DofConstraint*>(mConstraint);
+        btGeneric6DofSpring2Constraint* sc = dynamic_cast<btGeneric6DofSpring2Constraint*>(mConstraint);
+
+        if (c)
         {
-            btVector3 t;
-            mConstraint->getAngularUpperLimit(t);
-            mAngularUpperLimits.x = t.x();
-            mAngularUpperLimits.y = t.y();
-            mAngularUpperLimits.z = t.z();
+            c->getAngularUpperLimit(t);
         }
+        else if (sc)
+        {
+            sc->getAngularUpperLimit(t);
+        }
+        else
+        {
+            return mAngularUpperLimits;
+        }
+        mAngularUpperLimits.x = t.x();
+        mAngularUpperLimits.y = t.y();
+        mAngularUpperLimits.z = t.z();
         return mAngularUpperLimits;
     }
 
@@ -190,12 +270,13 @@ void BulletGeneric6dofConstraint::updateConstructionInfo(PhysicsWorld* world)
 
         localFrameA.setOrigin(pA);
         localFrameB.setOrigin(pB);
-        mConstraint = new btGeneric6DofSpringConstraint(*rbA, *rbB, localFrameA, localFrameB, false);
-        mConstraint->setLinearLowerLimit(Common2Bullet(mLinearLowerLimits));
-        mConstraint->setLinearUpperLimit(Common2Bullet(mLinearUpperLimits));
-        mConstraint->setAngularLowerLimit(Common2Bullet(mAngularLowerLimits));
-        mConstraint->setAngularUpperLimit(Common2Bullet(mAngularUpperLimits));
-        mConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
+        btGeneric6DofSpringConstraint* constraint = new btGeneric6DofSpringConstraint(*rbA, *rbB, localFrameA, localFrameB, false);
+        constraint->setLinearLowerLimit(Common2Bullet(mLinearLowerLimits));
+        constraint->setLinearUpperLimit(Common2Bullet(mLinearUpperLimits));
+        constraint->setAngularLowerLimit(Common2Bullet(mAngularLowerLimits));
+        constraint->setAngularUpperLimit(Common2Bullet(mAngularUpperLimits));
+        constraint->setBreakingImpulseThreshold(mBreakingImpulse);
+        mConstraint = constraint;
     }
 }
 }

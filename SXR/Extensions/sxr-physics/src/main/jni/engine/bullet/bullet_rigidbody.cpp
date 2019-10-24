@@ -95,6 +95,38 @@ namespace sxr
         finalize();
     }
 
+    void BulletRigidBody::setName(const char* name)
+    {
+        Node* owner = owner_object();
+        if (owner)
+        {
+            if (owner->name().empty() &&
+                (owner->name() != name))
+            {
+                mName = name;
+                owner->set_name(name);
+            }
+        }
+        else
+        {
+            mName = name;
+        }
+    }
+
+    const char* BulletRigidBody::getName() const
+    {
+        Node* owner = owner_object();
+        if (owner)
+        {
+            return owner->name().c_str();
+        }
+        if (mName.empty())
+        {
+            return nullptr;
+        }
+        return mName.c_str();
+    }
+
     void BulletRigidBody::setSimulationType(PhysicsRigidBody::SimulationType type)
     {
         mSimType = type;
@@ -110,10 +142,10 @@ namespace sxr
         Node* owner = owner_object();
         Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
         btCollisionShape* shape = mConstructionInfo.m_collisionShape;
+        Transform* trans = owner->transform();
 
         mWorld = static_cast<BulletWorld*>(world);
         mConstructionInfo.m_motionState = this;
-        getWorldTransform(mConstructionInfo.m_startWorldTransform);
         if (collider)
         {
             if (shape == nullptr)
@@ -124,7 +156,6 @@ namespace sxr
                     shape->calculateLocalInertia(mConstructionInfo.m_mass, mConstructionInfo.m_localInertia);
                 }
             }
-            Transform* trans = owner->transform();
             btVector3 scale(trans->scale_x(), trans->scale_y(), trans->scale_z());
             shape->setLocalScaling(scale);
         }
@@ -132,8 +163,25 @@ namespace sxr
         {
             LOGE("PHYSICS: Cannot attach rigid body without collider");
         }
-        if (mRigidBody == nullptr)
+        if (mRigidBody)
         {
+            shape = mRigidBody->getCollisionShape();
+            mConstructionInfo.m_collisionShape = shape;
+            btVector3 scale = shape->getLocalScaling();
+
+            setWorldTransform(mRigidBody->getWorldTransform());
+            trans->set_scale(scale.x(), scale.y(), scale.z());
+            collisionFlags = mRigidBody->getCollisionFlags();
+            if ((collisionFlags &
+                 ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
+                   btCollisionObject::CollisionFlags::CF_STATIC_OBJECT)) == 0)
+            {
+                mRigidBody->setActivationState(ACTIVE_TAG);
+            }
+        }
+        else
+        {
+            getWorldTransform(mConstructionInfo.m_startWorldTransform);
             mRigidBody = new btRigidBody(mConstructionInfo);
             mRigidBody->setUserPointer(this);
             mRigidBody->setIslandTag(0);
@@ -159,16 +207,6 @@ namespace sxr
                         ~btCollisionObject::CollisionFlags::CF_STATIC_OBJECT);
                 mRigidBody->setActivationState(ISLAND_SLEEPING);
                 break;
-            }
-        }
-        else
-        {
-            collisionFlags = mRigidBody->getCollisionFlags();
-            if ((collisionFlags &
-                 ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
-                 btCollisionObject::CollisionFlags::CF_STATIC_OBJECT)) == 0)
-            {
-                mRigidBody->setActivationState(ACTIVE_TAG);
             }
         }
         mRigidBody->setMotionState(this);

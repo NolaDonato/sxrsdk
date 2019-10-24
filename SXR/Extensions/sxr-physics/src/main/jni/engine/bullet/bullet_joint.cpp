@@ -95,6 +95,38 @@ namespace sxr {
         mMass = link.m_mass;
     }
 
+    void BulletJoint::setName(const char* name)
+    {
+        Node* owner = owner_object();
+        if (owner)
+        {
+            if (!owner->name().empty() &&
+                (owner->name() != name))
+            {
+                mName = name;
+                owner->set_name(name);
+            }
+        }
+        else
+        {
+            mName = name;
+        }
+    }
+
+    const char* BulletJoint::getName() const
+    {
+        Node* owner = owner_object();
+        if (owner)
+        {
+            return owner->name().c_str();
+        }
+        if (mName.empty())
+        {
+            return nullptr;
+        }
+        return mName.c_str();
+    }
+
     BulletRootJoint* BulletJoint::findRoot()
     {
         return mParent->findRoot();
@@ -224,8 +256,12 @@ namespace sxr {
         mMultiBody = parent->getMultiBody();
         btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
 
-        link.m_linkName = name;
-        link.m_jointName = name;
+        if (name)
+        {
+            mName = name;
+        }
+        link.m_linkName = mName.c_str();
+        link.m_jointName = mName.c_str();
         link.m_parent = getJointIndex();
         link.m_userPtr = this;
         link.m_mass = mMass;

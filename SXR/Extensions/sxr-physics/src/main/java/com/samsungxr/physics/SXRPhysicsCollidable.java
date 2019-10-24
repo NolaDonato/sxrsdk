@@ -27,4 +27,8 @@ abstract class SXRPhysicsCollidable extends SXRPhysicsWorldObject
     }
 
     abstract public int getCollisionGroup();
+
+    abstract public String getName();
+
+    abstract public void setName(String s);
 }

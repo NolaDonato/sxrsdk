@@ -26,6 +26,10 @@ namespace sxr {
     public:
         PhysicsCollidable(long componentType) : Component(componentType)  { }
 
+        virtual const char* getName() const = 0;
+
+        virtual void setName(const char*) = 0;
+
         virtual void setMass(float mass) = 0;
 
         virtual float getMass() const = 0;

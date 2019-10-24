@@ -93,7 +93,8 @@ namespace sxr {
         Skeleton* skel = static_cast<Skeleton*>(owner_object()->getComponent(COMPONENT_TYPE_SKELETON));
         if (skel == nullptr)
         {
-            return  createSkeleton();
+            skel = createSkeleton();
+            owner_object()->attachComponent(skel);
         }
         return skel;
     }
@@ -171,31 +172,30 @@ namespace sxr {
         }
     }
 
-
     Skeleton* BulletRootJoint::createSkeleton()
     {
-        int numbones = mMultiBody->getNumLinks() + 1;
-        int boneParents[numbones];
-        const char* boneNames[numbones];
-        Skeleton* skel = static_cast<Skeleton*>(owner_object()->getComponent(COMPONENT_TYPE_SKELETON));
+        int          numbones = mMultiBody->getNumLinks() + 1;
+        int*         boneParents = new int[numbones];
+        int*         curParent = boneParents;
+        Skeleton*    skel;
 
-        if (skel != nullptr)
-        {
-            return skel;
-        }
-        boneParents[0] = -1;
-        boneNames[0] = owner_object()->name().c_str();
+        *curParent = -1;
         for (int i = 1; i < numbones; ++i)
         {
             btMultibodyLink& link = mMultiBody->getLink(i - 1);
             const BulletJoint* j = reinterpret_cast<const BulletJoint*>(link.m_userPtr);
-            Node* owner = j->owner_object();
-            boneNames[i] = owner->name().c_str();
-            boneParents[i] = link.m_parent + 1;
+            *(++curParent) = link.m_parent + 1;
         }
         skel = new Skeleton(boneParents, numbones);
-        skel->updateBones(boneParents, boneNames, numbones);
-        owner_object()->attachComponent(skel);
+        delete [] boneParents;
+        skel->setBoneName(0, getName());
+        for (int i = 1; i < numbones; ++i)
+        {
+            btMultibodyLink& link = mMultiBody->getLink(i - 1);
+            const BulletJoint* j = reinterpret_cast<const BulletJoint*>(link.m_userPtr);
+            const char* name = j->getName();
+            skel->setBoneName(i, name);
+        }
         return skel;
     }
 
@@ -231,8 +231,12 @@ namespace sxr {
     {
         Node* owner = owner_object();
 
+        if (owner->name().c_str())
+        {
+            mName = owner->name();
+        }
         mWorld = static_cast<BulletWorld*>(world);
-        mMultiBody->setBaseName(owner->name().c_str());
+        mMultiBody->setBaseName(mName.c_str());
         mMultiBody->setBaseMass(mMass);
         updateCollider(owner);
         setPhysicsTransform();

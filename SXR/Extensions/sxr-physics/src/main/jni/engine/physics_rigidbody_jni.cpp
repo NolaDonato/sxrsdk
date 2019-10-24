@@ -403,6 +403,28 @@ Java_com_samsungxr_physics_NativeRigidBody_reset(JNIEnv *env, jclass obj,
     PhysicsRigidBody *rigid_body = reinterpret_cast<PhysicsRigidBody *>(jrigid_body);
     rigid_body->reset(rebuildCollider);
 }
+
+JNIEXPORT jstring JNICALL
+Java_com_samsungxr_physics_NativeRigidBody_getName(JNIEnv * env, jobject obj, jlong jbody)
+{
+    BulletRigidBody* body = reinterpret_cast<BulletRigidBody*>(jbody);
+    const char* name = body->getName();
+    if (name)
+    {
+        return env->NewStringUTF(name);
+    }
+    return nullptr;
+}
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativeRigidBody_setName(JNIEnv * env, jclass obj,
+                                                 jlong jbody, jstring name)
+{
+    BulletRigidBody* body = reinterpret_cast<BulletRigidBody*>(jbody);
+    const char* native_name = env->GetStringUTFChars(name, 0);
+    body->setName(native_name);
+    env->ReleaseStringUTFChars(name, native_name);
+}
 }
 
 }

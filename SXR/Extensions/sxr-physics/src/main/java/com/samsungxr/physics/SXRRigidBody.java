@@ -121,7 +121,7 @@ public class SXRRigidBody extends SXRPhysicsCollidable
     SXRRigidBody(SXRContext ctx, long nativeRigidBody)
     {
         super(ctx, nativeRigidBody);
-        mCollisionGroup = (getMass() > 0) ? SXRCollisionMatrix.DEFAULT_GROUP : SXRCollisionMatrix.STATIC_GROUP;;
+        mCollisionGroup = (getMass() > 0) ? SXRCollisionMatrix.DEFAULT_GROUP : SXRCollisionMatrix.STATIC_GROUP;
         mPhysicsContext = SXRPhysicsContext.getInstance();
     }
 
@@ -165,6 +165,35 @@ public class SXRRigidBody extends SXRPhysicsCollidable
         }
 
         return (SXRWorld) world;
+    }
+
+    /**
+     * Get the name of this rigid body.
+     * <p>
+     * If the rigid body is attached to a scene object, the name
+     * of the scene object is returned. Otherwise, the name of the
+     * rigid body last updated by {@link #setName(String)} is returned.
+     * If the name has never been set, null is returned.
+     * @return name of rigid body, may be null
+     */
+    public String getName()
+    {
+        return NativeRigidBody.getName(getNative());
+    }
+
+    /**
+     * Set the name of this rigid body.
+     * <p>
+     * If the rigid body is attached to a scene object,
+     * the name of the scene object is set if it was
+     * previously null. If the rigid body does not have
+     * an owner, its local name is updated.
+     * If this rigid body is later attached to a scene
+     * object of a different name, the name is not changed.
+     */
+    public void setName(String name)
+    {
+        NativeRigidBody.setName(getNative(), name);
     }
 
     /**
@@ -649,6 +678,10 @@ class NativeRigidBody {
     static native long getComponentType();
 
     static native float getMass(long jrigid_body);
+
+    static native String getName(long jrigid_body);
+
+    static native void setName(long jrigid_body, String name);
 
     static native void applyCentralForce(long jrigid_body, float x, float y, float z);
 

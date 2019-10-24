@@ -42,6 +42,10 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
         return mRigidBody;
     }
 
+    virtual const char* getName() const;
+
+    virtual void setName(const char*);
+
     virtual void setSimulationType(SimulationType type);
 
     virtual SimulationType getSimulationType() const
@@ -151,6 +155,7 @@ private:
     btRigidBody*    mRigidBody;
     SimulationType  mSimType;
     BulletWorld*    mWorld;
+    std::string     mName;
 
     friend class BulletWorld;
 };

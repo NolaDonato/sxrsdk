@@ -111,7 +111,7 @@ Java_com_samsungxr_physics_NativePhysicsJoint_getSkeleton(JNIEnv *env, jclass ob
 }
 
 JNIEXPORT void JNICALL
-Java_com_samsungxr_physics_NativePhysicsJoint_setPivot(JNIEnv *env, jclass obj, jlong jjoint,
+Java_com_samsungxr_physics_NativePhysicsJoint_setPivot(JNIEnv* env, jclass obj, jlong jjoint,
                                                        jfloat x, jfloat y, jfloat z)
 {
     PhysicsJoint *mb = reinterpret_cast<PhysicsJoint *>(jjoint);
@@ -119,5 +119,26 @@ Java_com_samsungxr_physics_NativePhysicsJoint_setPivot(JNIEnv *env, jclass obj, 
     mb->setPivot(pivot);
 }
 
+JNIEXPORT jstring JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_getName(JNIEnv* env, jclass obj, jlong jjoint)
+{
+    BulletJoint* joint = reinterpret_cast<BulletJoint*>(jjoint);
+    const char* name = joint->getName();
+    if (name)
+    {
+        return env->NewStringUTF(name);
+    }
+    return nullptr;
+}
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_setName(JNIEnv* env, jclass obj,
+                                                    jlong jjoint, jstring name)
+{
+    BulletJoint* joint = reinterpret_cast<BulletJoint*>(jjoint);
+    const char* native_name = env->GetStringUTFChars(name, 0);
+    joint->setName(native_name);
+    env->ReleaseStringUTFChars(name, native_name);
+}
 }
 }

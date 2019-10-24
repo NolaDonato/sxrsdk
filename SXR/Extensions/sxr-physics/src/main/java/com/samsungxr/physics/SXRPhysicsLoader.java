@@ -38,6 +38,8 @@ import java.util.List;
 public class SXRPhysicsLoader extends SXRHybridObject
 {
     static private final String TAG = SXRPhysicsLoader.class.getSimpleName();
+    private boolean mCreateNodes = false;
+    private String mErrors = "";
 
     public SXRPhysicsLoader(SXRContext ctx)
     {
@@ -45,12 +47,15 @@ public class SXRPhysicsLoader extends SXRHybridObject
     }
 
     /**
-     * Loads a Bullet physics content file.
+     * Loads a physics content file.
      * <p>
-     * The Bullet binary files only contain physics, there
-     * are no nodes or meshes. The rigid bodies and constraints
-     * from the Bullet file are added to the nodes in the
-     * given scene.
+     * Bullet (.bullet) physics files and Universal Robot
+     * Description Format (.urdf) are supported.
+     * Physics files contain only physics components,
+     * rigid bodies, joints, constraints and colliders.
+     * There are no nodes or meshes. The imported physics
+     * components are added to the nodes with the same
+     * name in the scene provided.
      *
      * @param fileName Name of file containing physics content.
      * @param scene    The scene containing the objects to attach physics components.
@@ -61,15 +66,19 @@ public class SXRPhysicsLoader extends SXRHybridObject
     }
 
     /**
-     * Loads a Bullet physics content file.
+     * Loads a physics content file.
      * <p>
-     * The Bullet binary files only contain physics, there
-     * are no nodes or meshes. The rigid bodies and constraints
-     * from the Bullet file are added to the nodes in the
-     * given scene.
+     * Bullet (.bullet) physics files and Universal Robot
+     * Description Format (.urdf) are supported.
+     * Physics files contain only physics components,
+     * rigid bodies, joints, constraints and colliders.
+     * There are no nodes or meshes. The imported physics
+     * components are added to the nodes with the same
+     * name in the scene provided.
      *
      * @param fileName Name of file containing physics content.
      * @param scene    The scene containing the objects to attach physics components.
+     * @param ignoreUpAxis Assume Y axis is up if true, down if false.
      */
     public void loadPhysics(SXRScene scene, String fileName, boolean ignoreUpAxis) throws IOException
     {
@@ -78,22 +87,26 @@ public class SXRPhysicsLoader extends SXRHybridObject
     }
 
     /**
-     * Loads a Bullet physics content file.
+     * Loads a physics content file.
      * <p>
-     * The Bullet binary files only contain physics, there
-     * are no nodes or meshes. The rigid bodies and constraints
-     * from the Bullet file are added to the nodes in the
-     * given scene.
+     * Bullet (.bullet) physics files and Universal Robot
+     * Description Format (.urdf) are supported.
+     * Physics files contain only physics components,
+     * rigid bodies, joints, constraints and colliders.
+     * There are no nodes or meshes. The imported physics
+     * components are added to the nodes with the same
+     * name in the scene provided.
      *
-     * @param resource {@link SXRAndroidResource} referencint the file containing physics content.
+     * @param resource {@link SXRAndroidResource} referencing the file containing physics content.
      * @param scene    The scene containing the objects to attach physics components.
-     * @returns        {@link SXRWorld} containing physics objects.
+     * @param ignoreUpAxis Assume Y axis is up if true, down if false.
      */
     public SXRPhysicsContent loadPhysics(SXRScene scene, SXRAndroidResource resource, boolean ignoreUpAxis) throws IOException
     {
         String fname = resource.getResourceFilename().toLowerCase();
         SXRWorld world = (SXRWorld) scene.getRoot().getComponent(SXRWorld.getComponentType());
 
+        mCreateNodes = false;
         if (world == null)
         {
             throw new IOException("To load physics files, you must have a physics world attached to the scene");
@@ -120,19 +133,28 @@ public class SXRPhysicsLoader extends SXRHybridObject
     }
 
     /**
-     * Loads a Bullet physics content file.
+     * Loads a physics content file.
      * <p>
-     * The Bullet binary files only contain physics, there
-     * are no nodes or meshes. The rigid bodies and constraints
-     * from the Bullet file are added to the nodes in the given scene.
-     * <p>
+     * Bullet (.bullet) physics files and Universal Robot
+     * Description Format (.urdf) are supported.
      * This function can import Featherstone multi-body hierarchies.
      * It throws an exception if the input world does not support multi-body.
-     *
-     * @param resource {@link SXRAndroidResource} containing the physics content..
+     * <p>
+     * Physics files contain only physics components,
+     * rigid bodies, joints, constraints and colliders.
+     * There are no nodes or meshes. The imported physics
+     * components are added to the nodes with the same
+     * name in the scene provided.
+     * <p>
+     * When a multi-body hierarchy is imported, a {@link SXRSkeleton} is created
+     * from the hierarchy and attached to the root joint. A corresponding
+     * hierarchy of {@SXRNode} objects is also constructed and attached
+     * to the owner of the root joint.
+     * @param resource {@link SXRAndroidResource} referencing the file containing physics content.
      * @param world    The physics world to attach physics components.
      *                 This world should be attached to the root of the
      *                 node hierarchy to attach physics to.
+     * @param ignoreUpAxis Assume Y axis is up if true, down if false.
      */
     public void loadPhysics(SXRWorld world, SXRAndroidResource resource, boolean ignoreUpAxis) throws IOException
     {
@@ -166,17 +188,41 @@ public class SXRPhysicsLoader extends SXRHybridObject
         }
         else
         {
+            mCreateNodes = false;
             throw new IOException("Unknown physics file type, must be .bullet or .urdf");
         }
+        mCreateNodes = false;
     }
 
+    /**
+     * Loads a physics content file.
+     * <p>
+     * Bullet (.bullet) physics files and Universal Robot
+     * Description Format (.urdf) are supported.
+     * This function can import Featherstone multi-body hierarchies.
+     * It throws an exception if the input world does not support multi-body.
+     * <p>
+     * Physics files contain only physics components,
+     * rigid bodies, joints, constraints and colliders.
+     * There are no nodes or meshes. This function constructs a new
+     * physics world and creates a new node for each rigid body imported.
+     * <p>
+     * When a multi-body hierarchy is imported, a {@link SXRSkeleton} is created
+     * from the hierarchy and attached to the root joint. A corresponding
+     * hierarchy of {@SXRNode} objects is also constructed and attached
+     * to the owner of the root joint.
+     * @param resource {@link SXRAndroidResource} referencing the file containing physics content.
+     * @param ignoreUpAxis Assume Y axis is up if true, down if false.
+     */
     public SXRPhysicsContent loadPhysics(SXRAndroidResource resource, boolean ignoreUpAxis) throws IOException
     {
         SXRNode root = new SXRNode(getSXRContext());
         SXRWorld world = new SXRWorld(root, true);
 
+        mCreateNodes = true;
         root.setName(resource.getResourceFilename());
         loadPhysics(world, resource, ignoreUpAxis);
+        mCreateNodes = false;
         return world;
     }
 
@@ -369,13 +415,22 @@ public class SXRPhysicsLoader extends SXRHybridObject
         SXRRigidBody[] bodies = NativeBulletLoader.getRigidBodies(loader);
         for (SXRRigidBody body : bodies)
         {
-            String name = NativeBulletLoader.getRigidBodyName(loader, body.getNative());
+            String name = body.getName();
             SXRNode sceneObject = sceneRoot.getNodeByName(name);
 
             if (sceneObject == null)
             {
-                Log.w(TAG, "Didn't find node for rigid body '" + name + "'");
-                continue;
+                if (mCreateNodes)
+                {
+                    sceneObject = new SXRNode(getSXRContext());
+                    sceneObject.setName(name);
+                    sceneRoot.addChildObject(sceneObject);
+                }
+                else
+                {
+                    mErrors += "Didn't find node for rigid body '" + name + "'";
+                    continue;
+                }
             }
             if (sceneObject.getComponent(SXRCollider.getComponentType()) == null)
             {
@@ -397,13 +452,22 @@ public class SXRPhysicsLoader extends SXRHybridObject
         SXRPhysicsJoint[] joints = NativeBulletLoader.getJoints(loader);
         for (SXRPhysicsJoint joint : joints)
         {
-            String name = NativeBulletLoader.getJointName(loader, joint.getNative());
+            String name = joint.getName();
             SXRNode sceneObject = sceneRoot.getNodeByName(name);
 
             if (sceneObject == null)
             {
-                Log.w(TAG, "Didn't find node for joint '" + name + "'");
-                continue;
+                if (mCreateNodes)
+                {
+                    sceneObject = new SXRNode(getSXRContext());
+                    sceneObject.setName(name);
+                    sceneRoot.addChildObject(sceneObject);
+                }
+                else
+                {
+                    mErrors += "Didn't find node for joint '" + name + "'";
+                    continue;
+                }
             }
             if (joint.getJointIndex() <= 0)
             {
@@ -423,7 +487,28 @@ public class SXRPhysicsLoader extends SXRHybridObject
 
         for (SXRPhysicsJoint joint : rootJoints)
         {
-            joint.getSkeleton();
+            SXRSkeleton skel = joint.getSkeleton();
+
+            if (mCreateNodes)
+            {
+                for (int i = 0; i < skel.getNumBones(); ++i)
+                {
+                    String boneName = skel.getBoneName(i);
+                    SXRNode bone = sceneRoot.getNodeByName(boneName);
+                    int parentIndex = skel.getParentBoneIndex(i);
+
+                    if ((bone != null) && (parentIndex > 0))
+                    {
+                        SXRNode parentBone = skel.getBone(parentIndex);
+
+                        if (parentBone != null)
+                        {
+                            sceneRoot.removeChildObject(bone);
+                            parentBone.addChildObject(bone);
+                        }
+                    }
+                }
+            }
         }
 
         /*
@@ -502,10 +587,6 @@ class NativeBulletLoader
     static native SXRPhysicsJoint[] getJoints(long loader);
 
     static native SXRConstraint[] getConstraints(long loader);
-
-    static native String getRigidBodyName(long loader, long nativeBody);
-
-    static native String getJointName(long loader, long nativeJoint);
 
     static native String getConstraintName(long loader, long nativeConstraint);
 }

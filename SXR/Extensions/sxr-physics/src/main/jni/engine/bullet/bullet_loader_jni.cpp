@@ -135,26 +135,6 @@ Java_com_samsungxr_physics_NativeBulletLoader_getJoints(JNIEnv* env, jclass claz
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_samsungxr_physics_NativeBulletLoader_getRigidBodyName(JNIEnv* env, jclass clazz,
-                                                        jlong jloader, jlong jbody)
-{
-    BulletFileLoader *loader = reinterpret_cast<BulletFileLoader*>(jloader);
-    BulletRigidBody* body = reinterpret_cast<BulletRigidBody*>(jbody);
-    const char* name = loader->getRigidBodyName(body);
-    return env->NewStringUTF(name);
-}
-
-JNIEXPORT jstring JNICALL
-Java_com_samsungxr_physics_NativeBulletLoader_getJointName(JNIEnv* env, jclass clazz,
-                                                           jlong jloader, jlong jjoint)
-{
-    BulletFileLoader *loader = reinterpret_cast<BulletFileLoader*>(jloader);
-    BulletJoint* joint = reinterpret_cast<BulletJoint*>(jjoint);
-    const char* name = loader->getJointName(joint);
-    return env->NewStringUTF(name);
-}
-
-JNIEXPORT jstring JNICALL
 Java_com_samsungxr_physics_NativeBulletLoader_getConstraintName(JNIEnv* env, jclass clazz,
                                                            jlong jloader, jlong jconstraint)
 {

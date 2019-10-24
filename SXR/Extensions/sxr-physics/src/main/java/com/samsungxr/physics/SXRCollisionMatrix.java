@@ -14,7 +14,7 @@ public class SXRCollisionMatrix
     /*
      * Enable collision with dynamic bodies.
      */
-        public static final int DEFAULT_GROUP = 0;
+   public static final int DEFAULT_GROUP = 0;
 
     /*
      * Enable collision with static bodies.

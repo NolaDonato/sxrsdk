@@ -54,7 +54,8 @@ namespace sxr {
             mNumBones = numbones;
             for (int i = 0; i < numbones; ++i)
             {
-                mBoneNames[i] = bonenames[i];
+                const char* name = bonenames[i];
+                mBoneNames[i].assign(name, strlen(name));
             }
         }
     }
@@ -75,7 +76,7 @@ namespace sxr {
     {
         if ((boneIndex >= 0) && (boneIndex < getNumBones()))
         {
-            mBoneNames[boneIndex] = boneName;
+            mBoneNames[boneIndex].assign(boneName, strlen(boneName));
         }
     }
 

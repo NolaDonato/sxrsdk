@@ -29,7 +29,7 @@ MultiBodyCreator::MultiBodyCreator(const URDFImporterInterface& u2b) : m_urdfImp
 	m_bodies.resize(u2b.getNumAllocatedCollisionShapes());
 }
 
-void MultiBodyCreator::registerNameForPointer(int urdfIndex, btCollisionObject* ptr, const std::string& name)
+const std::string& MultiBodyCreator::registerNameForPointer(int urdfIndex, btCollisionObject* ptr, const std::string& name)
 {
 	if (m_bodies.size() <= urdfIndex)
 	{
@@ -38,6 +38,7 @@ void MultiBodyCreator::registerNameForPointer(int urdfIndex, btCollisionObject* 
 	}
 	m_bodies[urdfIndex] = ptr;
 	m_names[urdfIndex] = name;
+	return m_names[urdfIndex];
 }
 
 btMultiBody* MultiBodyCreator::allocateMultiBody(int urdfLinkIndex, int totalNumJoints,
@@ -46,8 +47,6 @@ btMultiBody* MultiBodyCreator::allocateMultiBody(int urdfLinkIndex, int totalNum
 {
 	m_mb2urdfLink.resize(totalNumJoints + 1, -2);
 	m_bulletMultiBody = new btMultiBody(totalNumJoints, mass, localInertiaDiagonal, isFixedBase, canSleep);
-	m_bulletMultiBody->setBaseName(m_urdfImport.getBodyName().c_str());
-	registerNameForPointer(urdfLinkIndex, m_bulletMultiBody->getBaseCollider(), m_urdfImport.getBodyName());
 	return m_bulletMultiBody;
 }
 
@@ -63,15 +62,7 @@ btRigidBody* MultiBodyCreator::allocateRigidBody(int urdfLinkIndex, btScalar mas
 	{
 		m_rigidBody = body;
 	}
-	std::string name;
-	if (urdfLinkIndex > 0)
-	{
-		name = m_urdfImport.getJointName(urdfLinkIndex);
-	}
-	else
-	{
-		name = m_urdfImport.getBodyName();
-	}
+	std::string name = m_urdfImport.getJointName(urdfLinkIndex);
 	registerNameForPointer(urdfLinkIndex, body, name);
 	return body;
 }
@@ -80,10 +71,8 @@ btMultiBodyLinkCollider* MultiBodyCreator::allocateMultiBodyLinkCollider(int urd
 																		 int mbLinkIndex, btMultiBody* multiBody)
 {
 	btMultiBodyLinkCollider* mbCol = new btMultiBodyLinkCollider(multiBody, mbLinkIndex);
-
-	multiBody->getLink(mbLinkIndex).m_jointName = m_urdfImport.getJointName(urdfLinkIndex).c_str();
-	multiBody->getLink(mbLinkIndex).m_linkName = m_urdfImport.getLinkName(urdfLinkIndex).c_str();
-	registerNameForPointer(urdfLinkIndex, mbCol, m_urdfImport.getJointName(urdfLinkIndex));
+	std::string name = m_urdfImport.getJointName(urdfLinkIndex);
+	registerNameForPointer(urdfLinkIndex, mbCol, name);
 	return mbCol;
 }
 
@@ -257,7 +246,15 @@ void MultiBodyCreator::registerNames(btSerializer& s)
 		btCollisionObject* body = *it;
 		if (body)
 		{
-			s.registerNameForPointer(body, m_names[index].c_str());
+			btMultiBodyLinkCollider* mbc = dynamic_cast<btMultiBodyLinkCollider*>(body);
+			if (mbc && (mbc->m_link < 0))
+			{
+				s.registerNameForPointer(mbc->m_multiBody, m_names[index].c_str());
+			}
+			else
+			{
+				s.registerNameForPointer(body, m_names[index].c_str());
+			}
 		}
 		++index;
 	}
@@ -282,6 +279,7 @@ URDFConverter::~URDFConverter()
 btMultiBodyDynamicsWorld* URDFConverter::importPhysics(const char* urdfXMLData, btMultiBodyDynamicsWorld* world)
 {
 	m_urdfData = urdfXMLData;
+	m_dynamicsWorld = world;
 	initPhysics();
 	return m_dynamicsWorld;
 }

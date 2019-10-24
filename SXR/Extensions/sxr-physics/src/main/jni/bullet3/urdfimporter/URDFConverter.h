@@ -78,7 +78,7 @@ public:
 	btMultiBody* getBulletMultiBody() { return m_bulletMultiBody; }
 
 private:
-	void registerNameForPointer(int urdfIndex, btCollisionObject* ptr, const std::string& name);
+	const std::string& registerNameForPointer(int urdfIndex, btCollisionObject* ptr, const std::string& name);
 };
 
 class URDFConverter : public CommonMultiBodyBase

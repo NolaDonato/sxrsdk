@@ -173,34 +173,7 @@ const char* BulletFileLoader::getNameForPointer(void* ptr)
     {
         return mSerializer->findNameForPointer(ptr);
     }
-}
-
-/**
- * Get the name of the scene object this rigid body should attach to.
- */
-const char* BulletFileLoader::getRigidBodyName(BulletRigidBody* body)
-{
-    return getNameForPointer(body->getRigidBody());
-}
-
-/**
- * Get the name of the scene object this joint should attach to.
- */
-const char* BulletFileLoader::getJointName(BulletJoint* joint)
-{
-    if (mSerializer)
-    {
-        return mSerializer->findNameForPointer(joint);
-    }
-    btMultiBody* mb = joint->getMultiBody();
-    int i = joint->getJointIndex();
-
-    if (i < 0)
-    {
-        return mb->getBaseName();
-    }
-    btMultibodyLink& link = mb->getLink(i);
-    return link.m_jointName;
+    return nullptr;
 }
 
 /**
@@ -228,24 +201,13 @@ jobject BulletFileLoader::getConstraintBodyA(PhysicsConstraint* constraint)
     if (bodyA->getType() == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
     {
         BulletRigidBody* bA = static_cast<BulletRigidBody*>(bodyA);
-        name = getNameForPointer(bA->getRigidBody());
-        return getRigidBody(name);
+        return getRigidBody(bA->getName());
     }
     else if (bodyA->getType() == COMPONENT_TYPE_PHYSICS_JOINT)
     {
         BulletJoint* bA = static_cast<BulletJoint*>(bodyA);
-        btMultiBody* mb = bA->getMultiBody();
 
-        if (bA->getJointIndex() < 0)
-        {
-            name = mb->getBaseName();
-        }
-        else
-        {
-            btMultibodyLink& l = mb->getLink(bA->getJointIndex());
-            name = l.m_jointName;
-        }
-        return getJoint(name);
+        return getJoint(bA->getName());
     }
     return 0;
 }
@@ -298,13 +260,21 @@ void BulletFileLoader::createRigidBody(JNIEnv& env, btRigidBody* rb)
     jobject javaBody = CreateInstance(env, "com/samsungxr/physics/SXRRigidBody",
                                       "(Lcom/samsungxr/SXRContext;J)V",
                                       mContext.getObject(), reinterpret_cast<jlong>(nativeBody));
+    nativeBody->setName(name);
     SmartLocalRef r(mJavaVM, javaBody);
     std::string s(name);
     mRigidBodies.emplace(s, r);
 
+    if (mNeedRotate)
+    {
+        btTransform& t = rb->getWorldTransform();
+        t *= transformInvIdty;
+        rb->setWorldTransform(t);
+    }
     jobject javaCollider = createCollider(nativeBody->getRigidBody());
     SmartLocalRef c(mJavaVM, javaCollider);
-    s = name;
+
+    mColliders.emplace(s, c);
 }
 
 /**
@@ -321,7 +291,8 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
     for (int i = mFirstMultiBody; i < world.getNumMultibodies(); i++)
     {
         btMultiBody* mb = world.getMultiBody(i);
-        const char* name = mb->getBaseName();
+        btMultiBodyLinkCollider* btc = mb->getBaseCollider();
+        const char* name = getNameForPointer(mb);
 
         if (name == nullptr)    // cannot import bodies without names
         {
@@ -335,14 +306,15 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
             t *= transformInvIdty;
             mb->setBaseWorldTransform(t);
         }
-        const BulletJoint* nativeJoint = new BulletRootJoint(mb);
-        btMultiBodyLinkCollider* btc = mb->getBaseCollider();
+        BulletJoint* nativeJoint = new BulletRootJoint(mb);
         jobject javaJoint = CreateInstance(*env, "com/samsungxr/physics/SXRPhysicsJoint",
                                           "(Lcom/samsungxr/SXRContext;J)V",
                                           mContext.getObject(), reinterpret_cast<jlong>(nativeJoint));
         std::string s(name);
         SmartLocalRef r(mJavaVM, javaJoint);
         auto pair = std::make_pair(s, r);
+
+        nativeJoint->setName(name);
         mJoints.emplace(pair);
         if (btc != nullptr)
         {
@@ -355,9 +327,10 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
         for (int i = 0; i < mb->getNumLinks(); ++i)
         {
             btMultibodyLink& link = mb->getLink(i);
-            const char* jointName = link.m_jointName;
+            btMultiBodyLinkCollider* collider = link.m_collider;
 
-            if (jointName == nullptr)   // cannot map joints without names
+            name = getNameForPointer(collider);
+            if (name == nullptr)   // cannot map joints without names
             {
                 continue;
             }
@@ -366,8 +339,11 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
                 btTransform t = link.m_cachedWorldTransform;
                 t *= transformInvIdty;
                 link.m_cachedWorldTransform = t;
+                t = collider->getWorldTransform();
+                t *= transformInvIdty;
+                collider->setWorldTransform(t);
             }
-            nativeJoint = reinterpret_cast<const BulletJoint*>(link.m_userPtr);
+            nativeJoint = (BulletJoint*) (link.m_userPtr);
             javaJoint = CreateInstance(*env, "com/samsungxr/physics/SXRPhysicsJoint",
                                        "(Lcom/samsungxr/SXRContext;J)V",
                                        mContext.getObject(), reinterpret_cast<jlong>(nativeJoint));
@@ -375,10 +351,10 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
 
             s = name;
             mJoints.emplace(s, j);
-            btc = mb->getBaseCollider();
-            if (btc != nullptr)
+            nativeJoint->setName(name);
+            if (collider != nullptr)
             {
-                jobject javaCollider = createCollider(btc);
+                jobject javaCollider = createCollider(collider);
                 SmartLocalRef r(mJavaVM, javaCollider);
 
                 s = name;
@@ -470,6 +446,31 @@ jobject BulletFileLoader::createConeTwistConstraint(JNIEnv& env, btConeTwistCons
  * based on the input btGeneric6DofConstraint
  */
 jobject BulletFileLoader::createGenericConstraint(JNIEnv& env, btGeneric6DofConstraint* gen, PhysicsConstraint*& constraint)
+{
+    BulletGeneric6dofConstraint *bg = new BulletGeneric6dofConstraint(gen);
+
+    if (mNeedRotate)
+    {
+        btTransform tA = gen->getFrameOffsetA();
+        btTransform tB = gen->getFrameOffsetB();
+        btTransform t = tA;
+
+        tA.mult(transformInvIdty, t);
+        t = tB;
+        tB.mult(transformInvIdty, t);
+        gen->setFrames(tA, tB);
+    }
+    constraint = bg;
+    return CreateInstance(env, "com/samsungxr/physics/SXRGenericConstraint",
+                          "(Lcom/samsungxr/SXRContext;J)V",
+                          mContext.getObject(), reinterpret_cast<jlong>(bg));
+}
+
+/*
+ * Create a Java SXRGenericConstraint and the C++ PhysicsConstraint
+ * based on the input btGeneric6DofSpring2Constraint
+ */
+jobject BulletFileLoader::createSpringConstraint(JNIEnv& env, btGeneric6DofSpring2Constraint* gen, PhysicsConstraint*& constraint)
 {
     BulletGeneric6dofConstraint *bg = new BulletGeneric6dofConstraint(gen);
 
@@ -598,6 +599,11 @@ void BulletFileLoader::createConstraint(JNIEnv& env, btTypedConstraint* constrai
     {
         // Blender exports generic constraint as generic spring constraint
         javaConstraint = createGenericConstraint(env, dynamic_cast<btGeneric6DofConstraint*>(constraint), physCon);
+    }
+    else if (constraint->getConstraintType() == btTypedConstraintType::D6_SPRING_2_CONSTRAINT_TYPE)
+    {
+        // URDF exporter generic constraint as btGeneric6DofSpring2Constraint
+        javaConstraint = createSpringConstraint(env, dynamic_cast<btGeneric6DofSpring2Constraint*>(constraint), physCon);
     }
     else if (constraint->getConstraintType() == btTypedConstraintType::FIXED_CONSTRAINT_TYPE)
     {
@@ -819,8 +825,7 @@ bool BulletFileLoader::parse(BulletWorld* world, char *buffer, size_t length, bo
     }
     bParse::btBulletFile* bullet_file = new bParse::btBulletFile(buffer, length);
     btMultiBodyWorldImporter* importer = new btMultiBodyWorldImporter(bulletWorld);
-    BulletWorld* w = new BulletWorld(true);
-    mWorld = w->getPhysicsWorld();
+    mWorld = bulletWorld;
     mBulletImporter = importer;
     mBulletImporter->loadFileFromMemory(bullet_file);
 
@@ -876,7 +881,6 @@ bool BulletFileLoader::parse(BulletWorld* world, char *buffer, size_t length, bo
 bool BulletFileLoader::parseURDF(BulletWorld* world, const char* xmldata, bool ignoreUpAxis)
 {
     btMultiBodyDynamicsWorld* bulletWorld = dynamic_cast<btMultiBodyDynamicsWorld*>(world->getPhysicsWorld());
-
 
     if (bulletWorld == nullptr)
     {
