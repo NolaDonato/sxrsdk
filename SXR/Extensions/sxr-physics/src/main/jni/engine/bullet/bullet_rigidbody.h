@@ -152,10 +152,10 @@ private:
 
 private:
     btRigidBody::btRigidBodyConstructionInfo mConstructionInfo;
-    btRigidBody*    mRigidBody;
-    SimulationType  mSimType;
-    BulletWorld*    mWorld;
-    std::string     mName;
+    btRigidBody*        mRigidBody;
+    SimulationType      mSimType;
+    BulletWorld*        mWorld;
+    mutable std::string mName;
 
     friend class BulletWorld;
 };

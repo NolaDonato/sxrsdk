@@ -15,13 +15,12 @@
 
 package com.samsungxr.physics;
 
-import android.util.ArrayMap;
-import android.util.Log;
-
+import com.samsungxr.IEventReceiver;
+import com.samsungxr.IEvents;
 import com.samsungxr.SXRAndroidResource;
 import com.samsungxr.SXRCollider;
-import com.samsungxr.SXRComponentGroup;
 import com.samsungxr.SXRContext;
+import com.samsungxr.SXREventReceiver;
 import com.samsungxr.SXRHybridObject;
 import com.samsungxr.SXRMeshCollider;
 import com.samsungxr.SXRResourceVolume;
@@ -35,16 +34,39 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SXRPhysicsLoader extends SXRHybridObject
+public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 {
     static private final String TAG = SXRPhysicsLoader.class.getSimpleName();
     private boolean mCreateNodes = false;
-    private String mErrors = "";
+    private SXREventReceiver mListeners;
+
+    public interface IPhysicsLoaderEvents extends IEvents
+    {
+        /**
+         * Called after a physics file is loaded.
+         * @param  world    {@link }SXRPhysicsContent} containing the physics objects loaded.
+         *                  May be null if the load failed.
+         * @param filename  Name of file or resource loaded.
+         */
+        public void onPhysicsLoaded(SXRPhysicsContent world, String filename);
+
+        /**
+         * Called if a physics file fails to load.
+         * @param filename  Name of file or resource loaded.
+         * @param errors    Errors during loading, null if load was successful.
+         */
+        public void onLoadError(String filename, String errors);
+    }
+
 
     public SXRPhysicsLoader(SXRContext ctx)
     {
         super(ctx, NativeBulletLoader.ctor(ctx));
+        mListeners = new SXREventReceiver(this);
     }
+
+    public SXREventReceiver getEventReceiver() { return mListeners; }
+
 
     /**
      * Loads a physics content file.
@@ -188,10 +210,8 @@ public class SXRPhysicsLoader extends SXRHybridObject
         }
         else
         {
-            mCreateNodes = false;
             throw new IOException("Unknown physics file type, must be .bullet or .urdf");
         }
-        mCreateNodes = false;
     }
 
     /**
@@ -222,7 +242,6 @@ public class SXRPhysicsLoader extends SXRHybridObject
         mCreateNodes = true;
         root.setName(resource.getResourceFilename());
         loadPhysics(world, resource, ignoreUpAxis);
-        mCreateNodes = false;
         return world;
     }
 
@@ -346,13 +365,14 @@ public class SXRPhysicsLoader extends SXRHybridObject
         NativeBulletLoader.clear(loader);
     }
 
-    private void loadBulletFile(SXRWorld world, byte[] inputData, SXRNode sceneRoot, boolean ignoreUpAxis) throws IOException
+    private void loadBulletFile(final SXRWorld world, byte[] inputData, final SXRNode sceneRoot, boolean ignoreUpAxis) throws IOException
     {
         /*
          * Import the Bullet binary file and construct the Java physics objects.
          * They are attached to each other but not to nodes in the scene.
          */
-        long loader = getNative();
+        final long loader = getNative();
+        final SXRContext ctx = getSXRContext();
         boolean result;
 
         if (world.isMultiBody())
@@ -366,34 +386,74 @@ public class SXRPhysicsLoader extends SXRHybridObject
         if (!result)
         {
             NativeBulletLoader.clear(loader);
+            mCreateNodes = false;
+            getSXRContext().getEventManager().sendEvent(world, SXRWorld.IPhysicsEvents.class,
+                                            "onLoadError", sceneRoot.getName(),
+                                                        "Failed to parse bullet file");
             throw new IOException("Failed to parse bullet file");
         }
         /*
          * attach physics components to scene objects.
          */
-        attachPhysics(sceneRoot);
-        NativeBulletLoader.clear(loader);
+        world.run(new Runnable()
+        {
+            public void run()
+            {
+                String errors = attachPhysics(sceneRoot);
+                NativeBulletLoader.clear(loader);
+                mCreateNodes = false;
+                if (errors != null)
+                {
+                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", world, sceneRoot.getName());
+                }
+                else
+                {
+                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, SXRWorld.IPhysicsEvents.class, "onLoadError", sceneRoot.getName(), errors);
+                }
+            }
+        });
     }
 
-    void loadURDFFile(SXRWorld world, String xmlData, boolean ignoreUpAxis) throws IOException
+    void loadURDFFile(final SXRWorld world, String xmlData, boolean ignoreUpAxis) throws IOException
     {
         /*
          * Import the Bullet binary file and construct the Java physics objects.
          * They are attached to each other but not to nodes in the scene.
          */
-        long loader = getNative();
+        final long loader = getNative();
+        final SXRContext ctx = getSXRContext();
+        final SXRNode sceneRoot = world.getOwnerObject();
         boolean result = NativeBulletLoader.parseURDF(loader, world.getNative(), xmlData, ignoreUpAxis);
 
         if (!result)
         {
             NativeBulletLoader.clear(loader);
-            throw new IOException("Failed to parse bullet file");
+            mCreateNodes = false;
+            ctx.getEventManager().sendEvent(world, SXRWorld.IPhysicsEvents.class,
+                                             "onLoadError", sceneRoot.getName(),
+                                             "Failed to parse URDF file");
+            throw new IOException("Failed to parse URDF file");
         }
         /*
          * attach physics components to scene objects.
          */
-        attachPhysics(world.getOwnerObject());
-        NativeBulletLoader.clear(loader);
+        world.run(new Runnable()
+        {
+            public void run()
+            {
+                String errors = attachPhysics(sceneRoot);
+                NativeBulletLoader.clear(loader);
+                mCreateNodes = false;
+                if (errors != null)
+                {
+                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", world, sceneRoot.getName());
+                }
+                else
+                {
+                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, SXRWorld.IPhysicsEvents.class, "onLoadError", sceneRoot.getName(), errors);
+                }
+            }
+        });
     }
 
     /**
@@ -401,10 +461,11 @@ public class SXRPhysicsLoader extends SXRHybridObject
      * nodes based on name matching.
      * @param sceneRoot root of scene hierarchy to add physics to
      */
-    private void attachPhysics(SXRNode sceneRoot)
+    private String attachPhysics(SXRNode sceneRoot)
     {
         SXRContext ctx = sceneRoot.getSXRContext();
         long loader = getNative();
+        String errors = "";
         List<SXRPhysicsJoint> rootJoints = new ArrayList<SXRPhysicsJoint>();
 
         /*
@@ -428,7 +489,7 @@ public class SXRPhysicsLoader extends SXRHybridObject
                 }
                 else
                 {
-                    mErrors += "Didn't find node for rigid body '" + name + "'";
+                    errors += "Didn't find node for rigid body '" + name + "'\n";
                     continue;
                 }
             }
@@ -465,7 +526,7 @@ public class SXRPhysicsLoader extends SXRHybridObject
                 }
                 else
                 {
-                    mErrors += "Didn't find node for joint '" + name + "'";
+                    errors += "Didn't find node for joint '" + name + "'\n";
                     continue;
                 }
             }
@@ -525,11 +586,12 @@ public class SXRPhysicsLoader extends SXRHybridObject
 
             if (sceneObject == null)
             {
-                Log.w(TAG, "Didn't find node for constraint '" + name + "'");
+                errors += "Didn't find node for constraint '" + name + "'\n";
                 continue;
             }
             sceneObject.attachComponent(constraint);
         }
+        return errors;
     }
 
     private static byte[] toByteArray(SXRAndroidResource resource) throws IOException

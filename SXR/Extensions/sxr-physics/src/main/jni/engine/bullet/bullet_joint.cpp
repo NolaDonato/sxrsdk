@@ -116,9 +116,9 @@ namespace sxr {
     const char* BulletJoint::getName() const
     {
         Node* owner = owner_object();
-        if (owner)
+        if (owner && !owner->name().empty())
         {
-            return owner->name().c_str();
+            mName = owner->name();
         }
         if (mName.empty())
         {
@@ -299,13 +299,13 @@ namespace sxr {
                 link.m_inertiaLocal = localInertia;
                 link.m_collider = mCollider;
                 mCollider->setUserPointer(this);
-                mWorld->getPhysicsWorld()->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
             }
             else
             {
                 LOGE("PHYSICS: joint %s does not have collider", owner_object()->name().c_str());
             }
         }
+        mWorld->getPhysicsWorld()->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
     }
 
     void BulletJoint::setCollisionProperties(int collisionGroup, int collidesWith)

@@ -255,11 +255,14 @@ void BulletWorld::addJointWithMask(PhysicsJoint* joint, int collisionGroup, int 
 
 void BulletWorld::removeJoint(PhysicsJoint *body)
 {
-    if (isMultiBody() && (body->getJointIndex() < 0))
+    if (isMultiBody())
     {
-        btMultiBodyDynamicsWorld* world = dynamic_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld);
-        btMultiBody* mb = dynamic_cast<BulletJoint*>(body)->getMultiBody();
-        world->removeMultiBody(mb);
+        BulletRootJoint* root = static_cast<BulletJoint*>(body)->findRoot();
+        if (root->removeLink(body, this))
+        {
+            auto it = std::find(mMultiBodies.begin(), mMultiBodies.end(), body);
+            mMultiBodies.erase(it) ;
+        }
     }
 }
 

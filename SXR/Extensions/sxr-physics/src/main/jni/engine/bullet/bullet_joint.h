@@ -112,7 +112,7 @@ protected:
     BulletJoint*             mParent;
     btMultiBodyLinkCollider* mCollider;
     btMultiBody*             mMultiBody;
-    std::string				 mName;
+    mutable std::string		 mName;
     JointType                mJointType;
     glm::vec3                mAxis;
     glm::vec3                mPivot;
@@ -152,6 +152,8 @@ public:
     virtual BulletRootJoint* findRoot();
 
 	bool addLink(PhysicsJoint* joint, PhysicsWorld* world);
+
+	bool removeLink(PhysicsJoint* joint, PhysicsWorld* world);
 
 protected:
 	virtual void updateCollider(Node* owner);

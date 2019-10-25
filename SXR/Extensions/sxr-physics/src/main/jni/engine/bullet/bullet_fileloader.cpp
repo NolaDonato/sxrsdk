@@ -306,15 +306,15 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
             t *= transformInvIdty;
             mb->setBaseWorldTransform(t);
         }
-        BulletJoint* nativeJoint = new BulletRootJoint(mb);
+        BulletJoint* rootJoint = new BulletRootJoint(mb);
         jobject javaJoint = CreateInstance(*env, "com/samsungxr/physics/SXRPhysicsJoint",
                                           "(Lcom/samsungxr/SXRContext;J)V",
-                                          mContext.getObject(), reinterpret_cast<jlong>(nativeJoint));
+                                          mContext.getObject(), reinterpret_cast<jlong>(rootJoint));
         std::string s(name);
         SmartLocalRef r(mJavaVM, javaJoint);
         auto pair = std::make_pair(s, r);
 
-        nativeJoint->setName(name);
+        rootJoint->setName(name);
         mJoints.emplace(pair);
         if (btc != nullptr)
         {
@@ -343,7 +343,7 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
                 t *= transformInvIdty;
                 collider->setWorldTransform(t);
             }
-            nativeJoint = (BulletJoint*) (link.m_userPtr);
+            BulletJoint* nativeJoint = (BulletJoint*) (link.m_userPtr);
             javaJoint = CreateInstance(*env, "com/samsungxr/physics/SXRPhysicsJoint",
                                        "(Lcom/samsungxr/SXRContext;J)V",
                                        mContext.getObject(), reinterpret_cast<jlong>(nativeJoint));

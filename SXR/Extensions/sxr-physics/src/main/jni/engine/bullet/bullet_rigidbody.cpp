@@ -116,9 +116,9 @@ namespace sxr
     const char* BulletRigidBody::getName() const
     {
         Node* owner = owner_object();
-        if (owner)
+        if (owner && !owner->name().empty())
         {
-            return owner->name().c_str();
+            mName = owner->name();
         }
         if (mName.empty())
         {

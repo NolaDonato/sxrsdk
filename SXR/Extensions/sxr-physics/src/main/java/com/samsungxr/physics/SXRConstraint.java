@@ -31,7 +31,7 @@ import java.util.List;
  * {@linkplain com.samsungxr.SXRNode node} containing a rigid body that will become
  * the owner of this constraint (body B).
  */
-abstract class SXRConstraint extends SXRPhysicsWorldObject
+abstract public class SXRConstraint extends SXRPhysicsWorldObject
 {
     static final int fixedConstraintId = 1;
     static final int point2pointConstraintId = 2;
