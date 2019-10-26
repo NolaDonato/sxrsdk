@@ -387,7 +387,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         {
             NativeBulletLoader.clear(loader);
             mCreateNodes = false;
-            getSXRContext().getEventManager().sendEvent(world, SXRWorld.IPhysicsEvents.class,
+            getSXRContext().getEventManager().sendEvent(world, IPhysicsLoaderEvents.class,
                                             "onLoadError", sceneRoot.getName(),
                                                         "Failed to parse bullet file");
             throw new IOException("Failed to parse bullet file");
@@ -404,11 +404,11 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                 mCreateNodes = false;
                 if (errors != null)
                 {
-                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", world, sceneRoot.getName());
+                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onLoadError", sceneRoot.getName(), errors);
                 }
                 else
                 {
-                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, SXRWorld.IPhysicsEvents.class, "onLoadError", sceneRoot.getName(), errors);
+                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", world, sceneRoot.getName());
                 }
             }
         });
@@ -429,7 +429,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         {
             NativeBulletLoader.clear(loader);
             mCreateNodes = false;
-            ctx.getEventManager().sendEvent(world, SXRWorld.IPhysicsEvents.class,
+            ctx.getEventManager().sendEvent(world, IPhysicsLoaderEvents.class,
                                              "onLoadError", sceneRoot.getName(),
                                              "Failed to parse URDF file");
             throw new IOException("Failed to parse URDF file");
@@ -446,11 +446,11 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                 mCreateNodes = false;
                 if (errors != null)
                 {
-                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", world, sceneRoot.getName());
-                }
+                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onLoadError", sceneRoot.getName(), errors);
+                 }
                 else
                 {
-                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, SXRWorld.IPhysicsEvents.class, "onLoadError", sceneRoot.getName(), errors);
+                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", world, sceneRoot.getName());
                 }
             }
         });
@@ -558,14 +558,18 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                     SXRNode bone = sceneRoot.getNodeByName(boneName);
                     int parentIndex = skel.getParentBoneIndex(i);
 
-                    if ((bone != null) && (parentIndex > 0))
+                    if (bone != null)
                     {
-                        SXRNode parentBone = skel.getBone(parentIndex);
-
-                        if (parentBone != null)
+                        skel.setBone(i, bone);
+                        if (parentIndex >= 0)
                         {
-                            sceneRoot.removeChildObject(bone);
-                            parentBone.addChildObject(bone);
+                            SXRNode parentBone = skel.getBone(parentIndex);
+
+                            if (parentBone != null)
+                            {
+                                sceneRoot.removeChildObject(bone);
+                                parentBone.addChildObject(bone);
+                            }
                         }
                     }
                 }
@@ -591,7 +595,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
             }
             sceneObject.attachComponent(constraint);
         }
-        return errors;
+        return errors.isEmpty() ? null : errors;
     }
 
     private static byte[] toByteArray(SXRAndroidResource resource) throws IOException

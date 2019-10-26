@@ -100,7 +100,7 @@ namespace sxr
         Node* owner = owner_object();
         if (owner)
         {
-            if (owner->name().empty() &&
+            if (!owner->name().empty() &&
                 (owner->name() != name))
             {
                 mName = name;
@@ -118,7 +118,11 @@ namespace sxr
         Node* owner = owner_object();
         if (owner && !owner->name().empty())
         {
-            mName = owner->name();
+            const std::string& name =  owner->name();
+            if (!name.empty())
+            {
+                mName = name;
+            }
         }
         if (mName.empty())
         {

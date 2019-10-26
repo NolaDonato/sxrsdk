@@ -405,6 +405,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
             removeFromWorld(getWorld());
         }
     }
+
     @Override
     protected void addToWorld(SXRPhysicsContent world)
     {

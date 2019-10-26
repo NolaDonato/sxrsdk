@@ -261,7 +261,10 @@ void BulletWorld::removeJoint(PhysicsJoint *body)
         if (root->removeLink(body, this))
         {
             auto it = std::find(mMultiBodies.begin(), mMultiBodies.end(), body);
-            mMultiBodies.erase(it) ;
+            if (it != mMultiBodies.end())
+            {
+                mMultiBodies.erase(it);
+            }
         }
     }
 }

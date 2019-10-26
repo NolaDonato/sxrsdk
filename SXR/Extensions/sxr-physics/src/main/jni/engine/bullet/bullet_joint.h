@@ -108,11 +108,11 @@ protected:
     void setupFixed();
 
 protected:
+	mutable std::string		 mName;
     BulletWorld*             mWorld;
     BulletJoint*             mParent;
     btMultiBodyLinkCollider* mCollider;
     btMultiBody*             mMultiBody;
-    mutable std::string		 mName;
     JointType                mJointType;
     glm::vec3                mAxis;
     glm::vec3                mPivot;
@@ -157,15 +157,16 @@ public:
 
 protected:
 	virtual void updateCollider(Node* owner);
-    void finalize();
-    void destroy();
-    Skeleton* createSkeleton();
+    bool         finalize(PhysicsWorld* world);
+    void         destroy();
+    Skeleton*    createSkeleton();
 
 protected:
     std::vector<BulletJoint*> mJoints;
     Skeleton*   mSkeleton;
     int         mNumJoints;
     int         mLinksAdded;
+	bool		mTransformsFromPhysics;
 };
 }
 

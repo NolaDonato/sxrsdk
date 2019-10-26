@@ -247,7 +247,7 @@ public class SXRPhysicsContent extends SXRComponent
         attachConstraints(getCollidables());
     }
 
-    protected void doPhysicsDetach(final SXRNode rootNode)
+    protected void doPhysicsDetach()
     {
         for (int i = 0; i < mPhysicsObject.size(); ++i)
         {
@@ -280,7 +280,7 @@ public class SXRPhysicsContent extends SXRComponent
     public void onDetach(SXRNode oldOwner)
     {
         super.onDetach(oldOwner);
-        doPhysicsDetach(oldOwner);
+        doPhysicsDetach();
     }
 
     /**
@@ -300,11 +300,15 @@ public class SXRPhysicsContent extends SXRComponent
             {
                 addBody(body);
             }
-            else if (mIsMultibody)
+            else
             {
                 SXRPhysicsJoint joint = (SXRPhysicsJoint) obj.getComponent(SXRPhysicsJoint.getComponentType());
                 if (joint != null)
                 {
+                    if (!mIsMultibody)
+                    {
+                        throw new UnsupportedOperationException("This world does not support multi-body physics, cannot merge multi-body world");
+                    }
                     addBody(joint);
                 }
             }

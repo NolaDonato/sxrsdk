@@ -118,7 +118,11 @@ namespace sxr {
         Node* owner = owner_object();
         if (owner && !owner->name().empty())
         {
-            mName = owner->name();
+            const std::string& name =  owner->name();
+            if (!name.empty())
+            {
+                mName = name;
+            }
         }
         if (mName.empty())
         {
@@ -252,7 +256,6 @@ namespace sxr {
         Node* owner = owner_object();
         BulletJoint* parent = static_cast<BulletJoint*>(getParent());
         const char* name = owner->name().c_str();
-        mWorld = static_cast<BulletWorld*>(world);
         mMultiBody = parent->getMultiBody();
         btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
 
@@ -266,6 +269,11 @@ namespace sxr {
         link.m_userPtr = this;
         link.m_mass = mMass;
         updateCollider(owner);
+        if (mWorld != world)
+        {
+            mWorld = static_cast<BulletWorld*>(world);
+            mWorld->getPhysicsWorld()->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
+        }
         switch (mJointType)
         {
             case JointType::fixedJoint: setupFixed(); break;
@@ -273,7 +281,6 @@ namespace sxr {
             case JointType::revoluteJoint: setupHinge(); break;
             default: setupSpherical(); break;
         }
-        setPhysicsTransform();
     }
 
     void BulletJoint::updateCollider(Node* owner)
@@ -303,9 +310,9 @@ namespace sxr {
             else
             {
                 LOGE("PHYSICS: joint %s does not have collider", owner_object()->name().c_str());
+                return;
             }
         }
-        mWorld->getPhysicsWorld()->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
     }
 
     void BulletJoint::setCollisionProperties(int collisionGroup, int collidesWith)

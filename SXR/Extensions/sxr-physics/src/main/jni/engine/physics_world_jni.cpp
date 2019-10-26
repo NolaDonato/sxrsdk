@@ -98,6 +98,7 @@ namespace sxr
     {
         PhysicsWorld *world = reinterpret_cast<PhysicsWorld *>(jworld);
         PhysicsJoint *body = reinterpret_cast<PhysicsJoint *>(jmulti_body);
+
         world->removeJoint(body);
     }
 
