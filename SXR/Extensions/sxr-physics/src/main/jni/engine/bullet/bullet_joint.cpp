@@ -61,6 +61,7 @@ namespace sxr {
       mPivot(0, 0, 0),
       mWorld(nullptr),
       mMass(mass),
+      mTransformsFromPhysics(false),
       mCollisionGroup(btBroadphaseProxy::DefaultFilter),
       mCollisionMask(btBroadphaseProxy::AllFilter),
       mJointType(JointType::sphericalJoint)
@@ -72,6 +73,7 @@ namespace sxr {
       mMultiBody(nullptr),
       mParent(parent),
       mCollider(nullptr),
+      mTransformsFromPhysics(false),
       mJointIndex(jointIndex - 1),
       mAxis(1, 0, 0),
       mMass(mass),
@@ -86,6 +88,7 @@ namespace sxr {
         mParent(parent),
         mMultiBody(parent->getMultiBody()),
         mJointIndex(jointIndex),
+        mTransformsFromPhysics(true),
         mWorld(nullptr)
     {
         btMultibodyLink& link = mMultiBody->getLink(jointIndex);
@@ -253,27 +256,15 @@ namespace sxr {
 
     void BulletJoint::updateConstructionInfo(PhysicsWorld* world)
     {
-        Node* owner = owner_object();
         BulletJoint* parent = static_cast<BulletJoint*>(getParent());
-        const char* name = owner->name().c_str();
         mMultiBody = parent->getMultiBody();
         btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
 
-        if (name)
-        {
-            mName = name;
-        }
-        link.m_linkName = mName.c_str();
-        link.m_jointName = mName.c_str();
         link.m_parent = getJointIndex();
         link.m_userPtr = this;
         link.m_mass = mMass;
-        updateCollider(owner);
-        if (mWorld != world)
-        {
-            mWorld = static_cast<BulletWorld*>(world);
-            mWorld->getPhysicsWorld()->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
-        }
+        updateCollider(owner_object());
+        setPhysicsTransform();
         switch (mJointType)
         {
             case JointType::fixedJoint: setupFixed(); break;
@@ -281,6 +272,7 @@ namespace sxr {
             case JointType::revoluteJoint: setupHinge(); break;
             default: setupSpherical(); break;
         }
+        addToWorld(world);
     }
 
     void BulletJoint::updateCollider(Node* owner)
@@ -324,6 +316,33 @@ namespace sxr {
             mCollider->getBroadphaseHandle()->m_collisionFilterGroup = collisionGroup;
             mCollider->getBroadphaseHandle()->m_collisionFilterMask = collidesWith;
         }
+    }
+
+    void BulletJoint::removeFromWorld()
+    {
+        btMultiBodyDynamicsWorld* w = dynamic_cast<btMultiBodyDynamicsWorld*>(mWorld->getPhysicsWorld());
+        if (mCollider)
+        {
+            w->removeCollisionObject(mCollider);
+            mWorld = nullptr;
+        }
+    }
+
+    void BulletJoint::addToWorld(PhysicsWorld* w)
+    {
+        Node* owner = owner_object();
+        const char* name = owner->name().c_str();
+        BulletWorld* bw = static_cast<BulletWorld*>(w);
+        btMultibodyLink* link = getLink();
+
+        if (name)
+        {
+            mName = name;
+        }
+        link->m_linkName = mName.c_str();
+        link->m_jointName = mName.c_str();
+        mWorld = bw;
+        bw->getPhysicsWorld()->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
     }
 
     void BulletJoint::setupFixed()

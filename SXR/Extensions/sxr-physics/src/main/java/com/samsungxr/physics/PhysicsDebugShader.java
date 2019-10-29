@@ -38,15 +38,15 @@ public class PhysicsDebugShader extends SXRShader
     final String fragment_shader =
             "precision highp float;\n" +
             "layout (location = 0) in vec3 vertex_color;\n" +
-            "layout (location = 0) out vec4 gl_FragColor;\n" +
+            "layout (location = 0) out vec4 fragColor;\n" +
             "void main()\n" +
             "{\n" +
-            "    gl_FragColor = vec4(vertex_color, 1);\n" +
+            "    fragColor = vec4(vertex_color, 1);\n" +
             "}";
 
     public PhysicsDebugShader()
     {
-        super("mat4 u_vp float line_width", "", "float3 a_position, float3 a_color", GLSLESVersion.V300);
+        super("mat4 u_vp float line_width", "", "float3 a_position, float3 a_color", GLSLESVersion.VULKAN);
         setSegment("VertexTemplate", vertex_shader);
         setSegment("FragmentTemplate", fragment_shader);
     }

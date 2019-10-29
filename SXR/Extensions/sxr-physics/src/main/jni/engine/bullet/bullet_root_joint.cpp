@@ -55,7 +55,6 @@ namespace sxr {
     BulletRootJoint::BulletRootJoint(float mass, int numJoints)
     : BulletJoint(mass, numJoints),
       mNumJoints(numJoints - 1),
-      mTransformsFromPhysics(false),
       mLinksAdded(0)
     {
         mJointType = JointType::baseJoint;
@@ -66,14 +65,15 @@ namespace sxr {
     BulletRootJoint::BulletRootJoint(btMultiBody* multiBody)
     : BulletJoint(multiBody->getNumLinks(), multiBody->getBaseMass()),
       mLinksAdded(0),
-      mTransformsFromPhysics(true),
       mNumJoints(multiBody->getNumLinks())
     {
+        mTransformsFromPhysics = true;
         mMultiBody = multiBody;
         mJoints.reserve(mNumJoints);
         mJoints.resize(mNumJoints);
         mMultiBody->setUserPointer(this);
         mCollider = mMultiBody->getBaseCollider();
+        mCollider->setUserPointer(this);
         for (int i = 0; i < mNumJoints; ++i)
         {
             btMultibodyLink& link = mMultiBody->getLink(i);
@@ -113,12 +113,13 @@ namespace sxr {
         }
     }
 
-
     void BulletRootJoint::destroy()
     {
+        mWorld = nullptr;
         if (mMultiBody != nullptr)
         {
             int numLinks = mMultiBody->getNumLinks();
+
             for (int i = 0; i < numLinks; ++i)
             {
                 btMultibodyLink& link = mMultiBody->getLink(i);
@@ -158,7 +159,7 @@ namespace sxr {
             getPhysicsTransform();
             for (int j = 0; j < mNumJoints; ++j)
             {
-                BulletJoint* joint = mJoints.at(j);
+                BulletJoint* joint = mJoints[j];
                 joint->getPhysicsTransform();
             }
         }
@@ -231,15 +232,8 @@ namespace sxr {
 
     void BulletRootJoint::updateConstructionInfo(PhysicsWorld* world)
     {
-        Node* owner = owner_object();
-
-        if (owner && !owner->name().empty())
-        {
-            mName = owner->name();
-        }
-        mMultiBody->setBaseName(mName.c_str());
-        mMultiBody->setBaseMass(mMass);
-        updateCollider(owner);
+        updateCollider(owner_object());
+        setPhysicsTransform();
     }
 
     void BulletRootJoint::updateCollider(Node* owner)
@@ -264,65 +258,35 @@ namespace sxr {
                 shape->calculateLocalInertia(getMass(), localInertia);
                 mMultiBody->setBaseCollider(mCollider);
                 mMultiBody->setBaseInertia(localInertia);
+                mCollider->setUserPointer(this);
             }
             else
             {
                 LOGE("PHYSICS: joint %s does not have collider", owner_object()->name().c_str());
             }
         }
-        mCollider->setUserPointer(this);
     }
 
     bool BulletRootJoint::finalize(PhysicsWorld* world)
     {
-        bool finalizeDof = false;
-
-        if (mMultiBody == nullptr)
-        {
-            mMultiBody = new btMultiBody(mNumJoints, mMass, btVector3(0, 0, 0), (mMass == 0),
-                                         false);
-            mMultiBody->setUserPointer(this);
-            mMultiBody->setCanSleep(false);
-            mMultiBody->setHasSelfCollision(false);
-            finalizeDof = true;
-        }
+        mMultiBody = new btMultiBody(mNumJoints, mMass, btVector3(0, 0, 0), (mMass == 0),
+                                     false);
+        mMultiBody->setUserPointer(this);
+        mMultiBody->setCanSleep(false);
+        mMultiBody->setHasSelfCollision(false);
+        mMultiBody->setBaseMass(mMass);
         updateConstructionInfo(world);
-        if (mTransformsFromPhysics)
-        {
-            getPhysicsTransform();
-        }
-        else
-        {
-            setPhysicsTransform();
-        }
         for (int i = 0; i < mNumJoints; ++i)
         {
             BulletJoint *joint = mJoints[i];
             if (joint != nullptr)
             {
                 joint->updateConstructionInfo(world);
-                if (mTransformsFromPhysics)
-                {
-                    joint->getPhysicsTransform();
-                }
-                else
-                {
-                    joint->setPhysicsTransform();
-                }
             }
         }
-        if (mWorld != world)
-        {
-            mWorld = static_cast<BulletWorld *>(world);
-            mWorld->getPhysicsWorld()->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
-            if (finalizeDof)
-            {
-                mMultiBody->finalizeMultiDof();
-            }
-            dynamic_cast<btMultiBodyDynamicsWorld *>(mWorld->getPhysicsWorld())->addMultiBody(mMultiBody);
-            return true;
-        }
-        return false;
+        mMultiBody->finalizeMultiDof();
+        addToWorld(world);
+        return true;
     }
 
     bool BulletRootJoint::addLink(PhysicsJoint* joint, PhysicsWorld* world)
@@ -334,31 +298,60 @@ namespace sxr {
         {
             return false;
         }
-        mJoints[linkIndex] = static_cast<BulletJoint*>(joint);
+        BulletJoint* bj = static_cast<BulletJoint*>(joint);
+        mJoints[linkIndex] = bj;
+        if (bj->getMultiBody())
+        {
+            bj->getPhysicsTransform();
+            bj->addToWorld(world);
+            return ++mLinksAdded == numjoints;
+        }
         if (++mLinksAdded == numjoints)
         {
-            return finalize(world);
+            finalize(world);
+            return true;
         }
         return false;
     }
 
     bool BulletRootJoint::removeLink(PhysicsJoint* joint, PhysicsWorld* world)
     {
-        if (mLinksAdded == 0)
+        if (mLinksAdded <= 0)
         {
             return mNumJoints == 0;
         }
-        BulletWorld *w = static_cast<BulletWorld *>(world);
-        btMultiBodyDynamicsWorld *mbw = dynamic_cast<btMultiBodyDynamicsWorld *>(w->getPhysicsWorld());
-
+        static_cast<BulletJoint*>(joint)->removeFromWorld();
         if (--mLinksAdded == 0)
         {
-            mWorld = nullptr;
-            // TODO: remove collision objects from bullet world
-            mbw->removeMultiBody(getMultiBody());
+            removeFromWorld();
             return true;
         }
         return false;
     }
 
+    void BulletRootJoint::addToWorld(PhysicsWorld* w)
+    {
+        mWorld = static_cast<BulletWorld*>(w);;
+        btMultiBodyDynamicsWorld* bw = dynamic_cast<btMultiBodyDynamicsWorld*>(mWorld->getPhysicsWorld());
+        Node* owner = owner_object();
+
+        if (owner && !owner->name().empty())
+        {
+            mName = owner->name();
+        }
+        BulletJoint::addToWorld(w);
+        mMultiBody->setBaseName(mName.c_str());
+        bw->addMultiBody(mMultiBody, mCollisionGroup, mCollisionMask);
+    }
+
+    void BulletRootJoint::removeFromWorld()
+    {
+        btMultiBodyDynamicsWorld* w = dynamic_cast<btMultiBodyDynamicsWorld*>(mWorld->getPhysicsWorld());
+        if (w && mMultiBody)
+        {
+            BulletJoint::removeFromWorld();
+            mWorld = nullptr;
+            w->removeMultiBody(mMultiBody);
+        }
+    }
 }

@@ -99,6 +99,10 @@ class BulletJoint : public PhysicsJoint
 
 	void setCollisionProperties(int collisionGroup, int collidesWith);
 
+	virtual void removeFromWorld();
+
+	virtual void addToWorld(PhysicsWorld* world);
+
 protected:
     BulletJoint(float mass, int numBones);
     virtual void updateCollider(Node* owner);
@@ -120,6 +124,7 @@ protected:
     float                    mMass;
     int 					 mCollisionGroup;
     int 					 mCollisionMask;
+	bool					 mTransformsFromPhysics;
 };
 
 class BulletRootJoint : public BulletJoint
@@ -155,6 +160,10 @@ public:
 
 	bool removeLink(PhysicsJoint* joint, PhysicsWorld* world);
 
+	virtual void removeFromWorld();
+
+	virtual void addToWorld(PhysicsWorld* world);
+
 protected:
 	virtual void updateCollider(Node* owner);
     bool         finalize(PhysicsWorld* world);
@@ -166,7 +175,6 @@ protected:
     Skeleton*   mSkeleton;
     int         mNumJoints;
     int         mLinksAdded;
-	bool		mTransformsFromPhysics;
 };
 }
 
