@@ -15,6 +15,8 @@
 
 package com.samsungxr.physics;
 
+import android.content.res.AssetManager;
+
 import com.samsungxr.IEventReceiver;
 import com.samsungxr.IEvents;
 import com.samsungxr.SXRAndroidResource;
@@ -61,7 +63,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 
     public SXRPhysicsLoader(SXRContext ctx)
     {
-        super(ctx, NativeBulletLoader.ctor(ctx));
+        super(ctx, NativeBulletLoader.ctor(ctx, ctx.getActivity().getApplicationContext().getResources().getAssets()));
         mListeners = new SXREventReceiver(this);
     }
 
@@ -183,10 +185,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         SXRNode root = world.getOwnerObject();
         String fname = resource.getResourceFilename().toLowerCase();
 
-        if (!world.isMultiBody())
-        {
-            throw new IllegalArgumentException("The physics world must support multi-body dynamics to use this function");
-        }
+
         if (root == null)
         {
             root = new SXRNode(world.getSXRContext());
@@ -196,6 +195,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         if (fname.endsWith(".urdf"))
         {
             String urdfXML = SXRPhysicsLoader.toString(resource);
+            mCreateNodes = mCreateNodes || !world.isMultiBody();
             loadURDFFile(world, urdfXML, ignoreUpAxis);
         }
         else if (fname.endsWith(".bullet"))
@@ -636,7 +636,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 
 class NativeBulletLoader
 {
-    static native long ctor(SXRContext jcontext);
+    static native long ctor(SXRContext jcontext, AssetManager assetManager);
 
     static native boolean parse(long loader, byte[] bytes, int len, boolean ignoreUpAxis);
 

@@ -260,8 +260,9 @@ void MultiBodyCreator::registerNames(btSerializer& s)
 	}
 }
 
-URDFConverter::URDFConverter(bool isMultiBody)
+URDFConverter::URDFConverter(bool isMultiBody, CommonFileIOInterface* fileIO)
 	: CommonMultiBodyBase(NULL),
+	  m_fileIO(fileIO),
 	  m_dynamicsWorld(NULL),
 	  m_ownWorld(false),
 	  m_useMultiBody(isMultiBody)
@@ -287,7 +288,7 @@ btMultiBodyDynamicsWorld* URDFConverter::importPhysics(const char* urdfXMLData, 
 void URDFConverter::initPhysics()
 {
 	DummyGUIHelper gui;
-	BulletURDFImporter u2b(&gui, 0, 0, 1, 0);
+	BulletURDFImporter u2b(&gui, 0, m_fileIO, 1, 0);
 	bool loadOk = u2b.loadURDFString(m_urdfData.c_str());
 
 	if (loadOk)

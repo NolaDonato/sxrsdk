@@ -80,6 +80,7 @@ namespace sxr {
             BulletJoint* parent = (link.m_parent >= 0) ? mJoints[link.m_parent] : this;
             mJoints[i] = new BulletJoint(parent, i);
             link.m_userPtr = mJoints[i];
+            link.m_collider->setUserPointer(mJoints[i]);
         }
     }
 

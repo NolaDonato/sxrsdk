@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 
+#include <android/asset_manager_jni.h>
 #include "../physics_world.h"
 #include "../physics_constraint.h"
 #include "bullet_fileloader.h"
@@ -20,17 +21,20 @@
 #include "bullet_joint.h"
 #include "util/jni_utils.h"
 
+class AAssetManager;
+
 static char tag[] = "PHYSICS";
 
 namespace sxr {
 extern "C" {
 
 JNIEXPORT jlong JNICALL
-Java_com_samsungxr_physics_NativeBulletLoader_ctor(JNIEnv* env, jclass clazz, jobject context)
+Java_com_samsungxr_physics_NativeBulletLoader_ctor(JNIEnv* env, jclass clazz, jobject context, jobject assetManager)
 {
     JavaVM* jvm;
     env->GetJavaVM(&jvm);
-    BulletFileLoader* loader = new BulletFileLoader(context, *jvm);
+    AAssetManager* am = AAssetManager_fromJava(env, assetManager);
+    BulletFileLoader* loader = new BulletFileLoader(context, *jvm, am);
     return reinterpret_cast<jlong>(loader);
 }
 

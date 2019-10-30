@@ -145,25 +145,12 @@ namespace sxr
         int collisionFlags = 0;
         Node* owner = owner_object();
         Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
-        btCollisionShape* shape = mConstructionInfo.m_collisionShape;
+        btCollisionShape* shape;
         Transform* trans = owner->transform();
 
         mWorld = static_cast<BulletWorld*>(world);
         mConstructionInfo.m_motionState = this;
-        if (collider)
-        {
-            if (shape == nullptr)
-            {
-                mConstructionInfo.m_collisionShape = shape = convertCollider2CollisionShape(collider);
-                if (mConstructionInfo.m_mass > 0)
-                {
-                    shape->calculateLocalInertia(mConstructionInfo.m_mass, mConstructionInfo.m_localInertia);
-                }
-            }
-            btVector3 scale(trans->scale_x(), trans->scale_y(), trans->scale_z());
-            shape->setLocalScaling(scale);
-        }
-        else
+        if (!collider)
         {
             LOGE("PHYSICS: Cannot attach rigid body without collider");
         }
@@ -185,6 +172,17 @@ namespace sxr
         }
         else
         {
+            shape = mConstructionInfo.m_collisionShape;
+            if (shape == nullptr)
+            {
+                mConstructionInfo.m_collisionShape = shape = convertCollider2CollisionShape(collider);
+                if (mConstructionInfo.m_mass > 0)
+                {
+                    shape->calculateLocalInertia(mConstructionInfo.m_mass, mConstructionInfo.m_localInertia);
+                }
+            }
+            btVector3 scale(trans->scale_x(), trans->scale_y(), trans->scale_z());
+            shape->setLocalScaling(scale);
             getWorldTransform(mConstructionInfo.m_startWorldTransform);
             mRigidBody = new btRigidBody(mConstructionInfo);
             mRigidBody->setUserPointer(this);

@@ -34,7 +34,8 @@ namespace sxr
         btVector3 pB(constraint->getPivotInB());
 
         mMBConstraint = constraint;
-        mBodyA = static_cast<BulletJoint*>(constraint->getMultiBodyA()->getUserPointer());
+        mConstraint = nullptr;
+         mBodyA = static_cast<BulletJoint*>(constraint->getMultiBodyA()->getUserPointer());
         mBreakingImpulse = SIMD_INFINITY;
         mPivotA = glm::vec3(pA.x(), pA.y(), pA.z());
         mPivotB = glm::vec3(pB.x(), pB.y(), pB.z());

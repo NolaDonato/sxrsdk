@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include "CommonInterfaces/CommonFileIOInterface.h"
 #include "CommonInterfaces/CommonMultiBodyBase.h"
 #include "MultiBodyCreationInterface.h"
 
@@ -86,11 +87,12 @@ class URDFConverter : public CommonMultiBodyBase
 	std::string m_urdfData;
 	bool m_useMultiBody;
 	bool m_ownWorld;
+	CommonFileIOInterface* m_fileIO;
 	btMultiBodyDynamicsWorld* m_dynamicsWorld;
 	MultiBodyCreator* m_creator;
 
 public:
-	URDFConverter(bool isMultiBody);
+	URDFConverter(bool isMultiBody, CommonFileIOInterface* fileIO);
 	~URDFConverter();
 
 	btMultiBodyDynamicsWorld* importPhysics(const char* urdfData, btMultiBodyDynamicsWorld* world);

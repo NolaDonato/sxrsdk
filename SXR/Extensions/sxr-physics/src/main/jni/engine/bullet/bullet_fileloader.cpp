@@ -14,6 +14,8 @@
  */
 
 #include <android/asset_manager.h>
+#include <stdio.h>
+#include "stdioext.h"
 
 #include <btBulletCollisionCommon.h>
 #include <btBulletDynamicsCommon.h>
@@ -31,13 +33,17 @@
 #include <BulletDynamics/Featherstone/btMultiBodySliderConstraint.h>
 #include <BulletDynamics/Featherstone/btMultiBodyFixedConstraint.h>
 #include <BulletDynamics/Featherstone/btMultiBodyPoint2Point.h>
+#include <BulletCollision/CollisionShapes/btConvexPolyhedron.h>
 #include <BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.h>
 #include <Serialize/BulletFileLoader/btBulletFile.h>
 #include <BulletDynamics/Dynamics/btDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <BulletCollision/CollisionDispatch/btCollisionObject.h>
 #include <BulletDynamics/Featherstone/btMultiBody.h>
 #include <BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h>
 #include <LinearMath/btSerializer.h>
+#include <CommonInterfaces/CommonFileIOInterface.h>
+#include <Utils/b3BulletDefaultFileIO.h>
 
 #include "URDFConverter.h"
 #include "engine/renderer/renderer.h"
@@ -64,6 +70,79 @@ static btTransform transformInvIdty(matrixInvIdty);
 
 namespace sxr {
 
+static int android_read(void* cookie, char* buf, int size)
+{
+    return AAsset_read((AAsset*)cookie, buf, size);
+}
+
+static int android_write(void* cookie, const char* buf, int size)
+{
+    return EACCES; // can't provide write access to the apk
+}
+
+static fpos_t android_seek(void* cookie, fpos_t offset, int whence)
+{
+    return AAsset_seek((AAsset*)cookie, offset, whence);
+}
+
+static int android_close(void* cookie)
+{
+    AAsset_close((AAsset*)cookie);
+    return 0;
+}
+
+BulletFileLoader::FileIO::FileIO(AAssetManager* am, int fileIOType, const char* pathPrefix)
+:  b3BulletDefaultFileIO(fileIOType, pathPrefix),
+   mAssetManager(am)
+{
+}
+
+int BulletFileLoader::FileIO::fileOpen(const char* fileName, const char* mode)
+{
+    //search a free slot
+    int slot = -1;
+    for (int i = 0; i < B3_FILEIO_MAX_FILES; i++)
+    {
+        if (m_fileHandles[i] == 0)
+        {
+            slot=i;
+            break;
+        }
+    }
+    if (slot>=0)
+    {
+        FILE* f = fopen(fileName, mode);
+        if (f)
+        {
+            m_fileHandles[slot]=f;
+        }
+        else
+        {
+            slot=-1;
+        }
+    }
+    return slot;
+}
+
+
+FILE* BulletFileLoader::FileIO::fopen(const char* fileName, const char* mode)
+{
+    if (fileName[0] == '/')
+    {
+        return ::fopen(fileName, mode);
+    }
+    if ((fileName[0] == '.') && (fileName[1] == '/'))
+    {
+        fileName += 2;
+    }
+    AAsset* asset = AAssetManager_open(mAssetManager, fileName, 0);
+    if (asset)
+    {
+        return funopen(asset, android_read, android_write, android_seek, android_close);
+    }
+    return nullptr;
+}
+
 /**
  * Construct the appropriate subclass of SXRCollider to match the input
  * Bullet collision object. Box, sphere, capsule and mesh colliders
@@ -77,37 +156,40 @@ jobject BulletFileLoader::createCollider(btCollisionObject* collider)
     JNIEnv *env;
     mJavaVM.GetEnv((void **) &env, SUPPORTED_JNI_VERSION);
 
-    btCollisionShape *shape = collider->getCollisionShape();
-    if (mNeedRotate)
+    btCollisionShape* inshape = collider->getCollisionShape();
+    btCollisionShape* outshape = createCollisionShape(*env, inshape, o);
+    if (outshape && (outshape != inshape))
     {
-        btTransform t = collider->getWorldTransform();
-        collider->setWorldTransform(t * transformInvIdty);
+        delete inshape;
+        collider->setCollisionShape(outshape);
     }
-    return createCollisionShape(*env, shape);
+    return o;
 }
 
-jobject BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisionShape* shape)
+btCollisionShape* BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisionShape* shape, jobject& javaObj)
 {
-    jobject o = 0;
+    btCollisionShape* outshape = nullptr;
+
     switch (shape->getShapeType())
     {
         case BOX_SHAPE_PROXYTYPE:
         {
-            btBoxShape* box = dynamic_cast<btBoxShape*>(shape);
+            btBoxShape* inbox = dynamic_cast<btBoxShape*>(shape);
             BoxCollider* bc = new BoxCollider();
-            btVector3 he(box->getHalfExtentsWithoutMargin());
+            btVector3 he(inbox->getHalfExtentsWithoutMargin());
 
             if (mNeedRotate)
             {
-                bc->set_half_extents(he.x(), he.z(), he.y());
+                float y = he.getY();
+
+                he.setY(he.getZ());
+                he.setZ(y);
+                outshape = new btBoxShape(he);
             }
-            else
-            {
-                bc->set_half_extents(he.x(), he.y(), he.z());
-            }
-            o = CreateInstance(env, "com/samsungxr/SXRBoxCollider",
+            bc->set_half_extents(he.x(), he.y(), he.z());
+            javaObj = CreateInstance(env, "com/samsungxr/SXRBoxCollider",
                                "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), bc);
-            break;
+            return outshape;
         }
 
         case SPHERE_SHAPE_PROXYTYPE:
@@ -116,9 +198,9 @@ jobject BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisionShape* sh
             SphereCollider* sc = new SphereCollider();
             float radius = sphere->getRadius();
             sc->set_radius(radius);
-            o = CreateInstance(env, "com/samsungxr/SXRSphereCollider",
+            javaObj = CreateInstance(env, "com/samsungxr/SXRSphereCollider",
                                "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), sc);
-            break;
+            return shape;
         }
 
         case CAPSULE_SHAPE_PROXYTYPE:
@@ -129,6 +211,7 @@ jobject BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisionShape* sh
             float h = cc->getHeight();
             const char* name = capsule->getName();
             char last = name[strlen(name) - 1];
+            outshape = shape;
 
             switch (last)
             {
@@ -137,84 +220,157 @@ jobject BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisionShape* sh
                     break;
 
                 case 'Z':
-                    if (!mNeedRotate)
+                    if (mNeedRotate)
+                    {
+                        outshape = new btCapsuleShape(r, h);
+                        delete shape;
+                    }
+                    else
                     {
                         cc->setToZDirection();
                     }
                     break;
 
-                case 'Y':
-                    if (mNeedRotate)
-                    {
-                        cc->setToZDirection();
-                    }
+                default:
+                if (mNeedRotate)
+                {
+                    outshape = new btCapsuleShapeZ(r, h);
+                    cc->setToZDirection();
+                }
             }
             cc->setHeight(h);
             cc->setRadius(r);
-            o = CreateInstance(env, "com/samsungxr/SXRCapsuleCollider",
+            javaObj = CreateInstance(env, "com/samsungxr/SXRCapsuleCollider",
                                "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), cc);
-            break;
+            return outshape;
         }
 
-        case CUSTOM_POLYHEDRAL_SHAPE_TYPE:
         case CONVEX_HULL_SHAPE_PROXYTYPE:
         {
-            btPolyhedralConvexShape* hull = dynamic_cast<btPolyhedralConvexShape *>(shape);
+            btConvexHullShape* hull = dynamic_cast<btConvexHullShape*>(shape);
             int numVerts = hull->getNumVertices();
             VertexBuffer* vb = Renderer::getInstance()->createVertexBuffer("float3 a_position", numVerts);
-            IndexBuffer* ib = Renderer::getInstance()->createIndexBuffer(2, numVerts);
-            short* indices = (short*) alloca(numVerts * 2);
+            IndexBuffer* ib = Renderer::getInstance()->createIndexBuffer(sizeof(short), numVerts);
+            short* indices = (short*) alloca(numVerts * sizeof(short));
             btVector3* verts = new btVector3[numVerts];
+
+            outshape = copyHull(hull, verts);
             for (int i = 0; i < numVerts; ++i)
             {
                 indices[i] = i;
-            }
-            if (mNeedRotate)
-            {
-                for (int i = 0; i < numVerts; ++i)
-                {
-                    btVector3 vin;
-                    btVector3* vout = &verts[i];
-
-                    hull->getVertex(i, vin);
-                    if (mNeedRotate)
-                    {
-                        vout->setZ(-vin.y());
-                        vout->setY(vin.z());
-                        vout->setX(vin.x());
-                    }
-                    else
-                    {
-                        *vout = vin;
-                    }
-                }
             }
             vb->setFloatVec("a_position", (float*) verts, numVerts * 3, 3);
             delete [] verts;
             Mesh* mesh = new Mesh(*vb);
             mesh->setIndexBuffer(ib);
             MeshCollider* mc = new MeshCollider(mesh);
-            o = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
-                               "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), mc);
-            break;
+            javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
+                                     "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), mc);
+            return outshape ? outshape : shape;
         }
 
         case COMPOUND_SHAPE_PROXYTYPE:
         {
             btCompoundShape* cshape = dynamic_cast<btCompoundShape *>(shape);
+            btTransform t = transformInvIdty * cshape->getChildTransform(0);
+
             shape = cshape->getChildShape(0);
-            return createCollisionShape(env, shape);
+            outshape = createCollisionShape(env, shape, javaObj);
+            if (outshape && (outshape != shape))
+            {
+                cshape->removeChildShape(0);
+                cshape->addChildShape(t, outshape);
+            }
+            return cshape;
         }
 
         default:
+        if (shape->getShapeType() <= CUSTOM_POLYHEDRAL_SHAPE_TYPE)
         {
-            MeshCollider* mc = new MeshCollider(nullptr);
-            o = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
-                               "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), mc);
-            break;
+            btPolyhedralConvexShape* polyshape = dynamic_cast<btPolyhedralConvexShape *>(shape);
+            const btConvexPolyhedron* poly = polyshape->getConvexPolyhedron();
+            int numVerts = polyshape->getNumVertices();
+            VertexBuffer* vb = Renderer::getInstance()->createVertexBuffer("float3 a_position", numVerts);
+            IndexBuffer* ib = Renderer::getInstance()->createIndexBuffer(sizeof(short), numVerts);
+            short* indices = (short*) alloca(numVerts * sizeof(short));
+            btVector3* verts = new btVector3[numVerts];
+
+            if (mNeedRotate)
+            {
+                btConvexPolyhedron* newPoly = rotatePoly(poly, verts);
+                polyshape->setPolyhedralFeatures(*newPoly);
+            }
+            for (int i = 0; i < numVerts; ++i)
+            {
+                indices[i] = i;
+            }
+            vb->setFloatVec("a_position", (float*) verts, numVerts * 3, 3);
+            delete [] verts;
+            Mesh* mesh = new Mesh(*vb);
+            mesh->setIndexBuffer(ib);
+            MeshCollider* mc = new MeshCollider(mesh);
+            javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
+                                     "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), mc);
+            return shape;
+        }
+        else
+        {
+            MeshCollider *mc = new MeshCollider(nullptr);
+            javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
+                                     "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), mc);
+            return outshape;
         }
     }
-    return o;
+}
+
+btConvexPolyhedron* BulletFileLoader::rotatePoly(const btConvexPolyhedron* input, btVector3* outVerts)
+{
+    int numVerts = input->m_vertices.size();
+    btConvexPolyhedron* output = new btConvexPolyhedron();
+    output->m_radius = input->m_radius;
+    output->m_extents = btVector3(input->m_extents.x(), input->m_extents.z(), input->m_extents.y());
+    output->m_faces.copyFromArray(input->m_faces);
+    output->m_vertices.copyFromArray(input->m_vertices);
+    for (int i = 0; i < numVerts; ++i)
+    {
+        const btVector3& vin = input->m_vertices[i];
+        btVector3& vout = output->m_vertices[i];
+
+        vout.setX(vin.x());
+        vout.setY(vin.z());
+        vout.setZ(-vin.y());
+        outVerts[i] = vout;
+    }
+    return output;
+}
+
+btConvexHullShape* BulletFileLoader::copyHull(const btConvexHullShape *input,
+                                                    btVector3 *outVerts)
+{
+    const btVector3* inverts = input->getUnscaledPoints();
+    int numVerts = input->getNumVertices();
+
+    if (mNeedRotate)
+    {
+        for (int i = 0; i < numVerts; ++i)
+        {
+            const btVector3 &vin = inverts[i];
+            btVector3 &vout = outVerts[i];
+
+            vout.setX(vin.x());
+            vout.setY(vin.z());
+            vout.setZ(-vin.y());
+        }
+        return new btConvexHullShape((btScalar*) outVerts, numVerts);
+    }
+    else
+    {
+        for (int i = 0; i < numVerts; ++i)
+        {
+            outVerts[i] = inverts[i];
+        }
+        return nullptr;
+    }
 }
 
 const char* BulletFileLoader::getNameForPointer(void* ptr)
@@ -286,7 +442,7 @@ void BulletFileLoader::createRigidBodies(btBulletWorldImporter& importer)
     }
 }
 
-void BulletFileLoader::createRigidBodies(btMultiBodyDynamicsWorld& world)
+void BulletFileLoader::createRigidBodies(btDynamicsWorld& world)
 {
     JNIEnv* env;
     mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
@@ -297,7 +453,7 @@ void BulletFileLoader::createRigidBodies(btMultiBodyDynamicsWorld& world)
         btRigidBody* rb = dynamic_cast<btRigidBody*>(co);
         if (rb)
         {
-            mWorld->removeCollisionObject(rb);
+            world.removeCollisionObject(rb);
             createRigidBody(*env, rb);
         }
     }
@@ -311,6 +467,11 @@ void BulletFileLoader::createRigidBody(JNIEnv& env, btRigidBody* rb)
     {
         return;
     }
+    if (mNeedRotate)
+    {
+        btTransform t = transformInvIdty * rb->getWorldTransform();
+        rb->setWorldTransform(t);
+    }
     BulletRigidBody* nativeBody = new BulletRigidBody(rb);
     jobject javaBody = CreateInstance(env, "com/samsungxr/physics/SXRRigidBody",
                                       "(Lcom/samsungxr/SXRContext;J)V",
@@ -320,12 +481,6 @@ void BulletFileLoader::createRigidBody(JNIEnv& env, btRigidBody* rb)
     std::string s(name);
     mRigidBodies.emplace(s, r);
 
-    if (mNeedRotate)
-    {
-        btTransform& t = rb->getWorldTransform();
-        t *= transformInvIdty;
-        rb->setWorldTransform(t);
-    }
     jobject javaCollider = createCollider(nativeBody->getRigidBody());
     SmartLocalRef c(mJavaVM, javaCollider);
 
@@ -358,9 +513,9 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
             btQuaternion rot = mb->getWorldToBaseRot();
             btVector3    pos = mb->getBasePos();
             btTransform  t(rot, pos);
-            t *= transformInvIdty;
+            t = transformInvIdty * t;
             mb->setBaseWorldTransform(t);
-            btc->setWorldTransform(btTransform(rot, pos));
+            btc->setWorldTransform(t);
         }
         BulletJoint* rootJoint = new BulletRootJoint(mb);
         jobject javaJoint = CreateInstance(*env, "com/samsungxr/physics/SXRPhysicsJoint",
@@ -380,7 +535,7 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
 
             s = name;
             mColliders.emplace(s, c);
-            mWorld->removeCollisionObject(btc);
+            world.removeCollisionObject(btc);
         }
         for (int i = 0; i < mb->getNumLinks(); ++i)
         {
@@ -412,7 +567,7 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
 
                 s = name;
                 mColliders.emplace(s, r);
-                mWorld->removeCollisionObject(collider);
+                world.removeCollisionObject(collider);
             }
         };
     }
@@ -423,10 +578,8 @@ void BulletFileLoader::rotateLink(btMultibodyLink& link)
     btTransform trans = link.m_cachedWorldTransform;
     float t;
 
-    trans *= transformInvIdty;
-    link.m_cachedWorldTransform = trans;
-    trans = link.m_collider->getWorldTransform();
-    trans *= transformInvIdty;
+    link.m_cachedWorldTransform = transformInvIdty * trans;
+    trans = transformInvIdty * link.m_collider->getWorldTransform();
     link.m_collider->setWorldTransform(trans);
     t = -link.m_zeroRotParentToThis.y();
     link.m_zeroRotParentToThis.setY(link.m_zeroRotParentToThis.z());
@@ -444,10 +597,12 @@ void BulletFileLoader::rotateLink(btMultibodyLink& link)
         t = -v.y();
         v.setY(v.z());
         v.setZ(t);
-        v = link.getAxisBottom(i);
+        link.setAxisBottom(i, v);
+        v = link.getAxisTop(i);
         t = -v.y();
         v.setY(v.z());
         v.setZ(t);
+        link.setAxisBottom(i, v);
     }
 }
 
@@ -487,16 +642,15 @@ jobject BulletFileLoader::createP2PConstraint(JNIEnv& env, btPoint2PointConstrai
  */
 jobject BulletFileLoader::createHingeConstraint(JNIEnv& env, btHingeConstraint* hg, PhysicsConstraint*& constraint)
 {
-    BulletHingeConstraint *bhg = new BulletHingeConstraint(hg);
-
     if (mNeedRotate)
     {
-        btTransform t = hg->getAFrame();
+        btTransform& tA = hg->getAFrame();
+        btTransform& tB = hg->getBFrame();
 
-        hg->getAFrame().mult(transformInvIdty, t);
-        t = hg->getBFrame();
-        hg->getBFrame().mult(transformInvIdty, t);
+        tA.mult(transformInvIdty, tA);
+        tB.mult(transformInvIdty, tB);
     }
+    BulletHingeConstraint *bhg = new BulletHingeConstraint(hg);
     constraint = bhg;
     return CreateInstance(env, "com/samsungxr/physics/SXRHingeConstraint",
                           "(Lcom/samsungxr/SXRContext;J)V",
@@ -509,19 +663,16 @@ jobject BulletFileLoader::createHingeConstraint(JNIEnv& env, btHingeConstraint* 
  */
 jobject BulletFileLoader::createConeTwistConstraint(JNIEnv& env, btConeTwistConstraint* ct, PhysicsConstraint*& constraint)
 {
-    BulletConeTwistConstraint *bct = new BulletConeTwistConstraint(ct);
-
     if (mNeedRotate)
     {
         btTransform tA = ct->getAFrame();
         btTransform tB = ct->getBFrame();
-        btTransform t = tA;
 
-        tA.mult(transformInvIdty, t);
-        t = tB;
-        tB.mult(transformInvIdty, t);
+        tA.mult(transformInvIdty, tA);
+        tB.mult(transformInvIdty, tB);
         ct->setFrames(tA, tB);
     }
+    BulletConeTwistConstraint *bct = new BulletConeTwistConstraint(ct);
     constraint = bct;
     return CreateInstance(env, "com/samsungxr/physics/SXRConeTwistConstraint",
                           "(Lcom/samsungxr/SXRContext;J)V",
@@ -534,19 +685,16 @@ jobject BulletFileLoader::createConeTwistConstraint(JNIEnv& env, btConeTwistCons
  */
 jobject BulletFileLoader::createGenericConstraint(JNIEnv& env, btGeneric6DofConstraint* gen, PhysicsConstraint*& constraint)
 {
-    BulletGeneric6dofConstraint *bg = new BulletGeneric6dofConstraint(gen);
-
     if (mNeedRotate)
     {
         btTransform tA = gen->getFrameOffsetA();
         btTransform tB = gen->getFrameOffsetB();
-        btTransform t = tA;
 
-        tA.mult(transformInvIdty, t);
-        t = tB;
-        tB.mult(transformInvIdty, t);
+        tA.mult(transformInvIdty, tA);
+        tB.mult(transformInvIdty, tB);
         gen->setFrames(tA, tB);
     }
+    BulletGeneric6dofConstraint *bg = new BulletGeneric6dofConstraint(gen);
     constraint = bg;
     return CreateInstance(env, "com/samsungxr/physics/SXRGenericConstraint",
                           "(Lcom/samsungxr/SXRContext;J)V",
@@ -559,19 +707,16 @@ jobject BulletFileLoader::createGenericConstraint(JNIEnv& env, btGeneric6DofCons
  */
 jobject BulletFileLoader::createSpringConstraint(JNIEnv& env, btGeneric6DofSpring2Constraint* gen, PhysicsConstraint*& constraint)
 {
-    BulletGeneric6dofConstraint *bg = new BulletGeneric6dofConstraint(gen);
-
     if (mNeedRotate)
     {
         btTransform tA = gen->getFrameOffsetA();
         btTransform tB = gen->getFrameOffsetB();
-        btTransform t = tA;
 
-        tA.mult(transformInvIdty, t);
-        t = tB;
-        tB.mult(transformInvIdty, t);
+        tA.mult(transformInvIdty, tA);
+        tB.mult(transformInvIdty, tB);
         gen->setFrames(tA, tB);
     }
+    BulletGeneric6dofConstraint *bg = new BulletGeneric6dofConstraint(gen);
     constraint = bg;
     return CreateInstance(env, "com/samsungxr/physics/SXRGenericConstraint",
                           "(Lcom/samsungxr/SXRContext;J)V",
@@ -584,21 +729,16 @@ jobject BulletFileLoader::createSpringConstraint(JNIEnv& env, btGeneric6DofSprin
  */
 jobject BulletFileLoader::createFixedConstraint(JNIEnv& env, btFixedConstraint* fix, PhysicsConstraint*& constraint)
 {
-    BulletFixedConstraint *bfix = new BulletFixedConstraint(fix);
-
     if (mNeedRotate)
     {
         btTransform tA = fix->getFrameOffsetA();
         btTransform tB = fix->getFrameOffsetB();
 
-        btTransform t = tA;
-        tA.mult(transformInvIdty, t);
-
-        t = tB;
-        tB.mult(transformInvIdty, t);
-
+        tA.mult(transformInvIdty, tA);
+        tB.mult(transformInvIdty, tB);
         fix->setFrames(tA, tB);
     }
+    BulletFixedConstraint *bfix = new BulletFixedConstraint(fix);
     constraint = bfix;
     return CreateInstance(env, "com/samsungxr/physics/SXRFixedConstraint",
                           "(Lcom/samsungxr/SXRContext;J)V",
@@ -611,20 +751,16 @@ jobject BulletFileLoader::createFixedConstraint(JNIEnv& env, btFixedConstraint* 
  */
 jobject BulletFileLoader::createSliderConstraint(JNIEnv& env, btSliderConstraint* sld, PhysicsConstraint*& constraint)
 {
-    BulletSliderConstraint* c = new BulletSliderConstraint(sld);
     if (mNeedRotate)
     {
         btTransform tA = sld->getFrameOffsetA();
         btTransform tB = sld->getFrameOffsetB();
 
-        btTransform t = tA;
-        tA.mult(transformInvIdty, t);
-
-        t = tB;
-        tB.mult(transformInvIdty, t);
-
+        tA.mult(transformInvIdty, tA);
+        tB.mult(transformInvIdty, tB);
         sld->setFrames(tA, tB);
     }
+    BulletSliderConstraint* c = new BulletSliderConstraint(sld);
     constraint = c;
     return CreateInstance(env, "com/samsungxr/physics/SXRSliderConstraint",
                           "(Lcom/samsungxr/SXRContext;J)V",
@@ -640,7 +776,7 @@ jobject BulletFileLoader::createSliderConstraint(JNIEnv& env, btSliderConstraint
  * The name of rigid body B is also the name of the scene
  * object this constraint should be attached to.
  */
-void BulletFileLoader::createConstraints(btMultiBodyWorldImporter& importer)
+void BulletFileLoader::createConstraints(btBulletWorldImporter& importer)
 {
     JNIEnv* env;
     mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
@@ -652,7 +788,7 @@ void BulletFileLoader::createConstraints(btMultiBodyWorldImporter& importer)
     }
 }
 
-void BulletFileLoader::createConstraints(btMultiBodyDynamicsWorld& w)
+void BulletFileLoader::createConstraints(btDynamicsWorld& w)
 {
     JNIEnv* env;
     mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
@@ -777,8 +913,8 @@ void BulletFileLoader::createMultiBodyConstraint(JNIEnv& env, btMultiBodyConstra
             btVector3 pB = fc->getPivotInB();
             float t;
 
-            fA *= matrixInvIdty;
-            fB *= matrixInvIdty;
+            fA = matrixInvIdty * fA;
+            fB = matrixInvIdty * fB;
             t = -pA.getY();
             pA.setY(pA.getZ());
             pA.setY(t);
@@ -805,8 +941,8 @@ void BulletFileLoader::createMultiBodyConstraint(JNIEnv& env, btMultiBodyConstra
             btVector3 pB = sc->getPivotInB();
             float t;
 
-            fA *= matrixInvIdty;
-            fB *= matrixInvIdty;
+            fA = matrixInvIdty * fA;
+            fB = matrixInvIdty * fB;
             t = -pA.getY();
             pA.setY(pA.getZ());
             pA.setY(t);
@@ -861,15 +997,15 @@ void BulletFileLoader::createMultiBodyConstraint(JNIEnv& env, btMultiBodyConstra
     }
 }
 
-BulletFileLoader::BulletFileLoader(jobject context, JavaVM& jvm)
+BulletFileLoader::BulletFileLoader(jobject context, JavaVM& jvm, AAssetManager* am)
 :   HybridObject(),
+    mFileIO(am),
     mContext(jvm, context),
     mBulletImporter(nullptr),
     mURDFImporter(nullptr),
     mSerializer(nullptr),
     mJavaVM(jvm),
-    mFirstMultiBody(0),
-    mWorld(nullptr)
+    mFirstMultiBody(0)
 {
 }
 
@@ -906,7 +1042,7 @@ bool BulletFileLoader::parse(char *buffer, size_t length, bool ignoreUpAxis)
     try
     {
         bullet_file = new bParse::btBulletFile(buffer, length);
-        mBulletImporter = new btMultiBodyWorldImporter(nullptr);
+        mBulletImporter = new btBulletWorldImporter(nullptr);
         bool result = mBulletImporter->loadFileFromMemory(bullet_file);
         if (!result)
         {
@@ -922,7 +1058,6 @@ bool BulletFileLoader::parse(char *buffer, size_t length, bool ignoreUpAxis)
         delete bullet_file;
         return false;
     }
-    mWorld = nullptr;
     if (ignoreUpAxis)
     {
         mNeedRotate = false;
@@ -968,16 +1103,12 @@ bool BulletFileLoader::parse(char *buffer, size_t length, bool ignoreUpAxis)
  */
 bool BulletFileLoader::parse(BulletWorld* world, char *buffer, size_t length, bool ignoreUpAxis)
 {
-    btMultiBodyDynamicsWorld* bulletWorld = dynamic_cast<btMultiBodyDynamicsWorld*>(world->getPhysicsWorld());
-
-    if (bulletWorld == nullptr)
-    {
-        LOGE("BULLET: Input BulletWorld does not support multibody, cannot import");
-        return false;
-    }
+    btMultiBodyDynamicsWorld* worldMB = dynamic_cast<btMultiBodyDynamicsWorld*>(world->getPhysicsWorld());
+    btDynamicsWorld* bulletWorld = dynamic_cast<btDynamicsWorld*>(world->getPhysicsWorld());
     bParse::btBulletFile* bullet_file = new bParse::btBulletFile(buffer, length);
-    btMultiBodyWorldImporter* importer = new btMultiBodyWorldImporter(bulletWorld);
-    mWorld = bulletWorld;
+    btBulletWorldImporter* importer = (world->isMultiBody() && worldMB) ?
+                                      new  btMultiBodyWorldImporter(worldMB) :
+                                      new btBulletWorldImporter(bulletWorld);
     mBulletImporter = importer;
     mBulletImporter->loadFileFromMemory(bullet_file);
 
@@ -999,17 +1130,25 @@ bool BulletFileLoader::parse(BulletWorld* world, char *buffer, size_t length, bo
         float* gravity = reinterpret_cast<float*>(&fdata->m_gravity);
         mNeedRotate = gravity[2] != 0.f;
     }
-    if (bulletWorld->getNumMultibodies() > 0)
+    if (worldMB && worldMB->getNumMultibodies() > 0)
     {
-        mFirstMultiBody = bulletWorld->getNumMultibodies();
+        mFirstMultiBody = worldMB->getNumMultibodies();
         importer->convertAllObjects(bullet_file);
     }
     delete bullet_file;
 
-    createRigidBodies(*importer);
-    createJoints(*bulletWorld);
-    createConstraints(*importer);
-    createMultiBodyConstraints(*bulletWorld);
+    if (worldMB)
+    {
+        createRigidBodies(*importer);
+        createJoints(*worldMB);
+        createConstraints(*importer);
+        createMultiBodyConstraints(*worldMB);
+    }
+    else
+    {
+        createRigidBodies(*importer);
+        createConstraints(*importer);
+    }
     return true;
 }
 
@@ -1032,23 +1171,18 @@ bool BulletFileLoader::parse(BulletWorld* world, char *buffer, size_t length, bo
  */
 bool BulletFileLoader::parseURDF(BulletWorld* world, const char* xmldata, bool ignoreUpAxis)
 {
-    btMultiBodyDynamicsWorld* bulletWorld = dynamic_cast<btMultiBodyDynamicsWorld*>(world->getPhysicsWorld());
+    btMultiBodyDynamicsWorld* worldMB = dynamic_cast<btMultiBodyDynamicsWorld*>(world->getPhysicsWorld());
+    btDynamicsWorld* bulletWorld = dynamic_cast<btDynamicsWorld*>(world->getPhysicsWorld());
 
-    if (bulletWorld == nullptr)
+    if (worldMB && worldMB->getNumMultibodies() > 0)
     {
-        LOGE("BULLET: Input BulletWorld does not support multibody, cannot import");
-        return false;
-    }
-    if (bulletWorld->getNumMultibodies() > 0)
-    {
-        mFirstMultiBody = bulletWorld->getNumMultibodies();
+        mFirstMultiBody = worldMB->getNumMultibodies();
     }
     mSerializer = new btDefaultSerializer();
-    mURDFImporter = new URDFConverter(world->isMultiBody());
-    mURDFImporter->importPhysics(xmldata, bulletWorld);
+    mURDFImporter = new URDFConverter(world->isMultiBody(), &mFileIO);
+    worldMB = mURDFImporter->importPhysics(xmldata, worldMB);
     mURDFImporter->registerNames(*mSerializer);
-    mWorld = world->getPhysicsWorld();
-    const btVector3& gravity = mWorld->getGravity();
+    const btVector3& gravity = worldMB->getGravity();
 
     if (ignoreUpAxis)
     {
@@ -1058,12 +1192,18 @@ bool BulletFileLoader::parseURDF(BulletWorld* world, const char* xmldata, bool i
     {
         mNeedRotate = gravity.y() != 0.0;
     }
-    createRigidBodies(*bulletWorld);
-    createJoints(*bulletWorld);
-    createConstraints(*bulletWorld);
-    createMultiBodyConstraints(*bulletWorld);
-    delete mURDFImporter;
-    mURDFImporter = nullptr;
+    if (bulletWorld == worldMB)
+    {
+        createRigidBodies(*worldMB);
+        createJoints(*worldMB);
+        createConstraints(*worldMB);
+        createMultiBodyConstraints(*worldMB);
+    }
+    else
+    {
+        createRigidBodies(*worldMB);
+        createConstraints(*worldMB);
+    }
     return true;
 }
 
