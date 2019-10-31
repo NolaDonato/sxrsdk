@@ -347,9 +347,9 @@ namespace sxr {
 
     void BulletRootJoint::removeFromWorld()
     {
-        btMultiBodyDynamicsWorld* w = dynamic_cast<btMultiBodyDynamicsWorld*>(mWorld->getPhysicsWorld());
-        if (w && mMultiBody)
+        if (mWorld && mMultiBody)
         {
+            btMultiBodyDynamicsWorld* w = dynamic_cast<btMultiBodyDynamicsWorld*>(mWorld->getPhysicsWorld());
             BulletJoint::removeFromWorld();
             mWorld = nullptr;
             w->removeMultiBody(mMultiBody);

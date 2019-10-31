@@ -502,7 +502,7 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
     {
         btMultiBody* mb = world.getMultiBody(i);
         btMultiBodyLinkCollider* btc = mb->getBaseCollider();
-        const char* name = getNameForPointer(mb);
+        const char* name = getNameForPointer(btc);
 
         if (name == nullptr)    // cannot import bodies without names
         {
@@ -1109,9 +1109,12 @@ bool BulletFileLoader::parse(BulletWorld* world, char *buffer, size_t length, bo
     btBulletWorldImporter* importer = (world->isMultiBody() && worldMB) ?
                                       new  btMultiBodyWorldImporter(worldMB) :
                                       new btBulletWorldImporter(bulletWorld);
+    if (worldMB)
+    {
+        mFirstMultiBody = worldMB->getNumMultibodies();
+    }
     mBulletImporter = importer;
     mBulletImporter->loadFileFromMemory(bullet_file);
-
     if (ignoreUpAxis)
     {
         mNeedRotate = false;
@@ -1130,24 +1133,15 @@ bool BulletFileLoader::parse(BulletWorld* world, char *buffer, size_t length, bo
         float* gravity = reinterpret_cast<float*>(&fdata->m_gravity);
         mNeedRotate = gravity[2] != 0.f;
     }
-    if (worldMB && worldMB->getNumMultibodies() > 0)
-    {
-        mFirstMultiBody = worldMB->getNumMultibodies();
-        importer->convertAllObjects(bullet_file);
-    }
+
     delete bullet_file;
+    createRigidBodies(*importer);
+    createConstraints(*importer);
 
     if (worldMB)
     {
-        createRigidBodies(*importer);
         createJoints(*worldMB);
-        createConstraints(*importer);
         createMultiBodyConstraints(*worldMB);
-    }
-    else
-    {
-        createRigidBodies(*importer);
-        createConstraints(*importer);
     }
     return true;
 }
@@ -1172,7 +1166,8 @@ bool BulletFileLoader::parse(BulletWorld* world, char *buffer, size_t length, bo
 bool BulletFileLoader::parseURDF(BulletWorld* world, const char* xmldata, bool ignoreUpAxis)
 {
     btMultiBodyDynamicsWorld* worldMB = dynamic_cast<btMultiBodyDynamicsWorld*>(world->getPhysicsWorld());
-    btDynamicsWorld* bulletWorld = dynamic_cast<btDynamicsWorld*>(world->getPhysicsWorld());
+    btDynamicsWorld* bulletWorld = world->getPhysicsWorld();
+    const btVector3& gravity = bulletWorld->getGravity();
 
     if (worldMB && worldMB->getNumMultibodies() > 0)
     {
@@ -1180,29 +1175,19 @@ bool BulletFileLoader::parseURDF(BulletWorld* world, const char* xmldata, bool i
     }
     mSerializer = new btDefaultSerializer();
     mURDFImporter = new URDFConverter(world->isMultiBody(), &mFileIO);
+    worldMB->setGravity(btVector3(gravity.x(), -gravity.z(), gravity.y()));
     worldMB = mURDFImporter->importPhysics(xmldata, worldMB);
-    mURDFImporter->registerNames(*mSerializer);
-    const btVector3& gravity = worldMB->getGravity();
 
-    if (ignoreUpAxis)
-    {
-        mNeedRotate = false;
-    }
-    else
-    {
-        mNeedRotate = gravity.y() != 0.0;
-    }
+    mURDFImporter->exportPhysics("/storage/emulated/0/temp.bullet", mSerializer);
+    mURDFImporter->registerNames(*mSerializer, false);
+    bulletWorld->setGravity(gravity);
+    mNeedRotate = !ignoreUpAxis;    // URDF is Z up
+    createRigidBodies(*worldMB);
+    createConstraints(*worldMB);
     if (bulletWorld == worldMB)
     {
-        createRigidBodies(*worldMB);
         createJoints(*worldMB);
-        createConstraints(*worldMB);
         createMultiBodyConstraints(*worldMB);
-    }
-    else
-    {
-        createRigidBodies(*worldMB);
-        createConstraints(*worldMB);
     }
     return true;
 }
