@@ -249,9 +249,10 @@ public class SXRPhysicsContent extends SXRComponent
 
     protected void doPhysicsDetach()
     {
-        for (int i = 0; i < mPhysicsObject.size(); ++i)
+        int n = mPhysicsObject.size();
+        for (int i = 0; i < n; ++i)
         {
-            SXRPhysicsWorldObject o = mPhysicsObject.valueAt(i);
+            SXRPhysicsWorldObject o = mPhysicsObject.valueAt(0);
 
             if (o instanceof SXRConstraint)
             {
@@ -266,7 +267,6 @@ public class SXRPhysicsContent extends SXRComponent
                 removeBody((SXRPhysicsJoint) o);
             }
         }
-        mPhysicsObject.clear();
     }
 
     @Override

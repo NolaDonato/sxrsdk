@@ -238,27 +238,49 @@ void MultiBodyCreator::addLinkMapping(int urdfLinkIndex, int mbLinkIndex)
 	m_mb2urdfLink[mbLinkIndex] = urdfLinkIndex;
 }
 
-void MultiBodyCreator::registerNames(btSerializer& s)
+void MultiBodyCreator::registerNames(btSerializer& s, bool exporting)
 {
 	int index = 0;
 	for (auto it = m_bodies.begin(); it < m_bodies.end(); ++it)
 	{
 		btCollisionObject* body = *it;
+		const char* name = m_names[index].c_str();
+
 		if (body)
 		{
-			btMultiBodyLinkCollider* mbc = dynamic_cast<btMultiBodyLinkCollider*>(body);
-			if (mbc && (mbc->m_link < 0))
+		    s.registerNameForPointer(body, name);
+		}
+		btMultiBodyLinkCollider* mbc = dynamic_cast<btMultiBodyLinkCollider*>(body);
+		if (mbc)
+		{
+			btMultiBody* mb = mbc->m_multiBody;
+			if (mbc->m_link < 0)
 			{
-				s.registerNameForPointer(mbc->m_multiBody, m_names[index].c_str());
+			    if (exporting)
+                {
+			        mb->setBaseName((char*) mbc);
+                }
+                else
+                {
+                    mb->setBaseName(name);
+                }
 			}
 			else
 			{
-				s.registerNameForPointer(body, m_names[index].c_str());
-			}
+			    if (exporting)
+                {
+                    mb->getLink(mbc->m_link).m_jointName = (char*) mbc;
+                }
+                else
+                {
+                    mb->getLink(mbc->m_link).m_jointName = name;
+                }
+            }
 		}
 		++index;
 	}
 }
+
 
 URDFConverter::URDFConverter(bool isMultiBody, CommonFileIOInterface* fileIO)
 	: CommonMultiBodyBase(NULL),
@@ -308,12 +330,12 @@ void URDFConverter::initPhysics()
 	}
 }
 
-void URDFConverter::registerNames(btSerializer& s)
+void URDFConverter::registerNames(btSerializer& s, bool exporting = false)
 {
-	m_creator->registerNames(s);
+	m_creator->registerNames(s, exporting);
 }
 
-bool URDFConverter::exportPhysics(const char* bulletFile)
+bool URDFConverter::exportPhysics(const char* bulletFile, btSerializer* serializer)
 {
 	FILE* f = fopen(bulletFile, "wb");
 
@@ -321,11 +343,15 @@ bool URDFConverter::exportPhysics(const char* bulletFile)
 	{
 		return false;
 	}
-	btSerializer* s = new btDefaultSerializer;
-	registerNames(*s);
+	btSerializer* s = serializer ? serializer : new btDefaultSerializer;
+	registerNames(*s, true);
 	m_dynamicsWorld->serialize(s);
 	fwrite(s->getBufferPointer(), s->getCurrentBufferSize(), 1, f);
 	fclose(f);
+	if (s != serializer)
+    {
+	    delete s;
+    }
 	return true;
 }
 

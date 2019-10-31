@@ -69,17 +69,8 @@ set_target_properties(Bullet3Common PROPERTIES IMPORTED_LOCATION ${bulletDir}/li
 add_library(BulletCollision SHARED IMPORTED)
 set_target_properties(BulletCollision PROPERTIES IMPORTED_LOCATION ${bulletDir}/libBulletCollision.so)
 
-add_library(Bullet3Collision SHARED IMPORTED)
-set_target_properties(Bullet3Collision PROPERTIES IMPORTED_LOCATION ${bulletDir}/libBullet3Collision.so)
-
 add_library(BulletDynamics SHARED IMPORTED)
 set_target_properties(BulletDynamics PROPERTIES IMPORTED_LOCATION ${bulletDir}/libBulletDynamics.so)
-
-add_library(Bullet3Dynamics SHARED IMPORTED)
-set_target_properties(Bullet3Dynamics PROPERTIES IMPORTED_LOCATION ${bulletDir}/libBullet3Dynamics.so)
-
-add_library(Bullet3Geometry SHARED IMPORTED)
-set_target_properties(Bullet3Geometry PROPERTIES IMPORTED_LOCATION ${bulletDir}/libBullet3Geometry.so)
 
 add_library(BulletSoftBody SHARED IMPORTED)
 set_target_properties(BulletSoftBody PROPERTIES IMPORTED_LOCATION ${bulletDir}/libBulletSoftBody.so)
@@ -92,5 +83,5 @@ set_target_properties(BulletWorldImporter PROPERTIES IMPORTED_LOCATION ${bulletD
 
 
 
-target_link_libraries(sxr-physics sxrsdk BulletWorldImporter BulletFileLoader Bullet3Dynamics Bullet3Collision Bullet3Geometry Bullet3Common BulletDynamics BulletCollision LinearMath android log EGL GLESv3)
+target_link_libraries(sxr-physics sxrsdk BulletWorldImporter BulletFileLoader Bullet3Common BulletDynamics BulletCollision LinearMath android log EGL GLESv3)
 

@@ -30,7 +30,7 @@ class MultiBodyCreator : public MultiBodyCreationInterface
 
 public:
 	MultiBodyCreator(const URDFImporterInterface& u2b);
-	void registerNames(btSerializer& s);
+	void registerNames(btSerializer& s, bool exporting = false);
 	btRigidBody* allocateRigidBody(int urdfLinkIndex, btScalar mass,
 								   const btVector3& localInertiaDiagonal,
 								   const btTransform& initialWorldTrans,
@@ -96,9 +96,9 @@ public:
 	~URDFConverter();
 
 	btMultiBodyDynamicsWorld* importPhysics(const char* urdfData, btMultiBodyDynamicsWorld* world);
-	bool exportPhysics(const char* bulletFileName);
+	bool exportPhysics(const char* bulletFileName, btSerializer* serializer = nullptr);
 	void initPhysics();
-	void registerNames(btSerializer& s);
+	void registerNames(btSerializer& s, bool exporting);
 
 private:
 	btMultiBodyDynamicsWorld* createWorld();

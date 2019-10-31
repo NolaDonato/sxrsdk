@@ -42,6 +42,11 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
     private boolean mCreateNodes = false;
     private SXREventReceiver mListeners;
 
+    static
+    {
+        System.loadLibrary("BulletFileLoader");
+        System.loadLibrary("BulletWorldImporter");
+    }
     public interface IPhysicsLoaderEvents extends IEvents
     {
         /**
