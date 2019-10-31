@@ -43,6 +43,7 @@ class btConvexHullShape;
 class btRigidBody;
 class btSerializer;
 class btVector3;
+class btQuaternion;
 class URDFConverter;
 
 namespace std
@@ -148,8 +149,10 @@ private:
     void        createMultiBodyConstraint(JNIEnv& env, btMultiBodyConstraint* c);
     const char* getNameForPointer(void* p);
     void        rotateLink(btMultibodyLink& link);
+    btVector3&  rotatePoint(btVector3& p);
+    btQuaternion&       rotateQuat(btQuaternion& q);
     btConvexPolyhedron* rotatePoly(const btConvexPolyhedron* input, btVector3* outVerts);
-    btCollisionShape* createCollisionShape(JNIEnv& env, btCollisionShape* shape, jobject& obj);
+    btCollisionShape*   createCollisionShape(JNIEnv& env, btCollisionShape* shape, jobject& obj);
     btConvexHullShape* copyHull(const btConvexHullShape *input, btVector3 *outVerts);
 
     std::unordered_map<std::string, SmartGlobalRef>  mRigidBodies;

@@ -185,6 +185,7 @@ btCollisionShape* BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisio
                 he.setY(he.getZ());
                 he.setZ(y);
                 outshape = new btBoxShape(he);
+                outshape->setMargin(shape->getMargin());
             }
             bc->set_half_extents(he.x(), he.y(), he.z());
             javaObj = CreateInstance(env, "com/samsungxr/SXRBoxCollider",
@@ -223,7 +224,6 @@ btCollisionShape* BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisio
                     if (mNeedRotate)
                     {
                         outshape = new btCapsuleShape(r, h);
-                        delete shape;
                     }
                     else
                     {
@@ -235,6 +235,7 @@ btCollisionShape* BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisio
                 if (mNeedRotate)
                 {
                     outshape = new btCapsuleShapeZ(r, h);
+                    outshape->setMargin(shape->getMargin());
                     cc->setToZDirection();
                 }
             }
@@ -502,7 +503,7 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
     {
         btMultiBody* mb = world.getMultiBody(i);
         btMultiBodyLinkCollider* btc = mb->getBaseCollider();
-        const char* name = getNameForPointer(mb);
+        const char* name = getNameForPointer(btc);
 
         if (name == nullptr)    // cannot import bodies without names
         {
@@ -573,37 +574,39 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
     }
 }
 
+btVector3& BulletFileLoader::rotatePoint(btVector3& p)
+{
+    float t = -p.z();
+    p.setZ(p.y());
+    p.setY(t);
+    return p;
+}
+
+btQuaternion& BulletFileLoader::rotateQuat(btQuaternion& q)
+{
+    float t = -q.z();
+    q.setZ(q.y());
+    q.setY(t);
+    return q;
+}
+
 void BulletFileLoader::rotateLink(btMultibodyLink& link)
 {
-    btTransform trans = link.m_cachedWorldTransform;
-    float t;
-
-    link.m_cachedWorldTransform = transformInvIdty * trans;
-    trans = transformInvIdty * link.m_collider->getWorldTransform();
-    link.m_collider->setWorldTransform(trans);
-    t = -link.m_zeroRotParentToThis.y();
-    link.m_zeroRotParentToThis.setY(link.m_zeroRotParentToThis.z());
-    link.m_zeroRotParentToThis.setZ(t);
-    t = -link.m_eVector.y();
-    link.m_eVector.setY(link.m_eVector.z());
-    link.m_eVector.setZ(t);
-    t = -link.m_dVector.y();
-    link.m_dVector.setY(link.m_dVector.z());
-    link.m_dVector.setZ(t);
-
+    link.m_cachedWorldTransform = transformInvIdty * link.m_cachedWorldTransform;
+    link.m_collider->setWorldTransform(transformInvIdty * link.m_collider->getWorldTransform());
+    rotateQuat(link.m_zeroRotParentToThis);
+    rotatePoint(link.m_eVector);
+    rotatePoint(link.m_dVector);
+    rotatePoint((btVector3&) link.m_jointPos);
     for (int i = 0; i < link.m_dofCount; ++i)
     {
         btVector3 v = link.getAxisTop(i);
-        t = -v.y();
-        v.setY(v.z());
-        v.setZ(t);
+        rotatePoint(v);
         link.setAxisBottom(i, v);
-        v = link.getAxisTop(i);
-        t = -v.y();
-        v.setY(v.z());
-        v.setZ(t);
+        rotatePoint(v);
         link.setAxisBottom(i, v);
     }
+    link.updateCacheMultiDof();
 }
 
 /*
@@ -617,18 +620,10 @@ jobject BulletFileLoader::createP2PConstraint(JNIEnv& env, btPoint2PointConstrai
 
     if (mNeedRotate)
     {
-        // Adapting pivot to SXRf coordinates system
         btVector3 pivot = p2p->getPivotInA();
-        float t = pivot.getZ();
-        pivot.setZ(-pivot.getY());
-        pivot.setY(t);
-        p2p->setPivotA(pivot);
-
+        p2p->setPivotA(rotatePoint(pivot));
         pivot = p2p->getPivotInB();
-        t = pivot.getZ();
-        pivot.setZ(-pivot.getY());
-        pivot.setY(t);
-        p2p->setPivotB(pivot);
+        p2p->setPivotB(rotatePoint(pivot));
     }
     constraint = bp2p;
     return CreateInstance(env, "com/samsungxr/physics/SXRPoint2PointConstraint",
@@ -915,12 +910,8 @@ void BulletFileLoader::createMultiBodyConstraint(JNIEnv& env, btMultiBodyConstra
 
             fA = matrixInvIdty * fA;
             fB = matrixInvIdty * fB;
-            t = -pA.getY();
-            pA.setY(pA.getZ());
-            pA.setY(t);
-            t = -pB.getY();
-            pB.setY(pB.getZ());
-            pB.setY(t);
+            rotatePoint(pA);
+            rotatePoint(pB);
             fc->setFrameInA(fA);
             fc->setFrameInB(fB);
             fc->setPivotInA(pA);
@@ -939,16 +930,11 @@ void BulletFileLoader::createMultiBodyConstraint(JNIEnv& env, btMultiBodyConstra
             btMatrix3x3 fB = sc->getFrameInB();
             btVector3 pA = sc->getPivotInA();
             btVector3 pB = sc->getPivotInB();
-            float t;
 
             fA = matrixInvIdty * fA;
             fB = matrixInvIdty * fB;
-            t = -pA.getY();
-            pA.setY(pA.getZ());
-            pA.setY(t);
-            t = -pB.getY();
-            pB.setY(pB.getZ());
-            pB.setY(t);
+            rotatePoint(pA);
+            rotatePoint(pB);
             sc->setFrameInA(fA);
             sc->setFrameInB(fB);
             sc->setPivotInA(pA);
@@ -964,10 +950,7 @@ void BulletFileLoader::createMultiBodyConstraint(JNIEnv& env, btMultiBodyConstra
         if (mNeedRotate)
         {
             btVector3 pB = p2p->getPivotInB();
-            float t = -pB.getY();
-            pB.setY(pB.getZ());
-            pB.setY(t);
-            p2p->setPivotInB(pB);
+            p2p->setPivotInB(rotatePoint(pB));
         }
         physCon = new BulletPoint2PointConstraint(p2p);
         constraintClass = "com/samsungxr/physics/SXRPoint2PointConstraint";
@@ -1109,9 +1092,12 @@ bool BulletFileLoader::parse(BulletWorld* world, char *buffer, size_t length, bo
     btBulletWorldImporter* importer = (world->isMultiBody() && worldMB) ?
                                       new  btMultiBodyWorldImporter(worldMB) :
                                       new btBulletWorldImporter(bulletWorld);
+    if (worldMB)
+    {
+        mFirstMultiBody = worldMB->getNumMultibodies();
+    }
     mBulletImporter = importer;
     mBulletImporter->loadFileFromMemory(bullet_file);
-
     if (ignoreUpAxis)
     {
         mNeedRotate = false;
@@ -1130,24 +1116,15 @@ bool BulletFileLoader::parse(BulletWorld* world, char *buffer, size_t length, bo
         float* gravity = reinterpret_cast<float*>(&fdata->m_gravity);
         mNeedRotate = gravity[2] != 0.f;
     }
-    if (worldMB && worldMB->getNumMultibodies() > 0)
-    {
-        mFirstMultiBody = worldMB->getNumMultibodies();
-        importer->convertAllObjects(bullet_file);
-    }
+
     delete bullet_file;
+    createRigidBodies(*importer);
+    createConstraints(*importer);
 
     if (worldMB)
     {
-        createRigidBodies(*importer);
         createJoints(*worldMB);
-        createConstraints(*importer);
         createMultiBodyConstraints(*worldMB);
-    }
-    else
-    {
-        createRigidBodies(*importer);
-        createConstraints(*importer);
     }
     return true;
 }
@@ -1172,7 +1149,8 @@ bool BulletFileLoader::parse(BulletWorld* world, char *buffer, size_t length, bo
 bool BulletFileLoader::parseURDF(BulletWorld* world, const char* xmldata, bool ignoreUpAxis)
 {
     btMultiBodyDynamicsWorld* worldMB = dynamic_cast<btMultiBodyDynamicsWorld*>(world->getPhysicsWorld());
-    btDynamicsWorld* bulletWorld = dynamic_cast<btDynamicsWorld*>(world->getPhysicsWorld());
+    btDynamicsWorld* bulletWorld = world->getPhysicsWorld();
+    const btVector3& gravity = bulletWorld->getGravity();
 
     if (worldMB && worldMB->getNumMultibodies() > 0)
     {
@@ -1180,29 +1158,19 @@ bool BulletFileLoader::parseURDF(BulletWorld* world, const char* xmldata, bool i
     }
     mSerializer = new btDefaultSerializer();
     mURDFImporter = new URDFConverter(world->isMultiBody(), &mFileIO);
+    worldMB->setGravity(btVector3(gravity.x(), -gravity.z(), gravity.y()));
     worldMB = mURDFImporter->importPhysics(xmldata, worldMB);
-    mURDFImporter->registerNames(*mSerializer);
-    const btVector3& gravity = worldMB->getGravity();
 
-    if (ignoreUpAxis)
-    {
-        mNeedRotate = false;
-    }
-    else
-    {
-        mNeedRotate = gravity.y() != 0.0;
-    }
+    mURDFImporter->exportPhysics("/storage/emulated/0/temp.bullet", mSerializer);
+    mURDFImporter->registerNames(*mSerializer, false);
+    bulletWorld->setGravity(gravity);
+    mNeedRotate = !ignoreUpAxis;    // URDF is Z up
+    createRigidBodies(*worldMB);
+    createConstraints(*worldMB);
     if (bulletWorld == worldMB)
     {
-        createRigidBodies(*worldMB);
         createJoints(*worldMB);
-        createConstraints(*worldMB);
         createMultiBodyConstraints(*worldMB);
-    }
-    else
-    {
-        createRigidBodies(*worldMB);
-        createConstraints(*worldMB);
     }
     return true;
 }

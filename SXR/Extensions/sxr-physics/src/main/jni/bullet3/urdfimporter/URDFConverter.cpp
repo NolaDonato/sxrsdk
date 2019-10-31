@@ -246,36 +246,23 @@ void MultiBodyCreator::registerNames(btSerializer& s, bool exporting)
 		btCollisionObject* body = *it;
 		const char* name = m_names[index].c_str();
 
-		if (body)
-		{
-		    s.registerNameForPointer(body, name);
-		}
+		s.registerNameForPointer(body, name);
 		btMultiBodyLinkCollider* mbc = dynamic_cast<btMultiBodyLinkCollider*>(body);
 		if (mbc)
 		{
 			btMultiBody* mb = mbc->m_multiBody;
 			if (mbc->m_link < 0)
 			{
-			    if (exporting)
-                {
-			        mb->setBaseName((char*) mbc);
-                }
-                else
-                {
-                    mb->setBaseName(name);
-                }
+				mb->setBaseName(name);
 			}
 			else
 			{
-			    if (exporting)
-                {
-                    mb->getLink(mbc->m_link).m_jointName = (char*) mbc;
-                }
-                else
-                {
-                    mb->getLink(mbc->m_link).m_jointName = name;
-                }
+				mb->getLink(mbc->m_link).m_jointName = name;
             }
+			if (exporting)
+			{
+				s.registerNameForPointer(name, name);
+			}
 		}
 		++index;
 	}
