@@ -63,6 +63,7 @@
 #include "bullet_point2pointconstraint.h"
 #include "bullet_sliderconstraint.h"
 #include "bullet_jointmotor.h"
+#include "../../bullet3/include/BulletDynamics/Featherstone/btMultiBodyLink.h"
 
 static btMatrix3x3 matrixInvIdty(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f);
 static btTransform transformInvIdty(matrixInvIdty);
@@ -180,10 +181,7 @@ btCollisionShape* BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisio
 
             if (mNeedRotate)
             {
-                float y = he.getY();
-
-                he.setY(he.getZ());
-                he.setZ(y);
+                he.setValue(he.x(), he.z(), he.y());
                 outshape = new btBoxShape(he);
                 outshape->setMargin(shape->getMargin());
             }
@@ -334,19 +332,15 @@ btConvexPolyhedron* BulletFileLoader::rotatePoly(const btConvexPolyhedron* input
     output->m_vertices.copyFromArray(input->m_vertices);
     for (int i = 0; i < numVerts; ++i)
     {
-        const btVector3& vin = input->m_vertices[i];
-        btVector3& vout = output->m_vertices[i];
+        btVector3 v = input->m_vertices[i];
+        output->m_vertices[i] = rotatePoint(v);
 
-        vout.setX(vin.x());
-        vout.setY(vin.z());
-        vout.setZ(-vin.y());
-        outVerts[i] = vout;
     }
     return output;
 }
 
 btConvexHullShape* BulletFileLoader::copyHull(const btConvexHullShape *input,
-                                                    btVector3 *outVerts)
+                                                    btVector3 *outverts)
 {
     const btVector3* inverts = input->getUnscaledPoints();
     int numVerts = input->getNumVertices();
@@ -355,21 +349,15 @@ btConvexHullShape* BulletFileLoader::copyHull(const btConvexHullShape *input,
     {
         for (int i = 0; i < numVerts; ++i)
         {
-            const btVector3 &vin = inverts[i];
-            btVector3 &vout = outVerts[i];
+            btVector3 v = inverts[i];
 
-            vout.setX(vin.x());
-            vout.setY(vin.z());
-            vout.setZ(-vin.y());
+            outverts[i] = rotatePoint(v);
         }
-        return new btConvexHullShape((btScalar*) outVerts, numVerts);
+        return new btConvexHullShape((btScalar*) outverts, numVerts);
     }
     else
     {
-        for (int i = 0; i < numVerts; ++i)
-        {
-            outVerts[i] = inverts[i];
-        }
+        memcpy(outverts, inverts, numVerts * sizeof(btVector3));
         return nullptr;
     }
 }
@@ -511,10 +499,7 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
         }
         if (mNeedRotate)
         {
-            btQuaternion rot = mb->getWorldToBaseRot();
-            btVector3    pos = mb->getBasePos();
-            btTransform  t(rot, pos);
-            t = transformInvIdty * t;
+            btTransform t = transformInvIdty * mb->getBaseWorldTransform();
             mb->setBaseWorldTransform(t);
             btc->setWorldTransform(t);
         }
@@ -551,6 +536,13 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
             if (mNeedRotate)
             {
                 rotateLink(link);
+                if (link.m_posVarCount >= 3 && link.m_posVarCount <= 4)
+                {
+                    float* jointPos = mb->getJointPosMultiDof(i);
+                    btVector3 v(jointPos[0], jointPos[1], jointPos[2]);
+                    rotatePoint(v);
+                    mb->setJointPosMultiDof(i, (btScalar*) &v);
+                }
             }
             BulletJoint* nativeJoint = (BulletJoint*) (link.m_userPtr);
             javaJoint = CreateInstance(*env, "com/samsungxr/physics/SXRPhysicsJoint",
@@ -576,17 +568,17 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
 
 btVector3& BulletFileLoader::rotatePoint(btVector3& p)
 {
-    float t = -p.z();
-    p.setZ(p.y());
-    p.setY(t);
+    float t = -p.y();
+    p.setY(p.z());
+    p.setZ(t);
     return p;
 }
 
 btQuaternion& BulletFileLoader::rotateQuat(btQuaternion& q)
 {
-    float t = -q.z();
-    q.setZ(q.y());
-    q.setY(t);
+    float t = -q.y();
+    q.setY(q.z());
+    q.setZ(t);
     return q;
 }
 
@@ -597,12 +589,12 @@ void BulletFileLoader::rotateLink(btMultibodyLink& link)
     rotateQuat(link.m_zeroRotParentToThis);
     rotatePoint(link.m_eVector);
     rotatePoint(link.m_dVector);
-    rotatePoint((btVector3&) link.m_jointPos);
     for (int i = 0; i < link.m_dofCount; ++i)
     {
         btVector3 v = link.getAxisTop(i);
         rotatePoint(v);
-        link.setAxisBottom(i, v);
+        link.setAxisTop(i, v);
+        v = link.getAxisBottom(i);
         rotatePoint(v);
         link.setAxisBottom(i, v);
     }
@@ -642,8 +634,8 @@ jobject BulletFileLoader::createHingeConstraint(JNIEnv& env, btHingeConstraint* 
         btTransform& tA = hg->getAFrame();
         btTransform& tB = hg->getBFrame();
 
-        tA.mult(transformInvIdty, tA);
-        tB.mult(transformInvIdty, tB);
+        tA = transformInvIdty * tA;
+        tB = transformInvIdty * tB;
     }
     BulletHingeConstraint *bhg = new BulletHingeConstraint(hg);
     constraint = bhg;
@@ -663,8 +655,8 @@ jobject BulletFileLoader::createConeTwistConstraint(JNIEnv& env, btConeTwistCons
         btTransform tA = ct->getAFrame();
         btTransform tB = ct->getBFrame();
 
-        tA.mult(transformInvIdty, tA);
-        tB.mult(transformInvIdty, tB);
+        tA = transformInvIdty * tA;
+        tB = transformInvIdty * tB;
         ct->setFrames(tA, tB);
     }
     BulletConeTwistConstraint *bct = new BulletConeTwistConstraint(ct);
@@ -685,8 +677,8 @@ jobject BulletFileLoader::createGenericConstraint(JNIEnv& env, btGeneric6DofCons
         btTransform tA = gen->getFrameOffsetA();
         btTransform tB = gen->getFrameOffsetB();
 
-        tA.mult(transformInvIdty, tA);
-        tB.mult(transformInvIdty, tB);
+        tA = transformInvIdty * tA;
+        tB = transformInvIdty * tB;
         gen->setFrames(tA, tB);
     }
     BulletGeneric6dofConstraint *bg = new BulletGeneric6dofConstraint(gen);
@@ -707,8 +699,8 @@ jobject BulletFileLoader::createSpringConstraint(JNIEnv& env, btGeneric6DofSprin
         btTransform tA = gen->getFrameOffsetA();
         btTransform tB = gen->getFrameOffsetB();
 
-        tA.mult(transformInvIdty, tA);
-        tB.mult(transformInvIdty, tB);
+        tA = transformInvIdty * tA;
+        tB = transformInvIdty * tB;
         gen->setFrames(tA, tB);
     }
     BulletGeneric6dofConstraint *bg = new BulletGeneric6dofConstraint(gen);
@@ -729,8 +721,8 @@ jobject BulletFileLoader::createFixedConstraint(JNIEnv& env, btFixedConstraint* 
         btTransform tA = fix->getFrameOffsetA();
         btTransform tB = fix->getFrameOffsetB();
 
-        tA.mult(transformInvIdty, tA);
-        tB.mult(transformInvIdty, tB);
+        tA = transformInvIdty * tA;
+        tB = transformInvIdty * tB;
         fix->setFrames(tA, tB);
     }
     BulletFixedConstraint *bfix = new BulletFixedConstraint(fix);
@@ -751,8 +743,8 @@ jobject BulletFileLoader::createSliderConstraint(JNIEnv& env, btSliderConstraint
         btTransform tA = sld->getFrameOffsetA();
         btTransform tB = sld->getFrameOffsetB();
 
-        tA.mult(transformInvIdty, tA);
-        tB.mult(transformInvIdty, tB);
+        tA = transformInvIdty * tA;
+        tB = transformInvIdty * tB;
         sld->setFrames(tA, tB);
     }
     BulletSliderConstraint* c = new BulletSliderConstraint(sld);
