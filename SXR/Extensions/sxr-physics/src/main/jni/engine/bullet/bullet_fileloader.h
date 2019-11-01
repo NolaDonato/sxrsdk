@@ -144,7 +144,7 @@ private:
     void        createConstraints(btBulletWorldImporter&);
     void        createConstraints(btDynamicsWorld&);
     void        createMultiBodyConstraints(btMultiBodyDynamicsWorld&);
-    jobject     createCollider(btCollisionObject*);
+    jobject     createCollider(btCollisionObject*, float mass);
     void        createConstraint(JNIEnv& env, btTypedConstraint* constraint);
     void        createMultiBodyConstraint(JNIEnv& env, btMultiBodyConstraint* c);
     const char* getNameForPointer(void* p);

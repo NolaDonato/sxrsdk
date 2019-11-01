@@ -64,6 +64,7 @@
 #include "bullet_sliderconstraint.h"
 #include "bullet_jointmotor.h"
 #include "../../bullet3/include/BulletDynamics/Featherstone/btMultiBodyLink.h"
+#include "../../bullet3/include/BulletDynamics/Featherstone/btMultiBodyLinkCollider.h"
 
 static btMatrix3x3 matrixInvIdty(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f);
 static btTransform transformInvIdty(matrixInvIdty);
@@ -151,7 +152,7 @@ FILE* BulletFileLoader::FileIO::fopen(const char* fileName, const char* mode)
  * @param collider Bullet collider
  * @return Java SXRCollider object
  */
-jobject BulletFileLoader::createCollider(btCollisionObject* collider)
+jobject BulletFileLoader::createCollider(btCollisionObject* collider, float mass)
 {
     jobject o = 0;
     JNIEnv *env;
@@ -161,8 +162,24 @@ jobject BulletFileLoader::createCollider(btCollisionObject* collider)
     btCollisionShape* outshape = createCollisionShape(*env, inshape, o);
     if (outshape && (outshape != inshape))
     {
+        btRigidBody* rb = dynamic_cast<btRigidBody*>(collider);
+        btMultiBodyLinkCollider* mblc = dynamic_cast<btMultiBodyLinkCollider*>(collider);
+
         delete inshape;
         collider->setCollisionShape(outshape);
+        if (rb)
+        {
+            btVector3 inertia = rb->getLocalInertia();
+            outshape->calculateLocalInertia(mass, inertia);
+            rb->setMassProps(mass, inertia);
+        }
+        else if (mblc)
+        {
+            btMultiBody* mb = mblc->m_multiBody;
+            btVector3 inertia = mb->getLinkInertia(mblc->m_link);
+            outshape->calculateLocalInertia(mass, inertia);
+            mb->getLink(mblc->m_link).m_inertiaLocal = inertia;
+        }
     }
     return o;
 }
@@ -468,9 +485,9 @@ void BulletFileLoader::createRigidBody(JNIEnv& env, btRigidBody* rb)
     nativeBody->setName(name);
     SmartLocalRef r(mJavaVM, javaBody);
     std::string s(name);
+    btVector3 inertial = rb->getLocalInertia();
     mRigidBodies.emplace(s, r);
-
-    jobject javaCollider = createCollider(nativeBody->getRigidBody());
+    jobject javaCollider = createCollider(nativeBody->getRigidBody(), nativeBody->getMass());
     SmartLocalRef c(mJavaVM, javaCollider);
 
     mColliders.emplace(s, c);
@@ -516,7 +533,7 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
         world.removeMultiBody(mb);
         if (btc != nullptr)
         {
-            jobject javaCollider = createCollider(btc);
+            jobject javaCollider = createCollider(btc, mb->getBaseMass());
             SmartLocalRef c(mJavaVM, javaCollider);
 
             s = name;
@@ -535,7 +552,6 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
             }
             if (mNeedRotate)
             {
-                rotateLink(link);
                 if (link.m_posVarCount >= 3 && link.m_posVarCount <= 4)
                 {
                     float* jointPos = mb->getJointPosMultiDof(i);
@@ -543,6 +559,7 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
                     rotatePoint(v);
                     mb->setJointPosMultiDof(i, (btScalar*) &v);
                 }
+                rotateLink(link);
             }
             BulletJoint* nativeJoint = (BulletJoint*) (link.m_userPtr);
             javaJoint = CreateInstance(*env, "com/samsungxr/physics/SXRPhysicsJoint",
@@ -555,7 +572,7 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
             nativeJoint->setName(name);
             if (collider != nullptr)
             {
-                jobject javaCollider = createCollider(collider);
+                jobject javaCollider = createCollider(collider, link.m_mass);
                 SmartLocalRef r(mJavaVM, javaCollider);
 
                 s = name;
