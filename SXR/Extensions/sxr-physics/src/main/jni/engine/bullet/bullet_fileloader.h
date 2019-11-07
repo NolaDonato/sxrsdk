@@ -144,16 +144,13 @@ private:
     void        createConstraints(btBulletWorldImporter&);
     void        createConstraints(btDynamicsWorld&);
     void        createMultiBodyConstraints(btMultiBodyDynamicsWorld&);
-    jobject     createCollider(btCollisionObject*, float mass);
+    jobject     createCollider(btCollisionObject*);
     void        createConstraint(JNIEnv& env, btTypedConstraint* constraint);
     void        createMultiBodyConstraint(JNIEnv& env, btMultiBodyConstraint* c);
-    const char* getNameForPointer(void* p);
-    void        rotateLink(btMultibodyLink& link);
+    const char* getNameForPointer(void* p);void        rotateLink(btMultibodyLink& link);
     btVector3&  rotatePoint(btVector3& p);
-    btQuaternion&       rotateQuat(btQuaternion& q);
-    btConvexPolyhedron* rotatePoly(const btConvexPolyhedron* input, btVector3* outVerts);
-    btCollisionShape*   createCollisionShape(JNIEnv& env, btCollisionShape* shape, jobject& obj);
-    btConvexHullShape* copyHull(const btConvexHullShape *input, btVector3 *outVerts);
+    void        createCollisionShape(JNIEnv& env, btCollisionShape* shape, jobject& obj, btVector3& debugColor);
+    btConvexHullShape*  copyHull(const btConvexHullShape *input, float *outVerts, btVector3& dimensions);
 
     std::unordered_map<std::string, SmartGlobalRef>  mRigidBodies;
     std::unordered_map<std::string, SmartGlobalRef>  mJoints;

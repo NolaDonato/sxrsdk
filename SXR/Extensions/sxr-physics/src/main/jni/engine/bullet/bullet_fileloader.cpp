@@ -152,41 +152,22 @@ FILE* BulletFileLoader::FileIO::fopen(const char* fileName, const char* mode)
  * @param collider Bullet collider
  * @return Java SXRCollider object
  */
-jobject BulletFileLoader::createCollider(btCollisionObject* collider, float mass)
+jobject BulletFileLoader::createCollider(btCollisionObject* collider)
 {
     jobject o = 0;
     JNIEnv *env;
+    btVector3 color(1, 1, 1);
     mJavaVM.GetEnv((void **) &env, SUPPORTED_JNI_VERSION);
 
     btCollisionShape* inshape = collider->getCollisionShape();
-    btCollisionShape* outshape = createCollisionShape(*env, inshape, o);
-    if (outshape && (outshape != inshape))
-    {
-        btRigidBody* rb = dynamic_cast<btRigidBody*>(collider);
-        btMultiBodyLinkCollider* mblc = dynamic_cast<btMultiBodyLinkCollider*>(collider);
-
-        delete inshape;
-        collider->setCollisionShape(outshape);
-        if (rb)
-        {
-            btVector3 inertia = rb->getLocalInertia();
-            outshape->calculateLocalInertia(mass, inertia);
-            rb->setMassProps(mass, inertia);
-        }
-        else if (mblc)
-        {
-            btMultiBody* mb = mblc->m_multiBody;
-            btVector3 inertia = mb->getLinkInertia(mblc->m_link);
-            outshape->calculateLocalInertia(mass, inertia);
-            mb->getLink(mblc->m_link).m_inertiaLocal = inertia;
-        }
-    }
+    createCollisionShape(*env, inshape, o, color);
+    collider->setCustomDebugColor(color);
     return o;
 }
 
-btCollisionShape* BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisionShape* shape, jobject& javaObj)
+void BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisionShape* shape, jobject& javaObj, btVector3& debugColor)
 {
-    btCollisionShape* outshape = nullptr;
+    btVector3 scale = shape->getLocalScaling();
 
     switch (shape->getShapeType())
     {
@@ -196,16 +177,13 @@ btCollisionShape* BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisio
             BoxCollider* bc = new BoxCollider();
             btVector3 he(inbox->getHalfExtentsWithoutMargin());
 
-            if (mNeedRotate)
-            {
-                he.setValue(he.x(), he.z(), he.y());
-                outshape = new btBoxShape(he);
-                outshape->setMargin(shape->getMargin());
-            }
             bc->set_half_extents(he.x(), he.y(), he.z());
+            LOGD("PHYSICS LOADER:    box collider dimensions = (%0.3f, %0.3f, %0.3f)",
+                    he.x(), he.y(), he.z());
             javaObj = CreateInstance(env, "com/samsungxr/SXRBoxCollider",
                                "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), bc);
-            return outshape;
+            debugColor.setValue(0, 0, 1);
+            return;
         }
 
         case SPHERE_SHAPE_PROXYTYPE:
@@ -214,9 +192,10 @@ btCollisionShape* BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisio
             SphereCollider* sc = new SphereCollider();
             float radius = sphere->getRadius();
             sc->set_radius(radius);
+            LOGD("PHYSICS LOADER:    sphere collider radius = %0.3f", radius);
             javaObj = CreateInstance(env, "com/samsungxr/SXRSphereCollider",
-                               "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), sc);
-            return shape;
+                                     "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), sc);
+            return;
         }
 
         case CAPSULE_SHAPE_PROXYTYPE:
@@ -227,7 +206,6 @@ btCollisionShape* BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisio
             float h = cc->getHeight();
             const char* name = capsule->getName();
             char last = name[strlen(name) - 1];
-            outshape = shape;
 
             switch (last)
             {
@@ -236,29 +214,16 @@ btCollisionShape* BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisio
                     break;
 
                 case 'Z':
-                    if (mNeedRotate)
-                    {
-                        outshape = new btCapsuleShape(r, h);
-                    }
-                    else
-                    {
-                        cc->setToZDirection();
-                    }
-                    break;
-
-                default:
-                if (mNeedRotate)
-                {
-                    outshape = new btCapsuleShapeZ(r, h);
-                    outshape->setMargin(shape->getMargin());
                     cc->setToZDirection();
-                }
+                    break;
             }
             cc->setHeight(h);
             cc->setRadius(r);
+            LOGD("PHYSICS LOADER:    box collider height = %0.3f, radius = %0.3f", h, r);
             javaObj = CreateInstance(env, "com/samsungxr/SXRCapsuleCollider",
                                "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), cc);
-            return outshape;
+            debugColor.setValue(0, 1, 1);
+            return;
         }
 
         case CONVEX_HULL_SHAPE_PROXYTYPE:
@@ -266,23 +231,20 @@ btCollisionShape* BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisio
             btConvexHullShape* hull = dynamic_cast<btConvexHullShape*>(shape);
             int numVerts = hull->getNumVertices();
             VertexBuffer* vb = Renderer::getInstance()->createVertexBuffer("float3 a_position", numVerts);
-            IndexBuffer* ib = Renderer::getInstance()->createIndexBuffer(sizeof(short), numVerts);
-            short* indices = (short*) alloca(numVerts * sizeof(short));
-            btVector3* verts = new btVector3[numVerts];
+            float* verts = new float[numVerts * 3];
+            btVector3 dimensions;
 
-            outshape = copyHull(hull, verts);
-            for (int i = 0; i < numVerts; ++i)
-            {
-                indices[i] = i;
-            }
+            copyHull(hull, verts, dimensions);
             vb->setFloatVec("a_position", (float*) verts, numVerts * 3, 3);
             delete [] verts;
             Mesh* mesh = new Mesh(*vb);
-            mesh->setIndexBuffer(ib);
             MeshCollider* mc = new MeshCollider(mesh);
+            LOGD("PHYSICS LOADER:    convex hull collider %d vertices dimensions = (%0.3f, %0.3f, %0.3f)",
+                 numVerts, dimensions.x(), dimensions.y(), dimensions.z());
             javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
                                      "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), mc);
-            return outshape ? outshape : shape;
+            debugColor.setValue(0, 1, 0);
+            return;
         }
 
         case COMPOUND_SHAPE_PROXYTYPE:
@@ -291,13 +253,13 @@ btCollisionShape* BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisio
             btTransform t = transformInvIdty * cshape->getChildTransform(0);
 
             shape = cshape->getChildShape(0);
-            outshape = createCollisionShape(env, shape, javaObj);
-            if (outshape && (outshape != shape))
+            createCollisionShape(env, shape, javaObj, debugColor);
             {
-                cshape->removeChildShape(0);
-                cshape->addChildShape(t, outshape);
+                const btVector3& pos = t.getOrigin();
+                LOGD("PHYSICS LOADER:    compound collider pos = (%0.3f, %0.3f, %0.3f)", pos.x(),
+                     pos.y(), pos.z());
             }
-            return cshape;
+            return;
         }
 
         default:
@@ -307,76 +269,47 @@ btCollisionShape* BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisio
             const btConvexPolyhedron* poly = polyshape->getConvexPolyhedron();
             int numVerts = polyshape->getNumVertices();
             VertexBuffer* vb = Renderer::getInstance()->createVertexBuffer("float3 a_position", numVerts);
-            IndexBuffer* ib = Renderer::getInstance()->createIndexBuffer(sizeof(short), numVerts);
-            short* indices = (short*) alloca(numVerts * sizeof(short));
-            btVector3* verts = new btVector3[numVerts];
+            float* verts = new float[numVerts * 3];
 
-            if (mNeedRotate)
-            {
-                btConvexPolyhedron* newPoly = rotatePoly(poly, verts);
-                polyshape->setPolyhedralFeatures(*newPoly);
-            }
-            for (int i = 0; i < numVerts; ++i)
-            {
-                indices[i] = i;
-            }
             vb->setFloatVec("a_position", (float*) verts, numVerts * 3, 3);
             delete [] verts;
             Mesh* mesh = new Mesh(*vb);
-            mesh->setIndexBuffer(ib);
             MeshCollider* mc = new MeshCollider(mesh);
+            LOGD("PHYSICS LOADER:    convex polygon collider %d vertices", numVerts);
             javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
                                      "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), mc);
-            return shape;
         }
         else
         {
             MeshCollider *mc = new MeshCollider(nullptr);
             javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
                                      "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(), mc);
-            return outshape;
         }
     }
-}
-
-btConvexPolyhedron* BulletFileLoader::rotatePoly(const btConvexPolyhedron* input, btVector3* outVerts)
-{
-    int numVerts = input->m_vertices.size();
-    btConvexPolyhedron* output = new btConvexPolyhedron();
-    output->m_radius = input->m_radius;
-    output->m_extents = btVector3(input->m_extents.x(), input->m_extents.z(), input->m_extents.y());
-    output->m_faces.copyFromArray(input->m_faces);
-    output->m_vertices.copyFromArray(input->m_vertices);
-    for (int i = 0; i < numVerts; ++i)
-    {
-        btVector3 v = input->m_vertices[i];
-        output->m_vertices[i] = rotatePoint(v);
-
-    }
-    return output;
 }
 
 btConvexHullShape* BulletFileLoader::copyHull(const btConvexHullShape *input,
-                                                    btVector3 *outverts)
+                                                    float *outverts, btVector3& dimensions)
 {
     const btVector3* inverts = input->getUnscaledPoints();
     int numVerts = input->getNumVertices();
+    float* verts = outverts;
+    btVector3 boxMin, boxMax;
+    btConvexHullShape* outshape = nullptr;
 
-    if (mNeedRotate)
+    input->getAabb(btTransform::getIdentity(), boxMin, boxMax);
+    for (int i = 0; i < numVerts; ++i)
     {
-        for (int i = 0; i < numVerts; ++i)
-        {
-            btVector3 v = inverts[i];
+        btVector3 v = inverts[i];
+        *verts++ = v.x();
+        *verts++ = v.y();
+        *verts++ = v.z();
+    }
+    dimensions.setX(boxMax.x() - boxMin.x());
+    dimensions.setY(boxMax.y() - boxMin.y());
+    dimensions.setZ(boxMax.z() - boxMin.z());
+    return outshape;
 
-            outverts[i] = rotatePoint(v);
-        }
-        return new btConvexHullShape((btScalar*) outverts, numVerts);
-    }
-    else
-    {
-        memcpy(outverts, inverts, numVerts * sizeof(btVector3));
-        return nullptr;
-    }
 }
 
 const char* BulletFileLoader::getNameForPointer(void* ptr)
@@ -485,11 +418,10 @@ void BulletFileLoader::createRigidBody(JNIEnv& env, btRigidBody* rb)
     nativeBody->setName(name);
     SmartLocalRef r(mJavaVM, javaBody);
     std::string s(name);
-    btVector3 inertial = rb->getLocalInertia();
     mRigidBodies.emplace(s, r);
-    jobject javaCollider = createCollider(nativeBody->getRigidBody(), nativeBody->getMass());
-    SmartLocalRef c(mJavaVM, javaCollider);
 
+    jobject javaCollider = createCollider(nativeBody->getRigidBody());
+    SmartLocalRef c(mJavaVM, javaCollider);
     mColliders.emplace(s, c);
 }
 
@@ -516,9 +448,19 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
         }
         if (mNeedRotate)
         {
-            btTransform t = transformInvIdty * mb->getBaseWorldTransform();
-            mb->setBaseWorldTransform(t);
-            btc->setWorldTransform(t);
+            btQuaternion qYtoZ;
+
+            matrixInvIdty.getRotation(qYtoZ);
+            btQuaternion rot = qYtoZ * mb->getWorldToBaseRot();
+            btVector3 pos = mb->getBasePos();
+            mb->setWorldToBaseRot(rot);
+            //mb->setBasePos(rotatePoint(pos));
+            btc->setWorldTransform(btTransform(rot, pos));
+        }
+        {
+            const btVector3& p = mb->getBaseWorldTransform().getOrigin();
+            LOGD("PHYSICS LOADER: root joint %s pos = (%0.3f, %0.3f, %0.3f)",
+                  name, p.x(), p.y(), p.z());
         }
         BulletJoint* rootJoint = new BulletRootJoint(mb);
         jobject javaJoint = CreateInstance(*env, "com/samsungxr/physics/SXRPhysicsJoint",
@@ -533,7 +475,7 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
         world.removeMultiBody(mb);
         if (btc != nullptr)
         {
-            jobject javaCollider = createCollider(btc, mb->getBaseMass());
+            jobject javaCollider = createCollider(btc);
             SmartLocalRef c(mJavaVM, javaCollider);
 
             s = name;
@@ -550,16 +492,10 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
             {
                 continue;
             }
-            if (mNeedRotate)
             {
-                if (link.m_posVarCount >= 3 && link.m_posVarCount <= 4)
-                {
-                    float* jointPos = mb->getJointPosMultiDof(i);
-                    btVector3 v(jointPos[0], jointPos[1], jointPos[2]);
-                    rotatePoint(v);
-                    mb->setJointPosMultiDof(i, (btScalar*) &v);
-                }
-                rotateLink(link);
+                const btVector3& p = mb->getRVector(i);
+                LOGD("PHYSICS LOADER: joint %s index = %d, Rvector = (%0.3f, %0.3f, %0.3f)",
+                        name, i, p.x(), p.y(), p.z());
             }
             BulletJoint* nativeJoint = (BulletJoint*) (link.m_userPtr);
             javaJoint = CreateInstance(*env, "com/samsungxr/physics/SXRPhysicsJoint",
@@ -572,14 +508,14 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
             nativeJoint->setName(name);
             if (collider != nullptr)
             {
-                jobject javaCollider = createCollider(collider, link.m_mass);
+                jobject javaCollider = createCollider(collider);
                 SmartLocalRef r(mJavaVM, javaCollider);
 
                 s = name;
                 mColliders.emplace(s, r);
                 world.removeCollisionObject(collider);
             }
-        };
+        }
     }
 }
 
@@ -591,32 +527,6 @@ btVector3& BulletFileLoader::rotatePoint(btVector3& p)
     return p;
 }
 
-btQuaternion& BulletFileLoader::rotateQuat(btQuaternion& q)
-{
-    float t = -q.y();
-    q.setY(q.z());
-    q.setZ(t);
-    return q;
-}
-
-void BulletFileLoader::rotateLink(btMultibodyLink& link)
-{
-    link.m_cachedWorldTransform = transformInvIdty * link.m_cachedWorldTransform;
-    link.m_collider->setWorldTransform(transformInvIdty * link.m_collider->getWorldTransform());
-    rotateQuat(link.m_zeroRotParentToThis);
-    rotatePoint(link.m_eVector);
-    rotatePoint(link.m_dVector);
-    for (int i = 0; i < link.m_dofCount; ++i)
-    {
-        btVector3 v = link.getAxisTop(i);
-        rotatePoint(v);
-        link.setAxisTop(i, v);
-        v = link.getAxisBottom(i);
-        rotatePoint(v);
-        link.setAxisBottom(i, v);
-    }
-    link.updateCacheMultiDof();
-}
 
 /*
  * Create a Java SXRPoint2PointConstraint and the C++ PhysicsConstraint
@@ -1096,7 +1006,7 @@ bool BulletFileLoader::parse(char *buffer, size_t length, bool ignoreUpAxis)
 bool BulletFileLoader::parse(BulletWorld* world, char *buffer, size_t length, bool ignoreUpAxis)
 {
     btMultiBodyDynamicsWorld* worldMB = dynamic_cast<btMultiBodyDynamicsWorld*>(world->getPhysicsWorld());
-    btDynamicsWorld* bulletWorld = dynamic_cast<btDynamicsWorld*>(world->getPhysicsWorld());
+    btDynamicsWorld* bulletWorld = world->getPhysicsWorld();
     bParse::btBulletFile* bullet_file = new bParse::btBulletFile(buffer, length);
     btBulletWorldImporter* importer = (world->isMultiBody() && worldMB) ?
                                       new  btMultiBodyWorldImporter(worldMB) :
