@@ -66,9 +66,6 @@
 #include "../../bullet3/include/BulletDynamics/Featherstone/btMultiBodyLink.h"
 #include "../../bullet3/include/BulletDynamics/Featherstone/btMultiBodyLinkCollider.h"
 
-static btMatrix3x3 matrixInvIdty(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f);
-static btTransform transformInvIdty(matrixInvIdty);
-
 
 namespace sxr {
 
@@ -250,7 +247,7 @@ void BulletFileLoader::createCollisionShape(JNIEnv& env, btCollisionShape* shape
         case COMPOUND_SHAPE_PROXYTYPE:
         {
             btCompoundShape* cshape = dynamic_cast<btCompoundShape *>(shape);
-            btTransform t = transformInvIdty * cshape->getChildTransform(0);
+            btTransform t = mTransformCoords * cshape->getChildTransform(0);
 
             shape = cshape->getChildShape(0);
             createCollisionShape(env, shape, javaObj, debugColor);
@@ -408,7 +405,7 @@ void BulletFileLoader::createRigidBody(JNIEnv& env, btRigidBody* rb)
     }
     if (mNeedRotate)
     {
-        btTransform t = transformInvIdty * rb->getWorldTransform();
+        btTransform t = mTransformCoords * rb->getWorldTransform();
         rb->setWorldTransform(t);
     }
     BulletRigidBody* nativeBody = new BulletRigidBody(rb);
@@ -450,11 +447,11 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
         {
             btQuaternion qYtoZ;
 
-            matrixInvIdty.getRotation(qYtoZ);
+            mRotateCoords.getRotation(qYtoZ);
             btQuaternion rot = qYtoZ * mb->getWorldToBaseRot();
             btVector3 pos = mb->getBasePos();
             mb->setWorldToBaseRot(rot);
-            //mb->setBasePos(rotatePoint(pos));
+            mb->setBasePos(rotatePoint(pos));
             btc->setWorldTransform(btTransform(rot, pos));
         }
         {
@@ -521,9 +518,7 @@ void BulletFileLoader::createJoints(btMultiBodyDynamicsWorld& world)
 
 btVector3& BulletFileLoader::rotatePoint(btVector3& p)
 {
-    float t = -p.y();
-    p.setY(p.z());
-    p.setZ(t);
+    p = p * mRotateCoords;
     return p;
 }
 
@@ -551,6 +546,26 @@ jobject BulletFileLoader::createP2PConstraint(JNIEnv& env, btPoint2PointConstrai
 }
 
 /*
+ * Create a Java SXRPoint2PointConstraint and the C++ PhysicsConstraint
+ * based on the input btPoint2PointConstraint
+ */
+jobject BulletFileLoader::createP2PConstraint(JNIEnv& env, btMultiBodyPoint2Point* p2p, PhysicsConstraint*& constraint)
+{
+    // Constraint userPointer will point to newly created BulletPoint2PointConstraint
+    BulletPoint2PointConstraint* bp2p = new BulletPoint2PointConstraint(p2p);
+
+    if (mNeedRotate)
+    {
+        btVector3 pB = p2p->getPivotInB();
+        p2p->setPivotInB(rotatePoint(pB));
+    }
+    constraint = bp2p;
+    return CreateInstance(env, "com/samsungxr/physics/SXRPoint2PointConstraint",
+                          "(Lcom/samsungxr/SXRContext;J)V",
+                          mContext.getObject(), reinterpret_cast<jlong>(bp2p));
+}
+
+/*
  * Create a Java SXRHingeConstraint and the C++ PhysicsConstraint
  * based on the input btHingeConstraint
  */
@@ -561,8 +576,8 @@ jobject BulletFileLoader::createHingeConstraint(JNIEnv& env, btHingeConstraint* 
         btTransform& tA = hg->getAFrame();
         btTransform& tB = hg->getBFrame();
 
-        tA = transformInvIdty * tA;
-        tB = transformInvIdty * tB;
+        tA = mTransformCoords * tA;
+        tB = mTransformCoords * tB;
     }
     BulletHingeConstraint *bhg = new BulletHingeConstraint(hg);
     constraint = bhg;
@@ -582,8 +597,8 @@ jobject BulletFileLoader::createConeTwistConstraint(JNIEnv& env, btConeTwistCons
         btTransform tA = ct->getAFrame();
         btTransform tB = ct->getBFrame();
 
-        tA = transformInvIdty * tA;
-        tB = transformInvIdty * tB;
+        tA = mTransformCoords * tA;
+        tB = mTransformCoords * tB;
         ct->setFrames(tA, tB);
     }
     BulletConeTwistConstraint *bct = new BulletConeTwistConstraint(ct);
@@ -604,8 +619,8 @@ jobject BulletFileLoader::createGenericConstraint(JNIEnv& env, btGeneric6DofCons
         btTransform tA = gen->getFrameOffsetA();
         btTransform tB = gen->getFrameOffsetB();
 
-        tA = transformInvIdty * tA;
-        tB = transformInvIdty * tB;
+        tA = mTransformCoords * tA;
+        tB = mTransformCoords * tB;
         gen->setFrames(tA, tB);
     }
     BulletGeneric6dofConstraint *bg = new BulletGeneric6dofConstraint(gen);
@@ -626,8 +641,8 @@ jobject BulletFileLoader::createSpringConstraint(JNIEnv& env, btGeneric6DofSprin
         btTransform tA = gen->getFrameOffsetA();
         btTransform tB = gen->getFrameOffsetB();
 
-        tA = transformInvIdty * tA;
-        tB = transformInvIdty * tB;
+        tA = mTransformCoords * tA;
+        tB = mTransformCoords * tB;
         gen->setFrames(tA, tB);
     }
     BulletGeneric6dofConstraint *bg = new BulletGeneric6dofConstraint(gen);
@@ -648,9 +663,39 @@ jobject BulletFileLoader::createFixedConstraint(JNIEnv& env, btFixedConstraint* 
         btTransform tA = fix->getFrameOffsetA();
         btTransform tB = fix->getFrameOffsetB();
 
-        tA = transformInvIdty * tA;
-        tB = transformInvIdty * tB;
+        tA = mTransformCoords * tA;
+        tB = mTransformCoords * tB;
         fix->setFrames(tA, tB);
+    }
+    BulletFixedConstraint *bfix = new BulletFixedConstraint(fix);
+    constraint = bfix;
+    return CreateInstance(env, "com/samsungxr/physics/SXRFixedConstraint",
+                          "(Lcom/samsungxr/SXRContext;J)V",
+                          mContext.getObject(), reinterpret_cast<jlong>(bfix));
+}
+
+/*
+ * Create a Java SXRFixedConstraint and the C++ PhysicsConstraint
+ * based on the input btMultiBodyFixedConstraint
+ */
+jobject BulletFileLoader::createFixedConstraint(JNIEnv& env, btMultiBodyFixedConstraint* fix, PhysicsConstraint*& constraint)
+{
+    if (mNeedRotate)
+    {
+        btMatrix3x3 fA = fix->getFrameInA();
+        btMatrix3x3 fB = fix->getFrameInB();
+        btVector3 pA = fix->getPivotInA();
+        btVector3 pB = fix->getPivotInB();
+        float t;
+
+        fA = mRotateCoords * fA;
+        fB = mRotateCoords * fB;
+        rotatePoint(pA);
+        rotatePoint(pB);
+        fix->setFrameInA(fA);
+        fix->setFrameInB(fB);
+        fix->setPivotInA(pA);
+        fix->setPivotInB(pB);
     }
     BulletFixedConstraint *bfix = new BulletFixedConstraint(fix);
     constraint = bfix;
@@ -670,11 +715,40 @@ jobject BulletFileLoader::createSliderConstraint(JNIEnv& env, btSliderConstraint
         btTransform tA = sld->getFrameOffsetA();
         btTransform tB = sld->getFrameOffsetB();
 
-        tA = transformInvIdty * tA;
-        tB = transformInvIdty * tB;
+        tA = mTransformCoords * tA;
+        tB = mTransformCoords * tB;
         sld->setFrames(tA, tB);
     }
     BulletSliderConstraint* c = new BulletSliderConstraint(sld);
+    constraint = c;
+    return CreateInstance(env, "com/samsungxr/physics/SXRSliderConstraint",
+                          "(Lcom/samsungxr/SXRContext;J)V",
+                          mContext.getObject(), reinterpret_cast<jlong>(c));
+}
+
+/*
+ * Create a Java SXRSliderConstraint and the C++ PhysicsConstraint
+ * based on the input btMultiBodySliderConstraint
+ */
+jobject BulletFileLoader::createSliderConstraint(JNIEnv& env, btMultiBodySliderConstraint* sld, PhysicsConstraint*& constraint)
+{
+    if (mNeedRotate)
+    {
+        btMatrix3x3 fA = sld->getFrameInA();
+        btMatrix3x3 fB = sld->getFrameInB();
+        btVector3 pA = sld->getPivotInA();
+        btVector3 pB = sld->getPivotInB();
+
+        fA = mRotateCoords * fA;
+        fB = mRotateCoords * fB;
+        rotatePoint(pA);
+        rotatePoint(pB);
+        sld->setFrameInA(fA);
+        sld->setFrameInB(fB);
+        sld->setPivotInA(pA);
+        sld->setPivotInB(pB);
+    }
+     BulletSliderConstraint* c = new BulletSliderConstraint(sld);
     constraint = c;
     return CreateInstance(env, "com/samsungxr/physics/SXRSliderConstraint",
                           "(Lcom/samsungxr/SXRContext;J)V",
@@ -813,67 +887,31 @@ void BulletFileLoader::createMultiBodyConstraint(JNIEnv& env, btMultiBodyConstra
 
     if (mbA->getUserPointer() == nullptr)
     {
-        // This constraint has at least one invalid rigid body and then it must to be ignored
+        // This constraint has at least one invalid rigid body so it must to be ignored
         return;
     }
     if (typeid(c) == typeid(btMultiBodyFixedConstraint))
     {
         btMultiBodyFixedConstraint* fc = dynamic_cast<btMultiBodyFixedConstraint*>(c);
-        if (mNeedRotate)
-        {
-            btMatrix3x3 fA = fc->getFrameInA();
-            btMatrix3x3 fB = fc->getFrameInB();
-            btVector3 pA = fc->getPivotInA();
-            btVector3 pB = fc->getPivotInB();
-            float t;
-
-            fA = matrixInvIdty * fA;
-            fB = matrixInvIdty * fB;
-            rotatePoint(pA);
-            rotatePoint(pB);
-            fc->setFrameInA(fA);
-            fc->setFrameInB(fB);
-            fc->setPivotInA(pA);
-            fc->setPivotInB(pB);
-        }
-        physCon = new BulletFixedConstraint(fc);
-        constraintClass = "com/samsungxr/physics/SXRFixedConstraint";
+        javaConstraint = createFixedConstraint(env, fc, physCon);
         rbB = fc->getRigidBodyB();
     }
     else if (typeid(c) == typeid(btMultiBodySliderConstraint))
     {
         btMultiBodySliderConstraint* sc = dynamic_cast<btMultiBodySliderConstraint*>(c);
-        if (mNeedRotate)
-        {
-            btMatrix3x3 fA = sc->getFrameInA();
-            btMatrix3x3 fB = sc->getFrameInB();
-            btVector3 pA = sc->getPivotInA();
-            btVector3 pB = sc->getPivotInB();
 
-            fA = matrixInvIdty * fA;
-            fB = matrixInvIdty * fB;
-            rotatePoint(pA);
-            rotatePoint(pB);
-            sc->setFrameInA(fA);
-            sc->setFrameInB(fB);
-            sc->setPivotInA(pA);
-            sc->setPivotInB(pB);
-        }
-        physCon = new BulletSliderConstraint(sc);
-        constraintClass = "com/samsungxr/physics/SXRSliderConstraint";
+        javaConstraint = createSliderConstraint(env, sc, physCon);
         rbB = sc->getRigidBodyB();
     }
     else if (typeid(c) == typeid(btMultiBodyPoint2Point))
     {
         btMultiBodyPoint2Point* p2p = dynamic_cast<btMultiBodyPoint2Point*>(c);
-        if (mNeedRotate)
-        {
-            btVector3 pB = p2p->getPivotInB();
-            p2p->setPivotInB(rotatePoint(pB));
-        }
-        physCon = new BulletPoint2PointConstraint(p2p);
-        constraintClass = "com/samsungxr/physics/SXRPoint2PointConstraint";
+        javaConstraint = createP2PConstraint(env, p2p, physCon);
         rbB = p2p->getRigidBodyB();
+    }
+    else
+    {
+        return;
     }
     if (mbB != nullptr)
     {
@@ -885,10 +923,6 @@ void BulletFileLoader::createMultiBodyConstraint(JNIEnv& env, btMultiBodyConstra
     }
     if (nameB && javaConstraint)
     {
-        javaConstraint =  CreateInstance(env, constraintClass,
-                                         "(Lcom/samsungxr/SXRContext;J)V",
-                                         mContext.getObject(), reinterpret_cast<long>(physCon));
-
         mConstraints.emplace(std::string(nameB), SmartLocalRef(mJavaVM, javaConstraint));
         jobject bodyA = getConstraintBodyA(physCon);
         if (bodyA)
@@ -970,6 +1004,9 @@ bool BulletFileLoader::parse(char *buffer, size_t length, bool ignoreUpAxis)
                 reinterpret_cast<btDynamicsWorldDoubleData*>(bullet_file->m_dynamicsWorldInfo[0]);
         double *gravity = reinterpret_cast<double *>(&ddata->m_gravity);
         mNeedRotate = gravity[2] != 0.0;
+        mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f };
+        mTransformCoords.setBasis(mRotateCoords);
+        mTransformCoords.setOrigin(btVector3(0, 0, 0));
     }
     else
     {
@@ -977,6 +1014,9 @@ bool BulletFileLoader::parse(char *buffer, size_t length, bool ignoreUpAxis)
                 reinterpret_cast<btDynamicsWorldFloatData*>(bullet_file->m_dynamicsWorldInfo[0]);
         float *gravity = reinterpret_cast<float*>(&fdata->m_gravity);
         mNeedRotate = gravity[2] != 0.f;
+        mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f };
+        mTransformCoords.setBasis(mRotateCoords);
+        mTransformCoords.setOrigin(btVector3(0, 0, 0));
     }
 
     delete bullet_file;
@@ -1027,6 +1067,9 @@ bool BulletFileLoader::parse(BulletWorld* world, char *buffer, size_t length, bo
                 reinterpret_cast<btDynamicsWorldDoubleData*>(bullet_file->m_dynamicsWorldInfo[0]);
         double* gravity = reinterpret_cast<double*>(&ddata->m_gravity);
         mNeedRotate = gravity[2] != 0.0;
+        mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f };
+        mTransformCoords.setBasis(mRotateCoords);
+        mTransformCoords.setOrigin(btVector3(0, 0, 0));
     }
     else
     {
@@ -1034,6 +1077,9 @@ bool BulletFileLoader::parse(BulletWorld* world, char *buffer, size_t length, bo
                 reinterpret_cast<btDynamicsWorldFloatData*>(bullet_file->m_dynamicsWorldInfo[0]);
         float* gravity = reinterpret_cast<float*>(&fdata->m_gravity);
         mNeedRotate = gravity[2] != 0.f;
+        mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f };
+        mTransformCoords.setBasis(mRotateCoords);
+        mTransformCoords.setOrigin(btVector3(0, 0, 0));
     }
 
     delete bullet_file;
@@ -1077,13 +1123,18 @@ bool BulletFileLoader::parseURDF(BulletWorld* world, const char* xmldata, bool i
     }
     mSerializer = new btDefaultSerializer();
     mURDFImporter = new URDFConverter(world->isMultiBody(), &mFileIO);
-    worldMB->setGravity(btVector3(gravity.x(), -gravity.z(), gravity.y()));
     worldMB = mURDFImporter->importPhysics(xmldata, worldMB);
 
     mURDFImporter->exportPhysics("/storage/emulated/0/temp.bullet", mSerializer);
     mURDFImporter->registerNames(*mSerializer, false);
     bulletWorld->setGravity(gravity);
     mNeedRotate = !ignoreUpAxis;    // URDF is Z up
+    if (mNeedRotate)
+    {
+        mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f };
+        mTransformCoords.setBasis(mRotateCoords);
+        mTransformCoords.setOrigin(btVector3(0, 0, 0));
+    }
     createRigidBodies(*worldMB);
     createConstraints(*worldMB);
     if (bulletWorld == worldMB)

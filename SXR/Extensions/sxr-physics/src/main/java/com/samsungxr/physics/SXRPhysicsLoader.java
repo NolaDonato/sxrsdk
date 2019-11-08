@@ -47,6 +47,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         System.loadLibrary("BulletFileLoader");
         System.loadLibrary("BulletWorldImporter");
     }
+
     public interface IPhysicsLoaderEvents extends IEvents
     {
         /**
@@ -72,6 +73,12 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         mListeners = new SXREventReceiver(this);
     }
 
+    public SXRPhysicsLoader(SXRContext ctx, AssetManager assetMgr)
+    {
+        super(ctx, NativeBulletLoader.ctor(ctx, assetMgr));
+        mListeners = new SXREventReceiver(this);
+    }
+
     public SXREventReceiver getEventReceiver() { return mListeners; }
 
 
@@ -89,7 +96,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
      * @param fileName Name of file containing physics content.
      * @param scene    The scene containing the objects to attach physics components.
      */
-    public void loadPhysics(SXRScene scene, String fileName) throws IOException
+    public void loadPhysics(SXRScene scene, String fileName)
     {
         loadPhysics(scene, fileName, false);
     }
@@ -109,7 +116,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
      * @param scene    The scene containing the objects to attach physics components.
      * @param ignoreUpAxis Assume Y axis is up if true, down if false.
      */
-    public void loadPhysics(SXRScene scene, String fileName, boolean ignoreUpAxis) throws IOException
+    public void loadPhysics(SXRScene scene, String fileName, boolean ignoreUpAxis)
     {
         SXRAndroidResource resource = toAndroidResource(scene.getSXRContext(), fileName);
         loadPhysics(scene, resource, ignoreUpAxis);
@@ -130,7 +137,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
      * @param scene    The scene containing the objects to attach physics components.
      * @param ignoreUpAxis Assume Y axis is up if true, down if false.
      */
-    public SXRPhysicsContent loadPhysics(SXRScene scene, SXRAndroidResource resource, boolean ignoreUpAxis) throws IOException
+    public SXRPhysicsContent loadPhysics(SXRScene scene, SXRAndroidResource resource, boolean ignoreUpAxis)
     {
         String fname = resource.getResourceFilename().toLowerCase();
         SXRWorld world = (SXRWorld) scene.getRoot().getComponent(SXRWorld.getComponentType());
@@ -138,7 +145,10 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         mCreateNodes = false;
         if (world == null)
         {
-            throw new IOException("To load physics files, you must have a physics world attached to the scene");
+            getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
+                                                        "onLoadError", fname,
+                                                        "To load physics files, you must have a physics world attached to the scene");
+            return null;
         }
         if (fname.endsWith(".urdf"))
         {
@@ -150,14 +160,20 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 
             if (inputData == null || inputData.length == 0)
             {
-                throw new IOException("Failed to load physics file " + resource.getResourceFilename());
+                getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
+                                                            "onLoadError", fname,
+                                                            "Cannot open physics file");
+                return null;
             }
             loadBulletFile(inputData, scene.getRoot(), ignoreUpAxis);
             return world;
         }
         else
         {
-            throw new IOException("Unknown physics file type, must be .bullet or .urdf");
+            getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
+                                                        "onLoadError", fname,
+                                                        "Unknown physics file type, must be .bullet or .urdf");
+            return null;
         }
     }
 
@@ -185,11 +201,10 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
      *                 node hierarchy to attach physics to.
      * @param ignoreUpAxis Assume Y axis is up if true, down if false.
      */
-    public void loadPhysics(SXRWorld world, SXRAndroidResource resource, boolean ignoreUpAxis) throws IOException
+    public void loadPhysics(SXRWorld world, SXRAndroidResource resource, boolean ignoreUpAxis)
     {
         SXRNode root = world.getOwnerObject();
         String fname = resource.getResourceFilename().toLowerCase();
-
 
         if (root == null)
         {
@@ -197,9 +212,20 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
             root.setName(resource.getResourceFilename());
             root.attachComponent(world);
         }
+        if (root.getChildrenCount() == 0)
+        {
+            mCreateNodes = true;
+        }
         if (fname.endsWith(".urdf"))
         {
             String urdfXML = SXRPhysicsLoader.toString(resource);
+            if (urdfXML == null)
+            {
+                getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
+                                                            "onLoadError", fname,
+                                                            "Cannot parse URDF file");
+                return;
+            }
             mCreateNodes = mCreateNodes || !world.isMultiBody();
             loadURDFFile(world, urdfXML, ignoreUpAxis);
         }
@@ -209,13 +235,18 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 
             if (inputData == null || inputData.length == 0)
             {
-                throw new IOException("Failed to load physics file " + resource.getResourceFilename());
+                getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
+                                                            "onLoadError", fname,
+                                                            "Cannot open physics file");
+                return;
             }
             loadBulletFile(world, inputData, root, ignoreUpAxis);
         }
         else
         {
-            throw new IOException("Unknown physics file type, must be .bullet or .urdf");
+            getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
+                                                        "onLoadError", fname,
+                                                        "Unknown physics file type, must be .bullet or .urdf");
         }
     }
 
@@ -239,7 +270,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
      * @param resource {@link SXRAndroidResource} referencing the file containing physics content.
      * @param ignoreUpAxis Assume Y axis is up if true, down if false.
      */
-    public SXRPhysicsContent loadPhysics(SXRAndroidResource resource, boolean ignoreUpAxis) throws IOException
+    public SXRPhysicsContent loadPhysics(SXRAndroidResource resource, boolean ignoreUpAxis)
     {
         SXRNode root = new SXRNode(getSXRContext());
         SXRWorld world = new SXRWorld(root, true);
@@ -349,7 +380,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         return loader.parse(inputData);
     }
 
-    private void loadBulletFile(byte[] inputData, SXRNode sceneRoot, boolean ignoreUpAxis) throws IOException
+    private void loadBulletFile(byte[] inputData, SXRNode sceneRoot, boolean ignoreUpAxis)
     {
         /*
          * Import the Bullet binary file and construct the Java physics objects.
@@ -361,16 +392,29 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         if (!result)
         {
             NativeBulletLoader.clear(loader);
-            throw new IOException("Failed to parse bullet file");
+            mCreateNodes = false;
+            getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
+                                                        "onLoadError", sceneRoot.getName(),
+                                                        "Failed to parse bullet file");
+            return;
         }
         /*
          * attach physics components to scene objects.
          */
-        attachPhysics(sceneRoot);
+        String errors = attachPhysics(sceneRoot);
         NativeBulletLoader.clear(loader);
+        mCreateNodes = false;
+        if (errors != null)
+        {
+            getSXRContext().getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onLoadError", sceneRoot.getName(), errors);
+        }
+        else
+        {
+            getSXRContext().getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", null, sceneRoot.getName());
+        }
     }
 
-    private void loadBulletFile(final SXRWorld world, byte[] inputData, final SXRNode sceneRoot, boolean ignoreUpAxis) throws IOException
+    private void loadBulletFile(final SXRWorld world, byte[] inputData, final SXRNode sceneRoot, boolean ignoreUpAxis)
     {
         /*
          * Import the Bullet binary file and construct the Java physics objects.
@@ -392,10 +436,10 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         {
             NativeBulletLoader.clear(loader);
             mCreateNodes = false;
-            getSXRContext().getEventManager().sendEvent(world, IPhysicsLoaderEvents.class,
+            getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
                                             "onLoadError", sceneRoot.getName(),
                                                         "Failed to parse bullet file");
-            throw new IOException("Failed to parse bullet file");
+            return;
         }
         /*
          * attach physics components to scene objects.
@@ -419,7 +463,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         });
     }
 
-    void loadURDFFile(final SXRWorld world, String xmlData, boolean ignoreUpAxis) throws IOException
+    void loadURDFFile(final SXRWorld world, String xmlData, boolean ignoreUpAxis)
     {
         /*
          * Import the Bullet binary file and construct the Java physics objects.
@@ -434,10 +478,10 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         {
             NativeBulletLoader.clear(loader);
             mCreateNodes = false;
-            ctx.getEventManager().sendEvent(world, IPhysicsLoaderEvents.class,
+            ctx.getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
                                              "onLoadError", sceneRoot.getName(),
                                              "Failed to parse URDF file");
-            throw new IOException("Failed to parse URDF file");
+            return;
         }
         /*
          * attach physics components to scene objects.
@@ -603,45 +647,67 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         return errors.isEmpty() ? null : errors;
     }
 
-    private static byte[] toByteArray(SXRAndroidResource resource) throws IOException
+    private static byte[] toByteArray(SXRAndroidResource resource)
     {
-        resource.openStream();
-        InputStream is = resource.getStream();
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        byte[] buffer = new byte[1024];
-        for (int read; (read = is.read(buffer, 0, buffer.length)) != -1; )
+        try
         {
-            baos.write(buffer, 0, read);
+            resource.openStream();
+            InputStream is = resource.getStream();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            for (int read; (read = is.read(buffer, 0, buffer.length)) != -1; )
+            {
+                baos.write(buffer, 0, read);
+            }
+            baos.flush();
+            resource.closeStream();
+            return baos.toByteArray();
         }
-        baos.flush();
-        resource.closeStream();
-        return  baos.toByteArray();
+        catch (IOException ex)
+        {
+            return null;
+        }
     }
 
-    private static String toString(SXRAndroidResource resource) throws IOException
+    private static String toString(SXRAndroidResource resource)
     {
-        InputStream stream = resource.getStream();
-        byte[] bytes = new byte[stream.available()];
-        stream.read(bytes);
-        stream.close();
-        return new String(bytes);
+        try
+        {
+            InputStream stream = resource.getStream();
+            byte[] bytes = new byte[stream.available()];
+            stream.read(bytes);
+            stream.close();
+            return new String(bytes);
+        }
+        catch (IOException ex)
+        {
+            return null;
+        }
     }
 
-    private static SXRAndroidResource toAndroidResource(SXRContext context, String fileName) throws IOException {
-        SXRResourceVolume resVol = new SXRResourceVolume(context, fileName);
+    private static SXRAndroidResource toAndroidResource(SXRContext context, String fileName)
+    {
+        try
+        {
+            SXRResourceVolume resVol = new SXRResourceVolume(context, fileName);
 
-        final int i = fileName.lastIndexOf("/");
-        if (i > 0) {
-            fileName = fileName.substring(i + 1);
+            final int i = fileName.lastIndexOf("/");
+            if (i > 0)
+            {
+                fileName = fileName.substring(i + 1);
+            }
+            return resVol.openResource(fileName);
         }
-
-        return resVol.openResource(fileName);
+        catch (IOException ex)
+        {
+            return null;
+        }
     }
 }
 
 class NativeBulletLoader
 {
-    static native long ctor(SXRContext jcontext, AssetManager assetManager);
+    static native long ctor(SXRContext jcontext, AssetManager jassetManager);
 
     static native boolean parse(long loader, byte[] bytes, int len, boolean ignoreUpAxis);
 

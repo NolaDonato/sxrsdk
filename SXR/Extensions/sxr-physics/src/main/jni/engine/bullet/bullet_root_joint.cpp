@@ -300,7 +300,11 @@ namespace sxr {
             return false;
         }
         BulletJoint* bj = static_cast<BulletJoint*>(joint);
-        mJoints[linkIndex] = bj;
+
+        if (joint != this)
+        {
+            mJoints[linkIndex] = bj;
+        }
         if (bj->getMultiBody())
         {
             bj->getPhysicsTransform();
@@ -340,7 +344,7 @@ namespace sxr {
         {
             mName = owner->name();
         }
-        BulletJoint::addToWorld(w);
+        bw->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
         mMultiBody->setBaseName(mName.c_str());
         bw->addMultiBody(mMultiBody, mCollisionGroup, mCollisionMask);
     }

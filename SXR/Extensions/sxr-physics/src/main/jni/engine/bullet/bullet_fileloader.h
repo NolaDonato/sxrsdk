@@ -20,6 +20,8 @@
 #include <unordered_map>
 #include <vector>
 #include <Utils/b3BulletDefaultFileIO.h>
+#include <LinearMath/btMatrix3x3.h>
+#include <LinearMath/btTransform.h>
 
 class btBulletWorldImporter;
 class btMultiBodyWorldImporter;
@@ -33,6 +35,9 @@ class btMultiBodyFixedConstraint;
 class btGeneric6DofConstraint;
 class btGeneric6DofSpring2Constraint;
 class btPoint2PointConstraint;
+class btMultiBodyPoint2Point;
+class btMultiBodySliderConstraint;
+class btMultiBodyFixedConstraint;
 class btSliderConstraint;
 class btConeTwistConstraint;
 class btHingeConstraint;
@@ -45,6 +50,7 @@ class btSerializer;
 class btVector3;
 class btQuaternion;
 class URDFConverter;
+
 
 namespace std
 {
@@ -131,10 +137,13 @@ public:
 private:
     jobject     getConstraintBodyA(PhysicsConstraint*);
     jobject     createP2PConstraint(JNIEnv& env, btPoint2PointConstraint* , PhysicsConstraint*& constraint);
+    jobject     createP2PConstraint(JNIEnv& env, btMultiBodyPoint2Point* , PhysicsConstraint*& constraint);
     jobject     createHingeConstraint(JNIEnv& env, btHingeConstraint* hg, PhysicsConstraint*& constraint);
     jobject     createConeTwistConstraint(JNIEnv& env, btConeTwistConstraint* ct, PhysicsConstraint*& constraint);
     jobject     createFixedConstraint(JNIEnv& env, btFixedConstraint* fix, PhysicsConstraint*& constraint);
+    jobject     createFixedConstraint(JNIEnv& env, btMultiBodyFixedConstraint* fix, PhysicsConstraint*& constraint);
     jobject     createSliderConstraint(JNIEnv& env, btSliderConstraint* sld, PhysicsConstraint*& constraint);
+    jobject     createSliderConstraint(JNIEnv& env, btMultiBodySliderConstraint* sld, PhysicsConstraint*& constraint);
     jobject     createGenericConstraint(JNIEnv& env, btGeneric6DofConstraint* gen, PhysicsConstraint*& constraint);
     jobject     createSpringConstraint(JNIEnv& env, btGeneric6DofSpring2Constraint* gen, PhysicsConstraint*& constraint);
     void        createRigidBodies(btBulletWorldImporter&);
@@ -162,6 +171,8 @@ private:
     JavaVM&                     mJavaVM;
     SmartGlobalRef              mContext;
     bool                        mNeedRotate;
+    btMatrix3x3                 mRotateCoords;
+    btTransform                 mTransformCoords;
     int                         mFirstMultiBody;
     FileIO                      mFileIO;
 };

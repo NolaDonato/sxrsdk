@@ -353,7 +353,7 @@ btMultiBodyDynamicsWorld* URDFConverter::createWorld()
 	btDbvtBroadphase* broadPhase = new btDbvtBroadphase(pairCache);  //btSimpleBroadphase();
 	btMultiBodyConstraintSolver* solver = new btMultiBodyConstraintSolver;
 	m_dynamicsWorld = new btMultiBodyDynamicsWorld(dispatcher, broadPhase, m_solver, colconfig);
-	m_dynamicsWorld->setGravity(btVector3(0, -9.81, 0));
+	m_dynamicsWorld->setGravity(btVector3(0, 0, 9.81));	// URDF is Z up
 	return m_dynamicsWorld;
 }
 
