@@ -82,7 +82,8 @@ Java_com_samsungxr_physics_NativeBulletLoader_parseURDF(JNIEnv* env, jclass claz
                                                       jlong jloader,
                                                       jlong jworld,
                                                       jstring jxmldata,
-                                                      jboolean ignoreUpAxis)
+                                                      jboolean ignoreUpAxis,
+                                                      jboolean multiBody)
 {
     const char* xmldata = env->GetStringUTFChars(jxmldata, 0);
     if (xmldata == NULL)
@@ -91,8 +92,20 @@ Java_com_samsungxr_physics_NativeBulletLoader_parseURDF(JNIEnv* env, jclass claz
     }
     BulletFileLoader* loader = reinterpret_cast<BulletFileLoader*>(jloader);
     BulletWorld* world = reinterpret_cast<BulletWorld*>(jworld);
-    bool result = loader->parseURDF(world, (char*) xmldata, ignoreUpAxis);
+    bool result = loader->parseURDF(world, (char*) xmldata, ignoreUpAxis, multiBody);
     env->ReleaseStringUTFChars(jxmldata, xmldata);
+    return result;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_samsungxr_physics_NativeBulletLoader_exportBullet(JNIEnv* env, jclass clazz,
+                                                          jlong jloader, jlong jworld, jstring jfilename)
+{
+    BulletFileLoader *loader = reinterpret_cast<BulletFileLoader*>(jloader);
+    BulletWorld* world = reinterpret_cast<BulletWorld*>(jworld);
+    const char* name = env->GetStringUTFChars(jfilename, 0);
+    jboolean result = loader->exportBullet(world, name);
+    env->ReleaseStringUTFChars(jfilename, name);
     return result;
 }
 

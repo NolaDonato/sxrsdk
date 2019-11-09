@@ -17,11 +17,13 @@ package com.samsungxr.physics;
 
 
 
+import com.samsungxr.SXRAndroidResource;
 import com.samsungxr.SXRBoxCollider;
 import com.samsungxr.SXRCapsuleCollider;
 import com.samsungxr.SXRCollider;
 import com.samsungxr.SXRContext;
 import com.samsungxr.SXRNode;
+import com.samsungxr.SXRScene;
 import com.samsungxr.SXRSphereCollider;
 import com.samsungxr.animation.SXRPose;
 import com.samsungxr.animation.SXRSkeleton;
@@ -34,7 +36,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -44,53 +48,158 @@ import java.util.Map;
 /**
  * Loader for Avatar physics files which describe a multibody articulated hierarchy.
  */
-class PhysicsAVTLoader
+public class PhysicsAVTConverter extends SXRPhysicsLoader
 {
     private final Map<String, JSONObject> mTargetBones = new HashMap<String, JSONObject>();
-    private final String TAG = "AVT";;
-    private final SXRContext mContext;
-    private final SXRPhysicsContent mWorld;
-    private final SXRNode mRoot;
-    private final String mAttachBoneName;
+    private final String TAG = "AVT";
+
+    private SXRNode mRoot;
+    private String mAttachBoneName;
     private SXRSkeleton mSkeleton;
     private float mAngularDamping;
     private float mLinearDamping;
+    private SXRPhysicsContent mWorld;
+    private String mFileName;
 
-    public PhysicsAVTLoader(SXRContext ctx, boolean isMultiBody)
+    public PhysicsAVTConverter(SXRContext ctx)
     {
-        this(new SXRNode(ctx), isMultiBody);
-    }
-
-    public PhysicsAVTLoader(SXRNode root, boolean isMultiBody)
-    {
+        super(ctx);
+        mRoot = null;
         mAttachBoneName = null;
-        mRoot = root;
-        mContext = root.getSXRContext();
-        mSkeleton = null;
-        mWorld = new SXRPhysicsContent(root, isMultiBody);
-        mRoot.attachComponent(mWorld);
+        mWorld = null;
     }
 
-    public PhysicsAVTLoader(SXRSkeleton skel, String attachBone, boolean isMultiBody)
+    public SXRPhysicsContent loadPhysics(SXRScene scene, SXRAndroidResource resource, boolean ignoreUpAxis)
     {
-        mContext = skel.getSXRContext();
+        mFileName = resource.getResourceFilename().toLowerCase();
+        if (!mFileName.endsWith(".avt"))
+        {
+            return super.loadPhysics(scene, resource, ignoreUpAxis);
+        }
+
+        String inputData = toString(resource);
+        if (inputData != null && !inputData.isEmpty())
+        {
+            mRoot = scene.getRoot();
+            mWorld = (SXRWorld) mRoot.getComponent(SXRWorld.getComponentType());
+            SXRPhysicsContent world = parse(inputData);
+            mSkeleton = null;
+            mAttachBoneName = null;
+            if (world != null)
+            {
+                getSXRContext().getEventManager().sendEvent(this,
+                                                            IPhysicsLoaderEvents.class,
+                                                            "onPhysicsLoaded",
+                                                            world, mFileName);
+                return mWorld;
+            }
+         }
+        getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
+                                                    "onLoadError", mFileName,
+                                                    "Cannot open physics file");
+        return null;
+    }
+
+    public void loadPhysics(SXRWorld world, SXRAndroidResource resource, boolean ignoreUpAxis)
+    {
+        mRoot = world.getOwnerObject();
+        mFileName = resource.getResourceFilename().toLowerCase();
+        if (!mFileName.endsWith(".avt"))
+        {
+            super.loadPhysics(world, resource, ignoreUpAxis);
+            return;
+        }
+        String inputData = toString(resource);
+
+        if (inputData != null && !inputData.isEmpty())
+        {
+            if (mRoot == null)
+            {
+                mRoot = new SXRNode(getSXRContext());
+                mRoot.setName(mFileName);
+                mRoot.attachComponent(world);
+            }
+            mWorld = world;
+            SXRPhysicsContent content = parse(inputData);
+            mSkeleton = null;
+            mAttachBoneName = null;
+            if (content != null)
+            {
+                getSXRContext().getEventManager().sendEvent(this,
+                                                            IPhysicsLoaderEvents.class,
+                                                            "onPhysicsLoaded",
+                                                            world, mFileName);
+                return;
+            }
+        }
+        getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
+                                                    "onLoadError", mFileName,
+                                                    "Cannot open physics file");
+    }
+
+
+    /**
+     * Loads physics components from a JSON file describing the avatar and associates
+     * them to the skeleton provided
+     * <p>
+     * Avatar files describe physics for articulated bodies.
+     * Each file has a skeleton and joints with collision geometries.
+     * The contents of the AVT is not added to the current scene.
+     * Instead it is imported and contained in a {@link SXRPhysicsContent}
+     * object (like a physics world but it cannot simulate, just a container).
+     * @param skel        {@link SXRSkeleton} to use
+     * @param attachBone  name of bone in skeleton to associate with the root joint in physics.
+     * @param resource    source of physics content to import
+     */
+    public SXRPhysicsContent loadPhysics(SXRAndroidResource resource, SXRSkeleton skel, String attachBone)
+    {
         mSkeleton = skel;
         mAttachBoneName = attachBone;
-        mRoot = new SXRNode(mContext);
-        mRoot.setName("PhysicsRoot");
-        mWorld = new SXRPhysicsContent(mRoot, isMultiBody);
-        mRoot.attachComponent(mWorld);
+        return loadPhysics(resource, false);
     }
 
-    public SXRPhysicsContent parse(byte[] inputData) throws IOException
+    /**
+     * Loads physics components from a JSON file describing the avatar and associates
+     * them to the skeleton provided
+     * <p>
+     * Avatar files describe physics for articulated bodies.
+     * Each file has a skeleton and joints with collision geometries.
+     * The contents of the AVT is not added to the current scene.
+     * Instead it is imported and contained in a {@link SXRPhysicsContent}
+     * object (like a physics world but it cannot simulate, just a container).
+     * @param skel        {@link SXRSkeleton} to use
+     * @param attachBone  name of bone in skeleton to associate with the root joint in physics.
+     * @param resource    source of physics content to import
+     */
+    public SXRPhysicsContent loadPhysics(SXRWorld world, SXRAndroidResource resource, SXRSkeleton skel, String attachBone)
     {
-        String s = new String(inputData);
+        mSkeleton = skel;
+        mAttachBoneName = attachBone;
+        loadPhysics(world, resource, false);
+        return world;
+    }
 
+    public boolean convertToBullet(String infile, String outfile, boolean isMultibody)
+    {
+        SXRAndroidResource resource = toAndroidResource(getSXRContext(), infile);
+        SXRPhysicsContent content = loadPhysics(resource, false);
+        if (content == null)
+        {
+            return false;
+        }
+        SXRNode physicsRoot = new SXRNode(getSXRContext());
+        SXRWorld bulletWorld = new SXRWorld(physicsRoot, isMultibody);
+        bulletWorld.merge(content);
+        return exportPhysics(bulletWorld, outfile);
+    }
+
+    private SXRPhysicsContent parse(String inputData)
+    {
         Log.e(TAG, "loading physics file");
         try
         {
-            JSONObject start = new JSONObject(s);
-            if (mWorld.isMultiBody())
+            JSONObject start = new JSONObject(inputData);
+            if (mIsMultiBody)
             {
                 parseMultiBodyPhysics(start);
             }
@@ -99,12 +208,12 @@ class PhysicsAVTLoader
                 parsePhysics(start);
             }
             Log.e(TAG, "loading done");
+            return mWorld;
         }
         catch (JSONException ex)
         {
-            throw new IOException(ex);
+            return null;
         }
-        return mWorld;
     }
 
     private void parsePhysics(JSONObject root) throws JSONException
@@ -133,6 +242,7 @@ class PhysicsAVTLoader
         SXRNode boneNodes[] = new SXRNode[maxInputBones];
         Matrix4f worldMtx = new Matrix4f();
         int numInputBones = 0;
+        SXRContext ctx = getSXRContext();
 
         boneparents[0] = -1;
         mTargetBones.clear();
@@ -144,7 +254,7 @@ class PhysicsAVTLoader
             String parentName = bone.optString("Parent", "");
             String targetBone = bone.getString("Target Bone");
             JSONObject parent = mTargetBones.get(parentName);
-            SXRNode node = new SXRNode(mContext);
+            SXRNode node = new SXRNode(ctx);
 
             mTargetBones.put(bone.getString("Name"), bone);
             /*
@@ -187,10 +297,10 @@ class PhysicsAVTLoader
             boneNodes = Arrays.copyOfRange(boneNodes, 0, numInputBones);
             boneparents = Arrays.copyOfRange(boneparents, 0, numInputBones);
         }
-        SXRSkeleton skel = new SXRSkeleton(mContext, boneparents);
+        SXRSkeleton skel = new SXRSkeleton(ctx, boneparents);
         SXRPose worldPose = new SXRPose(skel);
 
-        for (int i = 0; i <  numInputBones; ++i)
+        for (int i = 0; i < numInputBones; ++i)
         {
             JSONObject bone = (i == 0) ? basebone : bonelist.getJSONObject(i - 1).getJSONObject("value");
             JSONObject xform = bone.getJSONObject("Transform");
@@ -311,6 +421,8 @@ class PhysicsAVTLoader
         JSONObject trans = link.getJSONObject("Transform");
         JSONObject pos = trans.getJSONObject("Position");
         Vector3f pivotB = new Vector3f(0, 0, 0);
+        SXRCollider collider;
+
         if (pivot != null)
         {
             pivotB.set((float) (pivot.getDouble("X") - pos.getDouble("X")),
@@ -375,10 +487,9 @@ class PhysicsAVTLoader
                 }
                 capsule.setHeight(height);
                 capsule.setRadius(radius);
-                owner.attachComponent(capsule);
+                collider = capsule;
                 Log.e(TAG, "capsule collider %s height %f radius %f %s axis",
                       colliderRoot.getString("Name"), height, radius, direction);
-                return capsule;
             }
             else if (type.equals("dmBoxCollider"))
             {
@@ -389,24 +500,27 @@ class PhysicsAVTLoader
                 float z = (float) size.getDouble("Z") * s.z;
 
                 box.setHalfExtents(x, y, z);
-                owner.attachComponent(box);
+                collider = box;
                 Log.e(TAG, "box collider %s extents  %f, %f, %f",
                       colliderRoot.getString("Name"), x, y, z);
-                return box;
             }
             else if (type.equals("dmSphereCollider"))
             {
                 float radius = (float) c.getDouble("Radius");
                 SXRSphereCollider sphere = new SXRSphereCollider(ctx);
 
-                owner.attachComponent(sphere);
+                sphere.setRadius(radius);
+                collider = sphere;
                 Log.e(TAG, "sphere collider %s radius %f", colliderRoot.getString("Name"), radius);
-                return sphere;
             }
             else
             {
                 throw new JSONException(type + " is an unknown collider type");
             }
+            owner.detachComponent(SXRCollider.getComponentType());
+            owner.attachComponent(collider);
+            return collider;
+
         }
         return null;
     }
@@ -551,6 +665,7 @@ class PhysicsAVTLoader
     {
         String nodeName = link.getString("Target Bone");
         SXRNode node = mRoot.getNodeByName(nodeName);
+        SXRContext ctx = mRoot.getSXRContext();
 
         if (node == null)
         {
@@ -562,13 +677,15 @@ class PhysicsAVTLoader
         float mass = (float) link.getDouble("Mass");
         SXRRigidBody parentBody = findParentBody(parentName);
         int collisionGroup = link.optInt("Collision Layer ID", 0);
-        SXRRigidBody body = new SXRRigidBody(mContext, mass, SXRCollisionMatrix.DEFAULT_GROUP);
+        SXRRigidBody body = new SXRRigidBody(ctx, mass, SXRCollisionMatrix.DEFAULT_GROUP);
         JSONObject props = link.getJSONObject("Physic Material");
         JSONObject v;
         float PIover2 = (float) Math.PI / 2;
 
         body.setFriction((float) props.getDouble("Friction"));
         body.setDamping(mLinearDamping, mAngularDamping);
+        node.detachComponent(SXRRigidBody.getComponentType());
+        node.detachComponent(SXRPhysicsJoint.getComponentType());
         mTargetBones.put(name, link);
         if (parentBody == null)
         {
@@ -618,7 +735,7 @@ class PhysicsAVTLoader
         {
             if (true)
             {
-                SXRGenericConstraint ball = new SXRGenericConstraint(mContext, parentBody, pivotA, pivotB);
+                SXRGenericConstraint ball = new SXRGenericConstraint(ctx, parentBody, pivotA, pivotB);
                 ball.setAngularLowerLimits(-PIover2, -PIover2, -PIover2);
                 ball.setAngularUpperLimits(PIover2, PIover2, PIover2);
                 ball.setLinearLowerLimits(0, 0, 0);
@@ -627,7 +744,7 @@ class PhysicsAVTLoader
             }
             else
             {
-                SXRPoint2PointConstraint ball = new SXRPoint2PointConstraint(mContext, parentBody, pivotA, pivotB);
+                SXRPoint2PointConstraint ball = new SXRPoint2PointConstraint(ctx, parentBody, pivotA, pivotB);
                 constraint = ball;
             }
             Log.e(TAG, "Ball joint between %s and %s (%f, %f, %f)",
@@ -664,7 +781,7 @@ class PhysicsAVTLoader
             axisA.normalize();
             axisB.normalize();
 
-            SXRUniversalConstraint ball = new SXRUniversalConstraint(mContext, parentBody, pivotB, axisA, axisB);
+            SXRUniversalConstraint ball = new SXRUniversalConstraint(ctx, parentBody, pivotB, axisA, axisB);
             JSONObject dof0 = dofdata.getJSONObject(0);
             JSONObject dof1 = dofdata.getJSONObject(1);
             float lz = dof0.getBoolean("useLimit") ? (float) Math.toRadians(dof0.getDouble("limitLow")) : -PIover2;
@@ -685,7 +802,7 @@ class PhysicsAVTLoader
                         (float) v.getDouble("X"),
                         (float) v.getDouble("Y"),
                         (float) v.getDouble("Z"));
-            SXRHingeConstraint hinge = new SXRHingeConstraint(mContext, parentBody,
+            SXRHingeConstraint hinge = new SXRHingeConstraint(ctx, parentBody,
                                                               pivotA, pivotB, axisA);
             JSONObject dof = dofdata.getJSONObject(0);
 
@@ -703,7 +820,7 @@ class PhysicsAVTLoader
         }
         else if (type.equals("fixed"))
         {
-           SXRFixedConstraint fixed = new SXRFixedConstraint(mContext, parentBody);
+           SXRFixedConstraint fixed = new SXRFixedConstraint(ctx, parentBody);
             constraint = fixed;
             Log.e(TAG, "Fixed joint between %s and %s", parentName, name);
         }
@@ -728,6 +845,8 @@ class PhysicsAVTLoader
         parseCollider(link, nodeName);
         joint.setBoneIndex(boneID);
         joint.setFriction((float) props.getDouble("Friction"));
+        node.detachComponent(SXRRigidBody.getComponentType());
+        node.detachComponent(SXRPhysicsJoint.getComponentType());
         node.attachComponent(joint);
         Log.e(TAG, "link %s bone = %s boneID = %d ",
               link.getString("Name"),

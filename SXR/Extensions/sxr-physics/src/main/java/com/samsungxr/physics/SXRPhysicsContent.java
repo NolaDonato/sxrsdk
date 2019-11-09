@@ -295,6 +295,7 @@ public class SXRPhysicsContent extends SXRComponent
         public boolean visit(SXRNode obj)
         {
             SXRRigidBody body = (SXRRigidBody) obj.getComponent(SXRRigidBody.getComponentType());
+            SXRPhysicsJoint joint = (SXRPhysicsJoint) obj.getComponent(SXRPhysicsJoint.getComponentType());
 
             if (body != null)
             {
@@ -302,7 +303,6 @@ public class SXRPhysicsContent extends SXRComponent
             }
             else
             {
-                SXRPhysicsJoint joint = (SXRPhysicsJoint) obj.getComponent(SXRPhysicsJoint.getComponentType());
                 if (joint != null)
                 {
                     if (!mIsMultibody)

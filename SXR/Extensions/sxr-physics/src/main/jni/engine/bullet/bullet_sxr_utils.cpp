@@ -46,7 +46,7 @@ btCollisionShape *convertCollider2CollisionShape(Collider *collider)
     {
         return convertCapsuleCollider2CollisionShape(static_cast<CapsuleCollider *>(collider));
     }
-    return NULL;
+    return new btEmptyShape();
 }
 
 btCollisionShape *convertSphereCollider2CollisionShape(SphereCollider *collider)
@@ -68,7 +68,6 @@ btCollisionShape *convertSphereCollider2CollisionShape(SphereCollider *collider)
         }
     }
     LOGE("PHYSICS: Sphere collider with zero volume");
-    return nullptr;
 }
 
 btCollisionShape *convertCapsuleCollider2CollisionShape(CapsuleCollider *collider)
@@ -117,7 +116,6 @@ btCollisionShape* convertBoxCollider2CollisionShape(BoxCollider *collider)
         }
     }
     LOGE("PHYSICS: Box collider with zero volume");
-    return nullptr;
 }
 
 btCollisionShape *convertMeshCollider2CollisionShape(MeshCollider *collider)

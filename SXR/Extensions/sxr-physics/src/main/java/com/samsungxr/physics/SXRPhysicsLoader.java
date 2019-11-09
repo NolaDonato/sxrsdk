@@ -39,7 +39,8 @@ import java.util.List;
 public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 {
     static private final String TAG = SXRPhysicsLoader.class.getSimpleName();
-    private boolean mCreateNodes = false;
+    protected boolean mCreateNodes = false;
+    protected boolean mIsMultiBody = false;
     private SXREventReceiver mListeners;
 
     static
@@ -66,7 +67,6 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         public void onLoadError(String filename, String errors);
     }
 
-
     public SXRPhysicsLoader(SXRContext ctx)
     {
         super(ctx, NativeBulletLoader.ctor(ctx, ctx.getActivity().getApplicationContext().getResources().getAssets()));
@@ -81,6 +81,12 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 
     public SXREventReceiver getEventReceiver() { return mListeners; }
 
+    public boolean isMultiBody() { return mIsMultiBody; }
+
+    public void setMultiBody(boolean flag)
+    {
+        mIsMultiBody = flag;
+    }
 
     /**
      * Loads a physics content file.
@@ -152,7 +158,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         }
         if (fname.endsWith(".urdf"))
         {
-            return loadPhysics(resource, false);
+            return loadPhysics(resource, ignoreUpAxis);
         }
         else if (fname.endsWith(".bullet"))
         {
@@ -226,7 +232,6 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                                                             "Cannot parse URDF file");
                 return;
             }
-            mCreateNodes = mCreateNodes || !world.isMultiBody();
             loadURDFFile(world, urdfXML, ignoreUpAxis);
         }
         else if (fname.endsWith(".bullet"))
@@ -273,7 +278,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
     public SXRPhysicsContent loadPhysics(SXRAndroidResource resource, boolean ignoreUpAxis)
     {
         SXRNode root = new SXRNode(getSXRContext());
-        SXRWorld world = new SXRWorld(root, true);
+        SXRWorld world = new SXRWorld(root, mIsMultiBody);
 
         mCreateNodes = true;
         root.setName(resource.getResourceFilename());
@@ -281,103 +286,15 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         return world;
     }
 
-    /**
-     * Loads a skeleton and physics components from a JSON file describing the avatar.
-     * <p>
-     * Avatar files describe physics for articulated bodies.
-     * Each file has a skeleton and joints with collision geometries.
-     * @param resource    {@link SXRAndroidResource} containing the physics components.
-     * @param isMultibody If true, use {@link SXRPhysicsJoint} and Bullet multibody support,
-     *                    otherwise use {@link SXRRigidBody} and discrete dynamics simulation.
+    /***
+     * Export the given physics world in Bullet binary format.
+     * @param world     physics world to export
+     * @param fileName  name of file to get physics world
+     * @return true if export successful, false if not
      */
-    public SXRPhysicsContent loadAvatarFile(SXRAndroidResource resource, boolean isMultibody) throws IOException
+    public boolean exportPhysics(SXRWorld world, String fileName)
     {
-        byte[] inputData = toByteArray(resource);
-
-        if (inputData == null || inputData.length == 0)
-        {
-            throw new IOException("Failed to load physics file " + resource.getResourceFilename());
-        }
-        PhysicsAVTLoader loader = new PhysicsAVTLoader(getSXRContext(), isMultibody);
-        return loader.parse(inputData);
-    }
-
-    /**
-     * Loads physics components from a JSON file describing the avatar and associates
-     * them to the skeleton provided
-     * <p>
-     * Avatar files describe physics for articulated bodies.
-     * Each file has a skeleton and joints with collision geometries.
-     * @param skel        {@link SXRSkeleton} to use
-     * @param attachBone  name of bone in skeleton to associate with the root joint in physics.
-     * @param resource    {@link SXRAndroidResource} containing the physics components.
-     * @param isMultibody If true, use {@link SXRPhysicsJoint} and Bullet multibody support,
-     *                    otherwise use {@link SXRRigidBody} and discrete dynamics simulation.
-     */
-    public SXRPhysicsContent loadAvatarFile(SXRSkeleton skel, String attachBone, SXRAndroidResource resource, boolean isMultibody) throws IOException
-    {
-        byte[] inputData = toByteArray(resource);
-
-        if (inputData == null || inputData.length == 0)
-        {
-            throw new IOException("Failed to load physics file " + resource.getResourceFilename());
-        }
-        PhysicsAVTLoader loader = new PhysicsAVTLoader(skel, attachBone, isMultibody);
-        return loader.parse(inputData);
-    }
-
-    /**
-     * Loads a skeleton and physics components from a JSON file describing the avatar.
-     * <p>
-     * Avatar files describe physics for articulated bodies.
-     * Each file has a skeleton and joints with collision geometries.
-     * The contents of the AVT is not added to the current scene.
-     * Instead it is imported and contained in a {@link SXRPhysicsContent}
-     * object (like a physics world but it cannot simulate, just a container).
-     * @param fileName    Physics settings file name.
-     * @param isMultibody If true, use {@link SXRPhysicsJoint} and Bullet multibody support,
-     *                    otherwise use {@link SXRRigidBody} and discrete dynamics simulation.
-     */
-    public SXRPhysicsContent loadAvatarFile(String fileName, boolean isMultibody) throws IOException
-    {
-        SXRContext ctx = getSXRContext();
-        SXRAndroidResource resource = toAndroidResource(ctx, fileName);
-        byte[] inputData = toByteArray(resource);
-
-        if (inputData == null || inputData.length == 0)
-        {
-            throw new IOException("Failed to load physics file " + fileName);
-        }
-        PhysicsAVTLoader loader = new PhysicsAVTLoader(ctx, isMultibody);
-        return loader.parse(inputData);
-    }
-
-    /**
-     * Loads physics components from a JSON file describing the avatar and associates
-     * them to the skeleton provided
-     * <p>
-     * Avatar files describe physics for articulated bodies.
-     * Each file has a skeleton and joints with collision geometries.
-     * The contents of the AVT is not added to the current scene.
-     * Instead it is imported and contained in a {@link SXRPhysicsContent}
-     * object (like a physics world but it cannot simulate, just a container).
-     * @param skel        {@link SXRSkeleton} to use
-     * @param attachBone  name of bone in skeleton to associate with the root joint in physics.
-     * @param fileName    Physics settings file name.
-     * @param isMultibody If true, use {@link SXRPhysicsJoint} and Bullet multibody support,
-     *                    otherwise use {@link SXRRigidBody} and discrete dynamics simulation.
-     */
-    public SXRPhysicsContent loadAvatarFile(SXRSkeleton skel, String fileName, String attachBone, boolean isMultibody) throws IOException
-    {
-        SXRAndroidResource resource = toAndroidResource(skel.getSXRContext(), fileName);
-        byte[] inputData = toByteArray(resource);
-
-        if (inputData == null || inputData.length == 0)
-        {
-            throw new IOException("Failed to load physics file " + fileName);
-        }
-        PhysicsAVTLoader loader = new PhysicsAVTLoader(skel, attachBone, isMultibody);
-        return loader.parse(inputData);
+        return NativeBulletLoader.exportBullet(getNative(), world.getNative(), fileName);
     }
 
     private void loadBulletFile(byte[] inputData, SXRNode sceneRoot, boolean ignoreUpAxis)
@@ -424,7 +341,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         final SXRContext ctx = getSXRContext();
         boolean result;
 
-        if (world.isMultiBody())
+        if (mIsMultiBody)
         {
             result = NativeBulletLoader.parseMB(loader, world.getNative(), inputData, inputData.length, ignoreUpAxis);
         }
@@ -472,7 +389,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         final long loader = getNative();
         final SXRContext ctx = getSXRContext();
         final SXRNode sceneRoot = world.getOwnerObject();
-        boolean result = NativeBulletLoader.parseURDF(loader, world.getNative(), xmlData, ignoreUpAxis);
+        boolean result = NativeBulletLoader.parseURDF(loader, world.getNative(), xmlData, ignoreUpAxis, mIsMultiBody);
 
         if (!result)
         {
@@ -647,7 +564,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         return errors.isEmpty() ? null : errors;
     }
 
-    private static byte[] toByteArray(SXRAndroidResource resource)
+    protected static byte[] toByteArray(SXRAndroidResource resource)
     {
         try
         {
@@ -669,7 +586,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         }
     }
 
-    private static String toString(SXRAndroidResource resource)
+    protected static String toString(SXRAndroidResource resource)
     {
         try
         {
@@ -685,7 +602,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         }
     }
 
-    private static SXRAndroidResource toAndroidResource(SXRContext context, String fileName)
+    protected static SXRAndroidResource toAndroidResource(SXRContext context, String fileName)
     {
         try
         {
@@ -713,7 +630,9 @@ class NativeBulletLoader
 
     static native boolean parseMB(long loader, long world, byte[] bytes, int len, boolean ignoreUpAxis);
 
-    static native boolean parseURDF(long loader, long world, String xmldata, boolean ignoreUpAxis);
+    static native boolean parseURDF(long loader, long world, String xmldata, boolean ignoreUpAxis, boolean multibody);
+
+    static native boolean exportBullet(long loader, long world, String filename);
 
     static native void clear(long loader);
 

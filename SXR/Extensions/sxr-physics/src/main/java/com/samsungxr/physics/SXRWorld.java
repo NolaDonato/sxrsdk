@@ -248,7 +248,11 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
         root.attachComponent(this);
     }
 
-    void run(Runnable task)
+    /**
+     * Run this task on the physics thread between steps.
+     * @param task runnable task
+     */
+    public void run(Runnable task)
     {
         mPhysicsContext.runOnPhysicsThread(task);
     }

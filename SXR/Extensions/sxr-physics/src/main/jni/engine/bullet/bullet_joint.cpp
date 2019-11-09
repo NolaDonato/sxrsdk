@@ -289,12 +289,12 @@ namespace sxr {
                 btVector3 ownerScale;
                 Transform* trans = owner->transform();
 
-                mCollider->setCollisionShape(shape);
-                mCollider->setIslandTag(0);
-                mCollider->m_link = getJointIndex();
                 ownerScale.setValue(trans->scale_x(), trans->scale_y(), trans->scale_z());
                 shape->setLocalScaling(ownerScale);
                 shape->calculateLocalInertia(getMass(), localInertia);
+                mCollider->setCollisionShape(shape);
+                mCollider->setIslandTag(0);
+                mCollider->m_link = getJointIndex();
                 link.m_inertiaLocal = localInertia;
                 link.m_collider = mCollider;
                 mCollider->setUserPointer(this);

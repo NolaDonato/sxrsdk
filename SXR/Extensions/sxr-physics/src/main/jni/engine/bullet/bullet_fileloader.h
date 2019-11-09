@@ -107,31 +107,19 @@ protected:
 
 public:
     BulletFileLoader(jobject context, JavaVM& jvm, AAssetManager* am);
-
-    bool parse(BulletWorld* world, char *buffer, size_t length, bool ignoreUpAxis);
-
-    bool parse(char *buffer, size_t length, bool ignoreUpAxis);
-
-    bool parseURDF(BulletWorld* world, const char* xmldata, bool ignoreUpAxis);
-
-    void clear();
-
     virtual ~BulletFileLoader();
 
-    const char* getConstraintName(PhysicsConstraint* constraint);
-
-    jobject getRigidBody(const char* name);
-
-    jobject getJoint(const char* name);
-
-    jobject getCollider(const char* name);
-
-    jobject getConstraint(const char* name);
-
+    bool         parse(BulletWorld* world, char *buffer, size_t length, bool ignoreUpAxis);
+    bool         parse(char *buffer, size_t lengh, bool ignoreUpAxis);
+    bool         parseURDF(BulletWorld* world, const char* xmldata, bool ignoreUpAxis, bool multiBody);
+    bool         exportBullet(BulletWorld* world, const char* fileName);
+    void         clear();
+    const char*  getConstraintName(PhysicsConstraint* constraint);
+    jobject      getRigidBody(const char* name);
+    jobject      getJoint(const char* name);
+    jobject      getCollider(const char* name);
     jobjectArray getRigidBodies();
-
     jobjectArray getJoints();
-
     jobjectArray getConstraints();
 
 private:
@@ -156,7 +144,8 @@ private:
     jobject     createCollider(btCollisionObject*);
     void        createConstraint(JNIEnv& env, btTypedConstraint* constraint);
     void        createMultiBodyConstraint(JNIEnv& env, btMultiBodyConstraint* c);
-    const char* getNameForPointer(void* p);void        rotateLink(btMultibodyLink& link);
+    void        registerNames(btDynamicsWorld* world, btSerializer* s);
+    const char* getNameForPointer(void* p);
     btVector3&  rotatePoint(btVector3& p);
     void        createCollisionShape(JNIEnv& env, btCollisionShape* shape, jobject& obj, btVector3& debugColor);
     btConvexHullShape*  copyHull(const btConvexHullShape *input, float *outVerts, btVector3& dimensions);
