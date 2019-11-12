@@ -76,6 +76,35 @@ Java_com_samsungxr_physics_NativePhysicsJoint_getJointIndex(JNIEnv *env, jclass 
     return mb->getJointIndex();
 }
 
+JNIEXPORT jint JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_getNumJoints(JNIEnv *env, jclass obj, jlong jjoint)
+{
+    PhysicsJoint *mb = reinterpret_cast<PhysicsJoint *>(jjoint);
+    return mb->getNumJoints();
+}
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_setNumJoints(JNIEnv *env, jclass obj, jlong jjoint, jint n)
+{
+    PhysicsJoint *mb = reinterpret_cast<PhysicsJoint *>(jjoint);
+    mb->setNumJoints(n);
+}
+
+JNIEXPORT int JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_addJoint(JNIEnv *env, jclass obj, jlong jroot, jlong jchild)
+{
+    PhysicsJoint* root = reinterpret_cast<PhysicsJoint *>(jroot);
+    PhysicsJoint* child = reinterpret_cast<PhysicsJoint *>(jchild);
+    return root->addJointToBody(child);
+}
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_removeJointAt(JNIEnv *env, jclass obj, jlong jroot, jint index)
+{
+    PhysicsJoint* root = reinterpret_cast<PhysicsJoint *>(jroot);
+    root->removeJointFromBody(index);
+}
+
 JNIEXPORT void JNICALL
 Java_com_samsungxr_physics_NativePhysicsJoint_applyCentralForce(JNIEnv *env, jclass obj, jlong jjoint,
                                                                 jfloat x, jfloat y, jfloat z)
@@ -139,6 +168,14 @@ Java_com_samsungxr_physics_NativePhysicsJoint_setName(JNIEnv* env, jclass obj,
     const char* native_name = env->GetStringUTFChars(name, 0);
     joint->setName(native_name);
     env->ReleaseStringUTFChars(name, native_name);
+}
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_sync(JNIEnv* env, jclass obj,
+                                                   jlong jjoint, jint options)
+{
+    BulletJoint* joint = reinterpret_cast<BulletJoint*>(jjoint);
+    joint->sync(options);
 }
 }
 }

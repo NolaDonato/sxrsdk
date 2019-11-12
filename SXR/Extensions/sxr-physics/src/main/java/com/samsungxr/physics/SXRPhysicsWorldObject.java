@@ -33,7 +33,7 @@ abstract class SXRPhysicsWorldObject extends SXRComponent {
      * @param owner Owner of the {@link SXRRigidBody}
      * @return Returns the {@link SXRWorld} of the scene.
      */
-    private static SXRPhysicsContent getWorld(SXRNode owner)
+    protected SXRPhysicsContent getWorld(SXRNode owner)
     {
         return getWorldFromAscendant(owner);
     }
@@ -44,7 +44,7 @@ abstract class SXRPhysicsWorldObject extends SXRComponent {
      * @param worldOwner Scene object to search for a physics world in the scene.
      * @return Physics world from the scene.
      */
-    private static SXRPhysicsContent getWorldFromAscendant(SXRNode worldOwner)
+    protected SXRPhysicsContent getWorldFromAscendant(SXRNode worldOwner)
     {
         SXRComponent world = null;
 

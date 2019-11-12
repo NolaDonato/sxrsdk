@@ -512,8 +512,8 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
             {
                 if ((body != null) && contains(body))
                 {
-                    NativePhysics3DWorld.removeRigidBody(getNative(), body.getNative());
                     mPhysicsObject.remove(body.getNative());
+                    NativePhysics3DWorld.removeRigidBody(getNative(), body.getNative());
                     getSXRContext().getEventManager().sendEvent(SXRWorld.this,
                             IPhysicsEvents.class,
                             "onRemoveRigidBody",
@@ -541,8 +541,8 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
             {
                 if ((joint != null) || contains(joint))
                 {
-                    NativePhysics3DWorld.removeJoint(getNative(), joint.getNative());
                     mPhysicsObject.remove(joint.getNative());
+                    NativePhysics3DWorld.removeJoint(getNative(), joint.getNative());
                     getSXRContext().getEventManager().sendEvent(SXRWorld.this, IPhysicsEvents.class,
                             "onRemoveJoint", SXRWorld.this, joint);
                 }

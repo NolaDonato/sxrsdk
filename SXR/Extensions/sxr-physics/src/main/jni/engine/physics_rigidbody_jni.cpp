@@ -397,11 +397,11 @@ Java_com_samsungxr_physics_NativeRigidBody_getContactProcessingThreshold(JNIEnv 
 }
 
 JNIEXPORT void JNICALL
-Java_com_samsungxr_physics_NativeRigidBody_reset(JNIEnv *env, jclass obj,
-                                                 jlong jrigid_body, jboolean rebuildCollider)
+Java_com_samsungxr_physics_NativeRigidBody_sync(JNIEnv *env, jclass obj,
+                                                 jlong jrigid_body, jint syncOptions)
 {
     PhysicsRigidBody *rigid_body = reinterpret_cast<PhysicsRigidBody *>(jrigid_body);
-    rigid_body->reset(rebuildCollider);
+    rigid_body->sync(syncOptions);
 }
 
 JNIEXPORT jstring JNICALL

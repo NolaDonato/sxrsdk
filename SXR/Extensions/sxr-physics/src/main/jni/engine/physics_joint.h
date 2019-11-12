@@ -42,7 +42,7 @@ class PhysicsJoint :  public PhysicsCollidable
 		planarJoint = 5,
 	};
 
-	PhysicsJoint(float mass, int numBones) : PhysicsCollidable(PhysicsJoint::getComponentType()) { }
+	PhysicsJoint(float mass, int numJoints) : PhysicsCollidable(PhysicsJoint::getComponentType()) { }
 	PhysicsJoint(PhysicsJoint* parent, JointType type, int boneID, float mass) : PhysicsCollidable(PhysicsJoint::getComponentType()) { }
 
     virtual ~PhysicsJoint() {}
@@ -69,8 +69,15 @@ class PhysicsJoint :  public PhysicsCollidable
 
 	virtual void applyTorque(float t) = 0;
 
-	virtual Skeleton* getSkeleton() = 0;
+	virtual Skeleton* getSkeleton() const = 0;
 
+	virtual int getNumJoints() const = 0;
+
+	virtual void setNumJoints(int n) = 0;
+
+	virtual void removeJointFromBody(int index) = 0;
+
+	virtual int addJointToBody(PhysicsJoint* childJoint) = 0;
 };
 
 }

@@ -46,70 +46,54 @@ class BulletJoint : public PhysicsJoint
     BulletJoint(BulletJoint* parent, JointType type, int jointIndex, float mass);
 
 	BulletJoint(BulletJoint* parent, int jointIndex);
-
     virtual ~BulletJoint() { }
 
-	virtual const char* getName() const;
+	virtual const BulletRootJoint* findRoot() const;
+	virtual BulletRootJoint* findRoot();
+	virtual const char*      getName() const;
+	virtual Skeleton*        getSkeleton() const;
+	virtual void  setName(const char*);
+	virtual void  setMass(float mass);
+	virtual float getFriction() const;
+	virtual void  setFriction(float f);
+	virtual void  applyCentralForce(float x, float y, float z);
+	virtual void  applyTorque(float x, float y, float z);
+	virtual void  applyTorque(float t);
+	virtual void  getWorldTransform(btTransform& t);
+	virtual void  setPhysicsTransform();
+	virtual void  getPhysicsTransform();
+	virtual void  sync(int options = 0);
+	virtual void  detachFromWorld(bool deleteCollider = false);
+	virtual void  attachToWorld(PhysicsWorld* world);
+	virtual int   getNumJoints() const;
+	virtual void  setNumJoints(int n);
+	virtual int   addJointToBody(PhysicsJoint* newJoint);
+	virtual void  removeJointFromBody(int jointIndex);
+	void          setCollisionProperties(int collisionGroup, int collidesWith);
+    void          update(int jointIndex, BulletJoint* parent);
 
-	virtual void setName(const char*);
-
-	btMultiBody* getMultiBody() const { return mMultiBody; }
-
-    btMultibodyLink* getLink() const { return &(mMultiBody->getLink(mJointIndex)); }
-
-    virtual void setMass(float mass);
-
-    virtual float getMass() const { return mMass; }
-
-    virtual JointType getJointType() const { return mJointType; }
-
-    virtual PhysicsJoint* getParent() const { return mParent; }
-
+	btMultiBody*             getMultiBody() const { return mMultiBody; }
+	btMultibodyLink*         getLink() const { return &(mMultiBody->getLink(mJointIndex)); }
+	int                      getJointIndex() const { return mJointIndex; }
+	virtual float            getMass() const { return mMass; }
+    virtual JointType        getJointType() const { return mJointType; }
+    virtual PhysicsJoint*    getParent() const { return mParent; }
     virtual const glm::vec3& getAxis() const { return mAxis; }
-
     virtual const glm::vec3& getPivot() const { return mPivot; }
-
-	virtual void setPivot(const glm::vec3& pivot) { mPivot = pivot; }
-
-    virtual void setAxis(const glm::vec3& axis) { mAxis = axis; }
-
-    virtual float getFriction() const;
-
-    virtual void setFriction(float f);
-
-    virtual void applyCentralForce(float x, float y, float z);
-
-    virtual void applyTorque(float x, float y, float z);
-
-    virtual void applyTorque(float t);
-
-    int getJointIndex() const { return mJointIndex; }
-
-    virtual void getWorldTransform(btTransform& t);
-
-    virtual void setPhysicsTransform();
-
-    virtual void getPhysicsTransform();
-
-    virtual Skeleton* getSkeleton();
-
-	virtual void updateConstructionInfo(PhysicsWorld* world);
-
-    virtual BulletRootJoint* findRoot();
-
-	void setCollisionProperties(int collisionGroup, int collidesWith);
-
-	virtual void removeFromWorld();
-
-	virtual void addToWorld(PhysicsWorld* world);
+	virtual void             setPivot(const glm::vec3& pivot);
+    virtual void             setAxis(const glm::vec3& axis);
 
 protected:
     BulletJoint(float mass, int numBones);
-    virtual void updateCollider(Node* owner);
+    virtual void updateCollider(Node* owner, int options);
     void setupSpherical();
     void setupHinge();
     void setupSlider();
     void setupFixed();
+    void updateFixed();
+    void updateSpherical();
+    void updateHinge();
+    void updateSlider();
 
 protected:
 	mutable std::string		 mName;
@@ -124,53 +108,41 @@ protected:
     float                    mMass;
     int 					 mCollisionGroup;
     int 					 mCollisionMask;
-	bool					 mTransformsFromPhysics;
 };
 
 class BulletRootJoint : public BulletJoint
 {
 public:
     BulletRootJoint(float mass, int numBones);
-
     BulletRootJoint(btMultiBody* multibody);
-
     virtual ~BulletRootJoint();
 
-    virtual Skeleton* getSkeleton();
-
-    virtual void updateConstructionInfo(PhysicsWorld* world);
-
+	virtual const BulletRootJoint* findRoot() const;
+	virtual BulletRootJoint* findRoot();
+    virtual Skeleton*        getSkeleton() const;
+    virtual BulletJoint*     getJoint(int jointIndex) { return mJoints[jointIndex]; }
+	virtual int  getNumJoints() const;
     virtual void setMass(float mass);
-
     virtual void applyCentralForce(float x, float y, float z);
-
     virtual void applyTorque(float x, float y, float z);
-
     virtual void applyTorque(float t);
-
-    void setPhysicsTransforms();
-
-    void getPhysicsTransforms();
-
     virtual void setPhysicsTransform();
-
-    virtual BulletRootJoint* findRoot();
-
-	bool addLink(PhysicsJoint* joint, PhysicsWorld* world);
-
-	bool removeLink(PhysicsJoint* joint, PhysicsWorld* world);
-
-	virtual void removeFromWorld();
-
-	virtual void addToWorld(PhysicsWorld* world);
+	virtual void detachFromWorld(bool deleteCollider = false);
+	virtual void attachToWorld(PhysicsWorld* world);
+	virtual void sync(int options = 0);
+	virtual void setNumJoints(int endIndex);
+	virtual int   addJointToBody(PhysicsJoint* newJoint);
+	virtual void  removeJointFromBody(int jointIndex);
+	bool	addJointToWorld(PhysicsJoint* joint, PhysicsWorld* world);
+	bool	removeJointFromWorld(PhysicsJoint* joint);
+	void	setPhysicsTransforms();
+	void	getPhysicsTransforms();
 
 protected:
-	virtual void updateCollider(Node* owner);
-    bool         finalize(PhysicsWorld* world);
+    virtual void updateCollider(Node* owner, int options);
     void         destroy();
-    Skeleton*    createSkeleton();
+    Skeleton*    createSkeleton() const;
 
-protected:
     std::vector<BulletJoint*> mJoints;
     Skeleton*   mSkeleton;
     int         mNumJoints;

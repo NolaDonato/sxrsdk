@@ -294,27 +294,28 @@ public class SXRPhysicsContent extends SXRComponent
         @Override
         public boolean visit(SXRNode obj)
         {
-            SXRRigidBody body = (SXRRigidBody) obj.getComponent(SXRRigidBody.getComponentType());
-            SXRPhysicsJoint joint = (SXRPhysicsJoint) obj.getComponent(SXRPhysicsJoint.getComponentType());
+            SXRRigidBody newBody = (SXRRigidBody) obj.getComponent(SXRRigidBody.getComponentType());
+            SXRPhysicsJoint newJoint = (SXRPhysicsJoint) obj.getComponent(SXRPhysicsJoint.getComponentType());
 
-            if (body != null)
+            if (newBody != null)
             {
-                addBody(body);
+                addBody(newBody);
             }
             else
             {
-                if (joint != null)
+                if (newJoint != null)
                 {
                     if (!mIsMultibody)
                     {
                         throw new UnsupportedOperationException("This world does not support multi-body physics, cannot merge multi-body world");
                     }
-                    addBody(joint);
+                    addBody(newJoint);
                 }
             }
             return true;
         }
     };
+
 
     protected void attachConstraints(List<SXRPhysicsCollidable> bodies)
     {

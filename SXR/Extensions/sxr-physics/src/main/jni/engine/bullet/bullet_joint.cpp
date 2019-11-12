@@ -61,7 +61,6 @@ namespace sxr {
       mPivot(0, 0, 0),
       mWorld(nullptr),
       mMass(mass),
-      mTransformsFromPhysics(false),
       mCollisionGroup(btBroadphaseProxy::DefaultFilter),
       mCollisionMask(btBroadphaseProxy::AllFilter),
       mJointType(JointType::sphericalJoint)
@@ -73,7 +72,6 @@ namespace sxr {
       mMultiBody(nullptr),
       mParent(parent),
       mCollider(nullptr),
-      mTransformsFromPhysics(false),
       mJointIndex(jointIndex - 1),
       mAxis(1, 0, 0),
       mMass(mass),
@@ -88,7 +86,6 @@ namespace sxr {
         mParent(parent),
         mMultiBody(parent->getMultiBody()),
         mJointIndex(jointIndex),
-        mTransformsFromPhysics(true),
         mWorld(nullptr)
     {
         btMultibodyLink& link = mMultiBody->getLink(jointIndex);
@@ -116,12 +113,37 @@ namespace sxr {
         }
     }
 
+    int BulletJoint::addJointToBody(PhysicsJoint* child)
+    {
+        BulletJoint* childJoint = static_cast<BulletJoint*>(child);
+        BulletRootJoint* newRoot = findRoot();
+        int nextJointIndex = newRoot->getNumJoints();
+
+        if (childJoint->getMultiBody())
+        {
+            childJoint->findRoot()->removeJointFromBody(childJoint->getJointIndex());
+        }
+        newRoot->setNumJoints(nextJointIndex + 1);
+        childJoint->update(nextJointIndex, this);
+        return nextJointIndex;
+    }
+
+    void BulletJoint::removeJointFromBody(int jointIndex)
+    {
+        BulletRootJoint* root = findRoot();
+
+        if (root)
+        {
+            root->removeJointFromBody(jointIndex);
+        }
+    }
+
     const char* BulletJoint::getName() const
     {
         Node* owner = owner_object();
         if (owner && !owner->name().empty())
         {
-            const std::string& name =  owner->name();
+            const std::string& name = owner->name();
             if (!name.empty())
             {
                 mName = name;
@@ -132,6 +154,11 @@ namespace sxr {
             return nullptr;
         }
         return mName.c_str();
+    }
+
+    const BulletRootJoint* BulletJoint::findRoot() const
+    {
+        return mParent->findRoot();
     }
 
     BulletRootJoint* BulletJoint::findRoot()
@@ -165,12 +192,57 @@ namespace sxr {
         }
     }
 
-
-    Skeleton* BulletJoint::getSkeleton()
+    void BulletJoint::setPivot(const glm::vec3& pivot)
     {
-        BulletRootJoint* root = findRoot();
+        mPivot = pivot;
+    }
+
+    void BulletJoint::setAxis(const glm::vec3& axis)
+    {
+        mAxis = axis;
+    }
+
+    Skeleton* BulletJoint::getSkeleton() const
+    {
+        const BulletRootJoint* root = findRoot();
         return root ? root->getSkeleton() : nullptr;
     }
+
+    void BulletJoint::update(int jointIndex, BulletJoint* parent)
+    {
+        mJointIndex = jointIndex;
+
+        if (parent == nullptr)
+        {
+            if (mCollider)
+            {
+                delete mCollider;
+                mCollider = nullptr;
+                LOGV("BULLET: deleting link collider %s", getName());
+            }
+            mMultiBody = nullptr;
+            return;
+        }
+        mMultiBody = parent->getMultiBody();
+        mParent = parent;
+        if (mCollider)
+        {
+            if (mCollider->m_multiBody == mMultiBody)
+            {
+                mCollider->m_link = jointIndex;
+            }
+            else
+            {
+                delete mCollider;
+                mCollider = new btMultiBodyLinkCollider(mMultiBody, jointIndex);
+                LOGV("BULLET: replacing link collider %s", getName());
+            }
+        }
+    }
+
+    int BulletJoint::getNumJoints() const { return findRoot()->getNumJoints(); }
+
+    void BulletJoint::setNumJoints(int n) { }
 
     void BulletJoint::getWorldTransform(btTransform& t)
     {
@@ -254,57 +326,92 @@ namespace sxr {
         }
     }
 
-    void BulletJoint::updateConstructionInfo(PhysicsWorld* world)
+    void BulletJoint::sync(int options)
     {
         BulletJoint* parent = static_cast<BulletJoint*>(getParent());
+        bool creating = (mMultiBody == nullptr);
+
         mMultiBody = parent->getMultiBody();
         btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
 
         link.m_parent = getJointIndex();
         link.m_userPtr = this;
         link.m_mass = mMass;
-        updateCollider(owner_object());
-        setPhysicsTransform();
-        switch (mJointType)
+        updateCollider(owner_object(), 0);
+        if (options & SyncOptions::TRANSFORM)
         {
-            case JointType::fixedJoint: setupFixed(); break;
-            case JointType::prismaticJoint: setupSlider(); break;
-            case JointType::revoluteJoint: setupHinge(); break;
-            default: setupSpherical(); break;
+            setPhysicsTransform();
         }
-        addToWorld(world);
+        if (creating)
+        {
+            switch (mJointType)
+            {
+                case JointType::fixedJoint: setupFixed(); break;
+                case JointType::prismaticJoint: setupSlider(); break;
+                case JointType::revoluteJoint: setupHinge(); break;
+                default: setupSpherical(); break;
+            }
+        }
+        else if (options & SyncOptions::PROPERTIES)
+        {
+            switch (mJointType)
+            {
+                case JointType::fixedJoint: updateFixed(); break;
+                case JointType::prismaticJoint: updateSlider(); break;
+                case JointType::revoluteJoint: updateHinge(); break;
+                case JointType::sphericalJoint: updateSpherical(); break;
+                default: break;
+            }
+        }
     }
 
-    void BulletJoint::updateCollider(Node* owner)
+    void BulletJoint::updateCollider(Node* owner, int options)
     {
-        btVector3 localInertia;
         btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
-        if (mCollider == nullptr)
-        {
-            Collider* collider = static_cast<Collider*>(owner->getComponent(COMPONENT_TYPE_COLLIDER));
-            if (collider)
-            {
-                mCollider = new btMultiBodyLinkCollider(mMultiBody, mJointIndex);
-                btCollisionShape* shape = convertCollider2CollisionShape(collider);
-                btVector3 ownerScale;
-                Transform* trans = owner->transform();
+        btCollisionShape* oldShape = nullptr;
+        btCollisionShape* newShape = nullptr;
+        btVector3 ownerScale;
+        Transform* trans = owner->transform();
+        btVector3 localInertia;
+        Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
 
-                ownerScale.setValue(trans->scale_x(), trans->scale_y(), trans->scale_z());
-                shape->setLocalScaling(ownerScale);
-                shape->calculateLocalInertia(getMass(), localInertia);
-                mCollider->setCollisionShape(shape);
-                mCollider->setIslandTag(0);
-                mCollider->m_link = getJointIndex();
-                link.m_inertiaLocal = localInertia;
-                link.m_collider = mCollider;
-                mCollider->setUserPointer(this);
+        if (collider == nullptr)
+        {
+            return;
+        }
+        newShape = convertCollider2CollisionShape(collider);
+        if (mCollider && ((options & SyncOptions::COLLISION_SHAPE) != 0))
+        {
+            oldShape = mCollider->getCollisionShape();
+            if (mWorld)
+            {
+                btDynamicsWorld* bw = mWorld->getPhysicsWorld();
+                bw->removeCollisionObject(mCollider);
+                mCollider->setCollisionShape(newShape);
+                bw->addCollisionObject(mCollider);
             }
             else
             {
-                LOGE("PHYSICS: joint %s does not have collider", owner_object()->name().c_str());
-                return;
+                mCollider->setCollisionShape(newShape);
+            }
+            if (oldShape)
+            {
+                delete oldShape;
             }
         }
+        else
+        {
+            mCollider = new btMultiBodyLinkCollider(mMultiBody, mJointIndex);
+            LOGV("BULLET: creating link collider %s", getName());
+            mCollider->setCollisionShape(newShape);
+            mCollider->m_link = getJointIndex();
+            mCollider->setUserPointer(this);
+            link.m_collider = mCollider;
+        }
+        ownerScale.setValue(trans->scale_x(), trans->scale_y(), trans->scale_z());
+        newShape->setLocalScaling(ownerScale);
+        newShape->calculateLocalInertia(getMass(), localInertia);
+        link.m_inertiaLocal = localInertia;
     }
 
     void BulletJoint::setCollisionProperties(int collisionGroup, int collidesWith)
@@ -318,17 +425,26 @@ namespace sxr {
         }
     }
 
-    void BulletJoint::removeFromWorld()
+    void BulletJoint::detachFromWorld(bool deleteCollider)
     {
-        btMultiBodyDynamicsWorld* w = dynamic_cast<btMultiBodyDynamicsWorld*>(mWorld->getPhysicsWorld());
         if (mCollider)
         {
-            w->removeCollisionObject(mCollider);
-            mWorld = nullptr;
+            if (mWorld)
+            {
+                btMultiBodyDynamicsWorld* w = dynamic_cast<btMultiBodyDynamicsWorld*>(mWorld->getPhysicsWorld());
+                w->removeCollisionObject(mCollider);
+                LOGD("BULLET: detaching joint %s from world", getName());
+            }
+            if (deleteCollider)
+            {
+                delete mCollider;
+                mCollider = nullptr;
+            }
         }
+        mWorld = nullptr;
     }
 
-    void BulletJoint::addToWorld(PhysicsWorld* w)
+    void BulletJoint::attachToWorld(PhysicsWorld* w)
     {
         Node* owner = owner_object();
         const char* name = owner->name().c_str();
@@ -343,6 +459,7 @@ namespace sxr {
         link->m_jointName = mName.c_str();
         mWorld = bw;
         bw->getPhysicsWorld()->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
+        LOGD("BULLET: attaching joint %s to world", getName());
     }
 
     void BulletJoint::setupFixed()
@@ -367,6 +484,24 @@ namespace sxr {
                                true);
     }
 
+    void BulletJoint::updateFixed()
+    {
+        BulletJoint*       jointA = static_cast<BulletJoint*>(getParent());
+        btVector3          pivotB(mPivot.x, mPivot.y, mPivot.z);
+        btTransform        worldA;  jointA->getWorldTransform(worldA);
+        btTransform        worldB; getWorldTransform(worldB);
+        btQuaternion       rot(worldA.getRotation());
+        btVector3          bodyACOM(worldA.getOrigin());
+        btVector3          bodyBCOM(worldB.getOrigin());
+        btVector3          diffCOM = bodyBCOM + pivotB - bodyACOM;
+        btMultibodyLink&   link = mMultiBody->getLink(getJointIndex());
+
+        link.m_zeroRotParentToThis = rot;
+        link.m_dVector = diffCOM;
+        link.m_eVector = -pivotB;
+        link.updateCacheMultiDof();
+    }
+
     void BulletJoint::setupSpherical()
     {
         BulletJoint*       jointA = static_cast<BulletJoint*>(getParent());
@@ -386,6 +521,27 @@ namespace sxr {
                                    rotA,
                                    diffCOM,
                                    -pivotB, true);
+    }
+
+    void BulletJoint::updateSpherical()
+    {
+        BulletJoint*       jointA = static_cast<BulletJoint*>(getParent());
+        btVector3          pivotB(mPivot.x, mPivot.y, mPivot.z);
+        btTransform        worldA;  jointA->getWorldTransform(worldA);
+        btTransform        worldB; getWorldTransform(worldB);
+        btQuaternion       rotA(worldA.getRotation());
+        btVector3          bodyACOM(worldA.getOrigin());
+        btVector3          bodyBCOM(worldB.getOrigin());
+        btVector3          diffCOM = bodyBCOM + pivotB - bodyACOM;
+        btMultibodyLink&   link = mMultiBody->getLink(getJointIndex());
+
+        link.m_zeroRotParentToThis = rotA;
+        link.m_dVector = diffCOM;
+        link.m_eVector = -pivotB;
+        link.setAxisBottom(0, link.getAxisTop(0).cross(link.m_dVector));
+        link.setAxisBottom(1, link.getAxisTop(1).cross(link.m_dVector));
+        link.setAxisBottom(2, link.getAxisTop(2).cross(link.m_dVector));
+        link.updateCacheMultiDof();
     }
 
     /***
@@ -416,7 +572,7 @@ namespace sxr {
         btVector3           bodyBCOM(worldB.getOrigin());
         btVector3           diffCOM = bodyBCOM + pivotB - bodyACOM;
         btVector3           hingeAxis(mAxis.x, mAxis.y, mAxis.z);
-        btMultibodyLink&   link = mMultiBody->getLink(getJointIndex());
+        btMultibodyLink&    link = mMultiBody->getLink(getJointIndex());
 
         mMultiBody->setupRevolute(getJointIndex(),
                           link.m_mass,
@@ -426,6 +582,28 @@ namespace sxr {
                           hingeAxis.normalized(),
                           diffCOM,
                           -pivotB, true);
+    }
+
+    void BulletJoint::updateHinge()
+    {
+        BulletJoint*        jointA = static_cast<BulletJoint*>(getParent());
+        btVector3           pivotB(mPivot.x, mPivot.y, mPivot.z);
+        btTransform         worldA; jointA->getWorldTransform(worldA);
+        btTransform         worldB; getWorldTransform(worldB);
+        btQuaternion        rotA(worldA.getRotation());
+        btVector3           bodyACOM(worldA.getOrigin());
+        btVector3           bodyBCOM(worldB.getOrigin());
+        btVector3           diffCOM = bodyBCOM + pivotB - bodyACOM;
+        btVector3           hingeAxis(mAxis.x, mAxis.y, mAxis.z);
+        btMultibodyLink&    link = mMultiBody->getLink(getJointIndex());
+
+        hingeAxis.normalize();
+        link.m_zeroRotParentToThis = rotA;
+        link.m_dVector = diffCOM;
+        link.m_eVector = -pivotB;
+        link.setAxisTop(0, hingeAxis);
+        link.setAxisBottom(0, hingeAxis.cross(link.m_dVector));
+        link.updateCacheMultiDof();
     }
 
     void BulletJoint::setupSlider()
@@ -452,4 +630,24 @@ namespace sxr {
                                   true);
     }
 
+    void BulletJoint::updateSlider()
+    {
+        BulletJoint*        jointA = static_cast<BulletJoint*>(getParent());
+        btVector3           pivotB(mPivot.x, mPivot.y, mPivot.z);
+        btTransform         worldA; jointA->getWorldTransform(worldA);
+        btTransform         worldB; getWorldTransform(worldB);
+        btQuaternion        rotA(worldA.getRotation());
+        btVector3           bodyACOM(worldA.getOrigin());
+        btVector3           bodyBCOM(worldB.getOrigin());
+        btVector3           diffCOM = bodyBCOM + pivotB - bodyACOM;
+        btVector3           sliderAxis(bodyBCOM - bodyACOM);
+        btMultibodyLink&    link = mMultiBody->getLink(getJointIndex());
+
+        sliderAxis.normalize();
+        link.m_zeroRotParentToThis = rotA;
+        link.m_dVector = diffCOM;
+        link.m_eVector = -pivotB;
+        link.setAxisBottom(0, sliderAxis);
+        link.updateCacheMultiDof();
+    }
 }

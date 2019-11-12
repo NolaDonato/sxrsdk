@@ -130,44 +130,6 @@ public class SXRRigidBody extends SXRPhysicsCollidable
     }
 
     /**
-     * Returns the {@linkplain SXRWorld physics world} of this {@linkplain SXRRigidBody rigid body}.
-     *
-     * @return The physics world of this {@link SXRRigidBody}, null if not added to a world.
-     */
-    public SXRWorld getWorld() {
-        return getWorld(getOwnerObject());
-    }
-
-    /**
-     * Returns the {@linkplain SXRWorld physics world} of the {@linkplain com.samsungxr.SXRScene scene}.
-     *
-     * @param owner  Owner of the {@link SXRRigidBody}
-     * @return Returns the {@link SXRWorld} of the scene, null if node is not in the scene
-     */
-    private static SXRWorld getWorld(SXRNode owner) {
-        return getWorldFromAscendant(owner);
-    }
-
-    /**
-     * Looks for {@link SXRWorld} component in the ascendants of the scene.
-     *
-     * @param worldOwner Scene object to search for a physics world in the scene.
-     * @return Physics world from the scene.
-     */
-    private static SXRWorld getWorldFromAscendant(SXRNode worldOwner)
-    {
-        SXRComponent world = null;
-
-        while (worldOwner != null && world == null)
-        {
-            world = worldOwner.getComponent(SXRWorld.getComponentType());
-            worldOwner = worldOwner.getParent();
-        }
-
-        return (SXRWorld) world;
-    }
-
-    /**
      * Get the name of this rigid body.
      * <p>
      * If the rigid body is attached to a scene object, the name
@@ -616,30 +578,11 @@ public class SXRRigidBody extends SXRPhysicsCollidable
         return mCollisionGroup;
     }
 
-    /**
-     * Reset the {@linkplain SXRRigidBody rigid body}. This API is intended mainly to adapt the
-     * rigid body transform (position, rotation and scale) when the {@linkplain SXRNode
-     * owner object} is changed.
-     *
-     * @param rebuildCollider rebuilds the physics collider if true.
-     */
-    public void reset(final boolean rebuildCollider)
-    {
-        mPhysicsContext.runOnPhysicsThread(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                NativeRigidBody.reset(getNative(), rebuildCollider);
-            }
-        });
-    }
 
-    /**
-     * Same as {@linkplain SXRRigidBody#reset reset(true)}
-     */
-    public void reset() {
-        reset(true);
+    @Override
+    public void sync(int options)
+    {
+        NativeRigidBody.sync(getNative(), options);
     }
 
     @Override
@@ -749,5 +692,5 @@ class NativeRigidBody {
 
     static native void setSimulationType(long jrigid_body, int jtype);
 
-    static native void reset(long jrigid_body, boolean rebuildCollider);
+    static native void sync(long jrigid_body, int options);
 }

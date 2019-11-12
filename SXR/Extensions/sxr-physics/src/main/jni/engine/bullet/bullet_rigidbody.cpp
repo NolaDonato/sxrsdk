@@ -23,6 +23,7 @@
 #include "bullet_sxr_utils.h"
 #include "objects/components/sphere_collider.h"
 #include "util/sxr_log.h"
+#include "../physics_collidable.h"
 
 #include <BulletDynamics/Dynamics/btDynamicsWorld.h>
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
@@ -134,66 +135,67 @@ namespace sxr
     void BulletRigidBody::setSimulationType(PhysicsRigidBody::SimulationType type)
     {
         mSimType = type;
-        if (mRigidBody != nullptr)
+        if (mRigidBody)
         {
-            reset(false);
+            sync(SyncOptions::PROPERTIES);
         }
     }
 
-    void BulletRigidBody::updateConstructionInfo(PhysicsWorld* world)
+    void BulletRigidBody::onDisable(Node* owner)
     {
-        int collisionFlags = 0;
-        Node* owner = owner_object();
-        Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
-        btCollisionShape* shape;
-        Transform* trans = owner->transform();
-
-        mWorld = static_cast<BulletWorld*>(world);
-        mConstructionInfo.m_motionState = this;
-        if (!collider)
-        {
-            LOGE("PHYSICS: Cannot attach rigid body without collider");
-        }
         if (mRigidBody)
         {
-            shape = mRigidBody->getCollisionShape();
-            mConstructionInfo.m_collisionShape = shape;
-            btVector3 scale = shape->getLocalScaling();
+            if ((mRigidBody->getCollisionFlags() &
+                 ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
+                   btCollisionObject::CollisionFlags::CF_STATIC_OBJECT)) == 0)
+            {
+                mRigidBody->setActivationState(DISABLE_SIMULATION);
+            }
+        }
+    }
 
-            setWorldTransform(mRigidBody->getWorldTransform());
-            trans->set_scale(scale.x(), scale.y(), scale.z());
-            collisionFlags = mRigidBody->getCollisionFlags();
-            if ((collisionFlags &
+    void BulletRigidBody::onEnable(Node* owner)
+    {
+        if (mRigidBody)
+        {
+            if ((mRigidBody->getCollisionFlags() &
                  ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
                    btCollisionObject::CollisionFlags::CF_STATIC_OBJECT)) == 0)
             {
                 mRigidBody->setActivationState(ACTIVE_TAG);
             }
         }
-        else
+    }
+
+    void BulletRigidBody::sync(int options)
+    {
+        int collisionFlags = 0;
+        Node* owner = owner_object();
+        Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
+
+        if (!collider)
         {
-            shape = mConstructionInfo.m_collisionShape;
-            if (shape == nullptr)
-            {
-                mConstructionInfo.m_collisionShape = shape = convertCollider2CollisionShape(collider);
-                if (mConstructionInfo.m_mass > 0)
-                {
-                    shape->calculateLocalInertia(mConstructionInfo.m_mass, mConstructionInfo.m_localInertia);
-                }
-            }
-            btVector3 scale(trans->scale_x(), trans->scale_y(), trans->scale_z());
-            shape->setLocalScaling(scale);
-            getWorldTransform(mConstructionInfo.m_startWorldTransform);
+            LOGE("PHYSICS: Cannot attach rigid body without collider");
+        }
+        if (mRigidBody == nullptr)
+        {
             mRigidBody = new btRigidBody(mConstructionInfo);
             mRigidBody->setUserPointer(this);
-            mRigidBody->setIslandTag(0);
+            options |= SyncOptions::COLLISION_SHAPE | SyncOptions::PROPERTIES;
+        }
+        if (options & SyncOptions::COLLISION_SHAPE)
+        {
+            updateCollider(owner, options);
+        }
+        if (options & SyncOptions::PROPERTIES)
+        {
             switch (mSimType)
             {
                 case SimulationType::DYNAMIC:
                 mRigidBody->setCollisionFlags(collisionFlags &
                                               ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
                                                 btCollisionObject::CollisionFlags::CF_STATIC_OBJECT));
-                mRigidBody->setActivationState(ACTIVE_TAG);
+                mRigidBody->setActivationState(enabled() ? ACTIVE_TAG : DISABLE_SIMULATION);
                 break;
 
                 case SimulationType::STATIC:
@@ -210,14 +212,71 @@ namespace sxr
                 mRigidBody->setActivationState(ISLAND_SLEEPING);
                 break;
             }
+            mConstructionInfo.m_motionState = this;
+            mRigidBody->setMotionState(this);
         }
-        mRigidBody->setMotionState(this);
+    }
+
+    void BulletRigidBody::onAddedToWorld(PhysicsWorld* world)
+    {
+        sync();
+        mWorld = static_cast<BulletWorld*>(world);
+    }
+
+    void BulletRigidBody::updateCollider(Node* owner, int options)
+    {
+        btCollisionShape* oldShape = nullptr;
+        btCollisionShape* newShape = nullptr;
+        Transform* trans = owner->transform();
+        Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
+        btVector3 ownerScale(trans->scale_x(), trans->scale_y(), trans->scale_z());
+        bool creating = (mRigidBody == nullptr);
+
+        if (collider == nullptr)
+        {
+            return;
+        }
+        if (creating)
+        {
+            mRigidBody = new btRigidBody(mConstructionInfo);
+            mRigidBody->setUserPointer(this);
+            if ((mRigidBody->getCollisionFlags() &
+                 ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
+                   btCollisionObject::CollisionFlags::CF_STATIC_OBJECT)) == 0)
+            {
+                mRigidBody->setActivationState(ACTIVE_TAG);
+            }
+            newShape = convertCollider2CollisionShape(collider);
+        }
+        else if (options & SyncOptions::COLLISION_SHAPE)
+        {
+            newShape = convertCollider2CollisionShape(collider);
+            oldShape = mRigidBody->getCollisionShape();
+            if (oldShape)
+            {
+                delete oldShape;
+            }
+        }
+        if (newShape)
+        {
+            mRigidBody->setCollisionShape(newShape);
+            newShape->setLocalScaling(ownerScale);
+            if (mConstructionInfo.m_mass > 0)
+            {
+                newShape->calculateLocalInertia(mConstructionInfo.m_mass,
+                                                mConstructionInfo.m_localInertia);
+            }
+        }
     }
 
     void BulletRigidBody::finalize()
     {
         if (mRigidBody)
         {
+            if (mWorld)
+            {
+                mWorld->getPhysicsWorld()->removeRigidBody(mRigidBody);
+            }
             if (mRigidBody->getCollisionShape())
             {
                 mConstructionInfo.m_collisionShape = 0;
@@ -286,6 +345,11 @@ namespace sxr
     void BulletRigidBody::setWorldTransform(const btTransform &centerOfMassWorldTrans)
     {
         Node* owner = owner_object();
+
+        if (!owner->enabled())
+        {
+            return;
+        }
         Transform* trans = owner->transform();
         btTransform physicBody = centerOfMassWorldTrans;
         btVector3 pos = physicBody.getOrigin();
@@ -616,25 +680,6 @@ namespace sxr
             return mRigidBody->getContactProcessingThreshold();
         }
         return BT_LARGE_FLOAT;
-    }
-
-    void BulletRigidBody::reset(bool rebuildCollider)
-    {
-        if ((nullptr == mWorld) || (mRigidBody == nullptr))
-        {
-            return;
-        }
-        if (rebuildCollider)
-        {
-            delete mConstructionInfo.m_collisionShape;
-            mConstructionInfo.m_collisionShape = nullptr;
-        }
-        int collisionFilterGroup = mRigidBody->getBroadphaseProxy()->m_collisionFilterGroup;
-        int collisionFilterMask = mRigidBody->getBroadphaseProxy()->m_collisionFilterMask;
-
-        mWorld->getPhysicsWorld()->removeRigidBody(mRigidBody);
-        updateConstructionInfo(mWorld);
-        mWorld->getPhysicsWorld()->addRigidBody(mRigidBody, collisionFilterGroup, collisionFilterMask);
     }
 
 }

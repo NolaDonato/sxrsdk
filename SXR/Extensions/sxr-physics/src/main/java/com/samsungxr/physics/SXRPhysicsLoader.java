@@ -41,6 +41,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
     static private final String TAG = SXRPhysicsLoader.class.getSimpleName();
     protected boolean mCreateNodes = false;
     protected boolean mIsMultiBody = false;
+    protected String mErrors = null;
     private SXREventReceiver mListeners;
 
     static
@@ -57,7 +58,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
          *                  May be null if the load failed.
          * @param filename  Name of file or resource loaded.
          */
-        public void onPhysicsLoaded(SXRPhysicsContent world, String filename);
+        public void onPhysicsLoaded(SXRPhysicsContent world, SXRSkeleton skel, String filename);
 
         /**
          * Called if a physics file fails to load.
@@ -318,16 +319,18 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         /*
          * attach physics components to scene objects.
          */
-        String errors = attachPhysics(sceneRoot);
+        SXRSkeleton skel = attachPhysics(sceneRoot);
         NativeBulletLoader.clear(loader);
         mCreateNodes = false;
-        if (errors != null)
+        if (mErrors != null)
         {
+            String errors = mErrors;
+            mErrors = null;
             getSXRContext().getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onLoadError", sceneRoot.getName(), errors);
         }
         else
         {
-            getSXRContext().getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", null, sceneRoot.getName());
+            getSXRContext().getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", null, skel, sceneRoot.getName());
         }
     }
 
@@ -365,16 +368,18 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         {
             public void run()
             {
-                String errors = attachPhysics(sceneRoot);
+                SXRSkeleton skel = attachPhysics(sceneRoot);
                 NativeBulletLoader.clear(loader);
                 mCreateNodes = false;
-                if (errors != null)
+                if (mErrors != null)
                 {
+                    String errors = mErrors;
+                    mErrors = null;
                     ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onLoadError", sceneRoot.getName(), errors);
                 }
                 else
                 {
-                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", world, sceneRoot.getName());
+                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", world, skel, sceneRoot.getName());
                 }
             }
         });
@@ -407,16 +412,18 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         {
             public void run()
             {
-                String errors = attachPhysics(sceneRoot);
+                SXRSkeleton skel = attachPhysics(sceneRoot);
                 NativeBulletLoader.clear(loader);
                 mCreateNodes = false;
-                if (errors != null)
+                if (mErrors != null)
                 {
+                    String errors = mErrors;
+                    mErrors = null;
                     ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onLoadError", sceneRoot.getName(), errors);
-                 }
+                }
                 else
                 {
-                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", world, sceneRoot.getName());
+                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", world, skel, sceneRoot.getName());
                 }
             }
         });
@@ -427,12 +434,10 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
      * nodes based on name matching.
      * @param sceneRoot root of scene hierarchy to add physics to
      */
-    private String attachPhysics(SXRNode sceneRoot)
+    private SXRSkeleton attachPhysics(SXRNode sceneRoot)
     {
         SXRContext ctx = sceneRoot.getSXRContext();
         long loader = getNative();
-        String errors = "";
-        List<SXRPhysicsJoint> rootJoints = new ArrayList<SXRPhysicsJoint>();
 
         /*
          * Attach imported SXRRigidBody objects to the corresponding
@@ -455,7 +460,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                 }
                 else
                 {
-                    errors += "Didn't find node for rigid body '" + name + "'\n";
+                    mErrors += "Didn't find node for rigid body '" + name + "'\n";
                     continue;
                 }
             }
@@ -477,6 +482,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
          * for the joint, attach it to the scene object too.
          */
         SXRPhysicsJoint[] joints = NativeBulletLoader.getJoints(loader);
+        SXRPhysicsJoint rootJoint = null;
         for (SXRPhysicsJoint joint : joints)
         {
             String name = joint.getName();
@@ -492,13 +498,13 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                 }
                 else
                 {
-                    errors += "Didn't find node for joint '" + name + "'\n";
+                    mErrors += "Didn't find node for joint '" + name + "'\n";
                     continue;
                 }
             }
             if (joint.getJointIndex() <= 0)
             {
-                rootJoints.add(joint);
+                rootJoint = joint;
             }
             if (sceneObject.getComponent(SXRCollider.getComponentType()) == null)
             {
@@ -512,36 +518,32 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
             sceneObject.attachComponent(joint);
         }
 
-        for (SXRPhysicsJoint joint : rootJoints)
+        SXRSkeleton skel = rootJoint.getSkeleton();
+
+        if (mCreateNodes)
         {
-            SXRSkeleton skel = joint.getSkeleton();
-
-            if (mCreateNodes)
+            for (int i = 0; i < skel.getNumBones(); ++i)
             {
-                for (int i = 0; i < skel.getNumBones(); ++i)
+                String boneName = skel.getBoneName(i);
+                SXRNode bone = sceneRoot.getNodeByName(boneName);
+                int parentIndex = skel.getParentBoneIndex(i);
+
+                if (bone != null)
                 {
-                    String boneName = skel.getBoneName(i);
-                    SXRNode bone = sceneRoot.getNodeByName(boneName);
-                    int parentIndex = skel.getParentBoneIndex(i);
-
-                    if (bone != null)
+                    skel.setBone(i, bone);
+                    if (parentIndex >= 0)
                     {
-                        skel.setBone(i, bone);
-                        if (parentIndex >= 0)
-                        {
-                            SXRNode parentBone = skel.getBone(parentIndex);
+                        SXRNode parentBone = skel.getBone(parentIndex);
 
-                            if (parentBone != null)
-                            {
-                                sceneRoot.removeChildObject(bone);
-                                parentBone.addChildObject(bone);
-                            }
+                        if (parentBone != null)
+                        {
+                            sceneRoot.removeChildObject(bone);
+                            parentBone.addChildObject(bone);
                         }
                     }
                 }
             }
         }
-
         /*
          * Attach imported SXRConstraint objects to the corresponding
          * scene nodes based on name matching. The Java constraints
@@ -556,12 +558,12 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 
             if (sceneObject == null)
             {
-                errors += "Didn't find node for constraint '" + name + "'\n";
+                mErrors += "Didn't find node for constraint '" + name + "'\n";
                 continue;
             }
             sceneObject.attachComponent(constraint);
         }
-        return errors.isEmpty() ? null : errors;
+        return skel;
     }
 
     protected static byte[] toByteArray(SXRAndroidResource resource)

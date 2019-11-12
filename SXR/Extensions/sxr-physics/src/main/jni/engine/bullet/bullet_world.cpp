@@ -210,7 +210,7 @@ void BulletWorld::stopDrag()
 void BulletWorld::addRigidBody(PhysicsRigidBody* body)
 {
     BulletRigidBody* rb = static_cast<BulletRigidBody*>(body);
-    body->updateConstructionInfo(this);
+    rb->onAddedToWorld(this);
     mPhysicsWorld->addRigidBody(rb->getRigidBody());
     rb->mWorld = this;
 }
@@ -218,7 +218,7 @@ void BulletWorld::addRigidBody(PhysicsRigidBody* body)
 void BulletWorld::addRigidBody(PhysicsRigidBody* body, int collisionGroup, int collidesWith)
 {
     BulletRigidBody* rb = static_cast<BulletRigidBody*>(body);
-    body->updateConstructionInfo(this);
+    rb->onAddedToWorld(this);
     mPhysicsWorld->addRigidBody(rb->getRigidBody(), collisionGroup, collidesWith);
     rb->mWorld = this;
 }
@@ -233,7 +233,7 @@ void BulletWorld::addJoint(PhysicsJoint *joint)
     if (isMultiBody())
     {
         BulletRootJoint* root = static_cast<BulletJoint*>(joint)->findRoot();
-        if (root->addLink(joint, this))
+        if (root->addJointToWorld(joint, this))
         {
             mMultiBodies.push_back(root);
         }
@@ -245,7 +245,7 @@ void BulletWorld::addJointWithMask(PhysicsJoint* joint, int collisionGroup, int 
     if (isMultiBody())
     {
         BulletRootJoint* root = static_cast<BulletJoint*>(joint)->findRoot();
-        if (root->addLink(joint, this))
+        if (root->addJointToWorld(joint, this))
         {
             mMultiBodies.push_back(root);
         }
@@ -258,7 +258,7 @@ void BulletWorld::removeJoint(PhysicsJoint *body)
     if (isMultiBody())
     {
         BulletRootJoint* root = static_cast<BulletJoint*>(body)->findRoot();
-        if (root->removeLink(body, this))
+        if (root && root->removeJointFromWorld(body))
         {
             auto it = std::find(mMultiBodies.begin(), mMultiBodies.end(), body);
             if (it != mMultiBodies.end())

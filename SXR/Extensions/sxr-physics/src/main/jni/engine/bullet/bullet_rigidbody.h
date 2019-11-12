@@ -34,19 +34,56 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
     BulletRigidBody();
 
     BulletRigidBody(btRigidBody *rigidBody);
-
     virtual ~BulletRigidBody();
+
+    virtual void onDisable(Node* owner);
+    virtual void onEnable(Node* owner);
+    virtual const char* getName() const;
+    virtual void setName(const char*);
+    virtual void setSimulationType(SimulationType type);
+    virtual void setFriction(float f);
+    virtual void sync(int options = 0);
+    virtual void getWorldTransform(btTransform &worldTrans) const;
+    virtual void setWorldTransform(const btTransform &worldTrans);
+
+    void    setCenterOfMass(Transform *t);
+    void    getRotation(float &w, float &x, float &y, float &z);
+    void    getTranslation(float &x, float &y, float &z);
+    void    applyCentralForce(float x, float y, float z);
+	void    applyForce(float force_x, float force_y, float force_z,
+			           float rel_pos_x, float rel_pos_y, float rel_pos_z);
+    void    applyCentralImpulse(float x, float y, float z);
+    void    applyImpulse(float impulse_x, float impulse_y, float impulse_z,
+                         float rel_pos_x, float rel_pos_y, float rel_pos_z);
+    void    applyTorque(float x, float y, float z);
+    void    applyTorqueImpulse(float x, float y, float z);
+    void    setGravity(float x, float y, float z);
+    void    setDamping(float linear, float angular);
+    void    setLinearVelocity(float x, float y, float z);
+    void    setAngularVelocity(float x, float y, float z);
+    void    setAngularFactor(float x, float y, float z);
+    void    setLinearFactor(float x, float y, float z);
+    void    setRestitution(float n);
+    void    setSleepingThresholds(float linear, float angular);
+    void    setCcdMotionThreshold(float n);
+    void    setCcdSweptSphereRadius(float n);
+    void    setContactProcessingThreshold(float n);
+    void    setIgnoreCollisionCheck(PhysicsRigidBody *collisionObj, bool ignore);
+    void    getGravity(float *v3) const;
+    void    getLinearVelocity(float *v3) const;
+    void    getAngularVelocity(float *v3) const;
+    void    getAngularFactor(float *v3) const;
+    void    getLinearFactor(float *v3) const;
+    void    getDamping(float &angular, float &linear) const;
+    float   getCcdMotionThreshold() const;
+    float   getContactProcessingThreshold() const;
+    float   getCcdSweptSphereRadius() const;
+    void    onAddedToWorld(PhysicsWorld* world);
 
     btRigidBody* getRigidBody() const
     {
         return mRigidBody;
     }
-
-    virtual const char* getName() const;
-
-    virtual void setName(const char*);
-
-    virtual void setSimulationType(SimulationType type);
 
     virtual SimulationType getSimulationType() const
     {
@@ -68,87 +105,14 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
         return mConstructionInfo.m_friction;
     }
 
-    virtual void setFriction(float f);
-
-    virtual void updateConstructionInfo(PhysicsWorld* world);
-
-    void setCenterOfMass(Transform *t);
-
-    void getRotation(float &w, float &x, float &y, float &z);
-
-    void getTranslation(float &x, float &y, float &z);
-
-    virtual void getWorldTransform(btTransform &worldTrans) const;
-
-    virtual void setWorldTransform(const btTransform &worldTrans);
-
-    void applyCentralForce(float x, float y, float z);
-
-	void applyForce(float force_x, float force_y, float force_z,
-			float rel_pos_x, float rel_pos_y, float rel_pos_z);
-
-    void applyCentralImpulse(float x, float y, float z);
-
-    void applyImpulse(float impulse_x, float impulse_y, float impulse_z,
-                              float rel_pos_x, float rel_pos_y, float rel_pos_z);
-
-    void applyTorque(float x, float y, float z);
-
-    void applyTorqueImpulse(float x, float y, float z);
-
-    void setGravity(float x, float y, float z);
-
-    void setDamping(float linear, float angular);
-
-    void setLinearVelocity(float x, float y, float z);
-
-    void setAngularVelocity(float x, float y, float z);
-
-    void setAngularFactor(float x, float y, float z);
-
-    void setLinearFactor(float x, float y, float z);
-
-    void setRestitution(float n);
-
-    void setSleepingThresholds(float linear, float angular);
-
-    void setCcdMotionThreshold(float n);
-
-    void setCcdSweptSphereRadius(float n);
-
-    void setContactProcessingThreshold(float n);
-
-    void setIgnoreCollisionCheck(PhysicsRigidBody *collisionObj, bool ignore);
-
-    void getGravity(float *v3) const;
-
-    void getLinearVelocity(float *v3) const;
-
-    void getAngularVelocity(float *v3) const;
-
-    void getAngularFactor(float *v3) const;
-
-    void getLinearFactor(float *v3) const;
-
-    void getDamping(float &angular, float &linear) const;
-
     float getRestitution() const
     {
         return mConstructionInfo.m_restitution;
     }
 
-    float getCcdMotionThreshold() const;
-
-    float getContactProcessingThreshold() const;
-
-    float getCcdSweptSphereRadius() const;
-
-    void reset(bool rebuildCollider);
-
-private:
-
+protected:
+    void updateCollider(Node* owner, int options);
     void finalize();
-
 
 private:
     btRigidBody::btRigidBodyConstructionInfo mConstructionInfo;
