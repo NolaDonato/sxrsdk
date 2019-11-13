@@ -637,19 +637,25 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
 
     private void sendCollisionEvent(SXRCollisionInfo info, String eventName)
     {
-        SXRNode bodyA = mPhysicsObject.get(info.bodyA).getOwnerObject();
-        SXRNode bodyB = mPhysicsObject.get(info.bodyB).getOwnerObject();
+        SXRPhysicsWorldObject bodyA = mPhysicsObject.get(info.bodyA);
+        SXRPhysicsWorldObject bodyB = mPhysicsObject.get(info.bodyB);
+
+        if ((bodyA == null) || (bodyB == null))
+        {
+            return;
+        }
+        SXRNode nodeA = bodyA.getOwnerObject();
+        SXRNode nodeB = bodyB.getOwnerObject();
         SXREventManager em =  getSXRContext().getEventManager();
 
-        em.sendEvent(bodyA, ICollisionEvents.class, eventName,
-                     bodyA, bodyB, info.normal, info.distance);
+        em.sendEvent(nodeA, ICollisionEvents.class, eventName,
+                     nodeA, nodeB, info.normal, info.distance);
 
-        em.sendEvent(bodyB, ICollisionEvents.class, eventName,
-                     bodyB, bodyA, info.normal, info.distance);
+        em.sendEvent(nodeB, ICollisionEvents.class, eventName,
+                     nodeB, nodeA, info.normal, info.distance);
 
         em.sendEvent(this, ICollisionEvents.class, eventName,
-                     bodyA, bodyB, info.normal, info.distance);
-
+                     nodeA, nodeB, info.normal, info.distance);
     }
 
 

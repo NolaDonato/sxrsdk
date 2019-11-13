@@ -135,7 +135,17 @@ namespace sxr
         {
             fileName += 2;
         }
-        AAsset *asset = AAssetManager_open(mAssetManager, fileName, 0);
+        if (mBaseDir.empty())
+        {
+            const char* p = strrchr(fileName, '/');
+            if (p)
+            {
+                mBaseDir.assign(fileName, p - fileName);
+            }
+        }
+        std::string path(mBaseDir);
+        path += fileName;
+        AAsset *asset = AAssetManager_open(mAssetManager, path.c_str(), 0);
         if (asset)
         {
             return funopen(asset, android_read, android_write, android_seek, android_close);
@@ -450,7 +460,11 @@ namespace sxr
 
             if (name == nullptr)    // cannot import bodies without names
             {
-                continue;
+                name = getNameForPointer(mb);
+                if (name == nullptr)
+                {
+                    continue;
+                }
             }
             if (mNeedRotate)
             {
@@ -1043,9 +1057,8 @@ namespace sxr
         }
         else if (bullet_file->getFlags() & bParse::FD_DOUBLE_PRECISION)
         {
-            btDynamicsWorldDoubleData *ddata =
-                    reinterpret_cast<btDynamicsWorldDoubleData *>(bullet_file
-                            ->m_dynamicsWorldInfo[0]);
+            btDynamicsWorldDoubleData *ddata = reinterpret_cast<btDynamicsWorldDoubleData *>
+                            (bullet_file->m_dynamicsWorldInfo[0]);
             double *gravity = reinterpret_cast<double *>(&ddata->m_gravity);
             mNeedRotate = gravity[2] != 0.0;
             mRotateCoords = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f};
@@ -1090,16 +1103,17 @@ namespace sxr
  */
     bool BulletFileLoader::parse(BulletWorld *world, char *buffer, size_t length, bool ignoreUpAxis)
     {
-        btMultiBodyDynamicsWorld *worldMB = dynamic_cast<btMultiBodyDynamicsWorld *>(world
-                ->getPhysicsWorld());
-        btDynamicsWorld *bulletWorld = world->getPhysicsWorld();
-        bParse::btBulletFile *bullet_file = new bParse::btBulletFile(buffer, length);
-        btBulletWorldImporter *importer = (world->isMultiBody() && worldMB) ?
-                                          new btMultiBodyWorldImporter(worldMB) :
-                                          new btBulletWorldImporter(bulletWorld);
+        btMultiBodyDynamicsWorld *worldMB = dynamic_cast<btMultiBodyDynamicsWorld*>
+                                            (world->getPhysicsWorld());
+        bParse::btBulletFile* bullet_file = new bParse::btBulletFile(buffer, length);
+        btBulletWorldImporter* importer = new btMultiBodyWorldImporter(worldMB);
         if (worldMB)
         {
             mFirstMultiBody = worldMB->getNumMultibodies();
+        }
+        else
+        {
+            return false;
         }
         mBulletImporter = importer;
         mBulletImporter->loadFileFromMemory(bullet_file);

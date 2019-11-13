@@ -24,6 +24,7 @@
 #include "objects/components/sphere_collider.h"
 #include "util/sxr_log.h"
 #include "../physics_collidable.h"
+#include "../../bullet3/include/BulletDynamics/Dynamics/btRigidBody.h"
 
 #include <BulletDynamics/Dynamics/btDynamicsWorld.h>
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
@@ -64,6 +65,7 @@ namespace sxr
         mSimType(SimulationType::DYNAMIC)
     {
         mRigidBody->setUserPointer(this);
+        mConstructionInfo.m_startWorldTransform = mRigidBody->getCenterOfMassTransform();
         mConstructionInfo.m_friction = rigidBody->getFriction();
         mConstructionInfo.m_restitution = rigidBody->getRestitution();
         mConstructionInfo.m_linearDamping = rigidBody->getLinearDamping();
@@ -181,9 +183,14 @@ namespace sxr
         {
             mRigidBody = new btRigidBody(mConstructionInfo);
             mRigidBody->setUserPointer(this);
-            options |= SyncOptions::COLLISION_SHAPE | SyncOptions::PROPERTIES;
+            options |= SyncOptions::ALL;
         }
-        if (options & SyncOptions::COLLISION_SHAPE)
+        if (options & SyncOptions::TRANSFORM)
+        {
+            getWorldTransform(mConstructionInfo.m_startWorldTransform);
+        }
+        if ((mRigidBody->getCollisionShape() == nullptr) ||
+            (options & SyncOptions::COLLISION_SHAPE))
         {
             updateCollider(owner, options);
         }
@@ -212,15 +219,16 @@ namespace sxr
                 mRigidBody->setActivationState(ISLAND_SLEEPING);
                 break;
             }
-            mConstructionInfo.m_motionState = this;
-            mRigidBody->setMotionState(this);
         }
+        mConstructionInfo.m_motionState = this;
+        mRigidBody->setMotionState(this);
     }
 
     void BulletRigidBody::onAddedToWorld(PhysicsWorld* world)
     {
-        sync();
+        sync(SyncOptions::TRANSFORM | SyncOptions::PROPERTIES);
         mWorld = static_cast<BulletWorld*>(world);
+        LOGD("BULLET: rigid body %s added to world", getName());
     }
 
     void BulletRigidBody::updateCollider(Node* owner, int options)
@@ -236,19 +244,7 @@ namespace sxr
         {
             return;
         }
-        if (creating)
-        {
-            mRigidBody = new btRigidBody(mConstructionInfo);
-            mRigidBody->setUserPointer(this);
-            if ((mRigidBody->getCollisionFlags() &
-                 ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
-                   btCollisionObject::CollisionFlags::CF_STATIC_OBJECT)) == 0)
-            {
-                mRigidBody->setActivationState(ACTIVE_TAG);
-            }
-            newShape = convertCollider2CollisionShape(collider);
-        }
-        else if (options & SyncOptions::COLLISION_SHAPE)
+        if (options & SyncOptions::COLLISION_SHAPE)
         {
             newShape = convertCollider2CollisionShape(collider);
             oldShape = mRigidBody->getCollisionShape();

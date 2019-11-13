@@ -212,7 +212,6 @@ void BulletWorld::addRigidBody(PhysicsRigidBody* body)
     BulletRigidBody* rb = static_cast<BulletRigidBody*>(body);
     rb->onAddedToWorld(this);
     mPhysicsWorld->addRigidBody(rb->getRigidBody());
-    rb->mWorld = this;
 }
 
 void BulletWorld::addRigidBody(PhysicsRigidBody* body, int collisionGroup, int collidesWith)
@@ -220,12 +219,12 @@ void BulletWorld::addRigidBody(PhysicsRigidBody* body, int collisionGroup, int c
     BulletRigidBody* rb = static_cast<BulletRigidBody*>(body);
     rb->onAddedToWorld(this);
     mPhysicsWorld->addRigidBody(rb->getRigidBody(), collisionGroup, collidesWith);
-    rb->mWorld = this;
 }
 
 void BulletWorld::removeRigidBody(PhysicsRigidBody *body)
 {
     mPhysicsWorld->removeRigidBody((static_cast<BulletRigidBody *>(body))->getRigidBody());
+    LOGD("BULLET: rigid body %s removed from world", body->getName());
 }
 
 void BulletWorld::addJoint(PhysicsJoint *joint)

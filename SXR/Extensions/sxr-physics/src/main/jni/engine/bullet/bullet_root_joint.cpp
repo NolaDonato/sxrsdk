@@ -72,14 +72,20 @@ namespace sxr {
         mJoints.resize(mNumJoints);
         mMultiBody->setUserPointer(this);
         mCollider = mMultiBody->getBaseCollider();
-        mCollider->setUserPointer(this);
+        if (mCollider)
+        {
+            mCollider->setUserPointer(this);
+        }
         for (int i = 0; i < mNumJoints; ++i)
         {
             btMultibodyLink& link = mMultiBody->getLink(i);
             BulletJoint* parent = (link.m_parent >= 0) ? mJoints[link.m_parent] : this;
             mJoints[i] = new BulletJoint(parent, i);
             link.m_userPtr = mJoints[i];
-            link.m_collider->setUserPointer(mJoints[i]);
+            if (link.m_collider)
+            {
+                link.m_collider->setUserPointer(mJoints[i]);
+            }
         }
     }
 
@@ -130,7 +136,7 @@ namespace sxr {
 
         if (childJoint->getMultiBody())
         {
-            childJoint->findRoot()->removeJointFromBody(childJoint->getJointIndex());
+            childJoint->removeJointFromBody(childJoint->getJointIndex());
         }
         setNumJoints(nextJointIndex + 1);
         childJoint->update(nextJointIndex, this);
@@ -142,30 +148,44 @@ namespace sxr {
     {
         int startIndex = jointIndex + 1;
 
-        if (startIndex >= mNumJoints)
+        if ((jointIndex < 0) || (startIndex >= mNumJoints))
         {
             return;
         }
+        BulletJoint* bj = getJoint(jointIndex);
+        BulletJoint* parent = (BulletJoint*) bj->getParent();
+
+        if (bj == nullptr)
+        {
+            return;
+        }
+        removeJointFromWorld(bj);
+        bj->update(0, nullptr);
         for (auto it = mJoints.begin() + startIndex; it != mJoints.end(); ++it)
         {
-            BulletJoint* bj = *it;
-
+            bj = *it;
             if (bj != nullptr)
             {
-                bj->update(bj->getJointIndex() - 1, (BulletJoint*) bj->getParent());
+                BulletJoint *bp = static_cast<BulletJoint *>(bj->getParent());
+                if (mMultiBody)
+                {
+                    btMultibodyLink& link = mMultiBody->getLink(bj->getJointIndex());
+                    if (link.m_parent == jointIndex)
+                    {
+                        bp = parent;
+                        link.m_parent = bp->getJointIndex();
+                    }
+                    else if (link.m_parent >= startIndex)
+                    {
+                        link.m_parent--;
+                    }
+                }
+                bj->update(bj->getJointIndex() - 1, bp);
             }
         }
-        BulletJoint* bj = getJoint(jointIndex);
-
-
         mJoints.erase(mJoints.begin() + jointIndex);
-        if (bj != nullptr)
-        {
-            removeJointFromWorld(bj);
-            bj->update(0, nullptr);
-            LOGD("BULLET: removing joint %s at index %d from body", bj->getName(), jointIndex);
-        }
         setNumJoints(mNumJoints - 1);
+        LOGD("BULLET: removing joint %s at index %d from body", bj->getName(), jointIndex);
     }
 
     void BulletRootJoint::setMass(float mass)
@@ -414,13 +434,13 @@ namespace sxr {
             mMultiBody->setHasSelfCollision(false);
             mMultiBody->setBaseMass(mMass);
         }
-        sync(SyncOptions::ALL);
+        sync(SyncOptions::PROPERTIES | SyncOptions::TRANSFORM);
         for (int i = 0; i < mNumJoints; ++i)
         {
             BulletJoint* joint = mJoints[i];
             if (joint != nullptr)
             {
-                joint->sync(SyncOptions::ALL);
+                joint->sync(SyncOptions::PROPERTIES | SyncOptions::TRANSFORM);
                 joint->attachToWorld(world);
             }
         }

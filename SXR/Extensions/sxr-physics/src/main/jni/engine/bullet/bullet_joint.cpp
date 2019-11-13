@@ -48,6 +48,7 @@
 #include "LinearMath/btVector3.h"
 #include "LinearMath/btTransform.h"
 #include "LinearMath/btMatrix3x3.h"
+#include "../../bullet3/include/BulletDynamics/Featherstone/btMultiBodyLinkCollider.h"
 
 namespace sxr {
 
@@ -121,7 +122,7 @@ namespace sxr {
 
         if (childJoint->getMultiBody())
         {
-            childJoint->findRoot()->removeJointFromBody(childJoint->getJointIndex());
+            childJoint->removeJointFromBody(childJoint->getJointIndex());
         }
         newRoot->setNumJoints(nextJointIndex + 1);
         childJoint->update(nextJointIndex, this);
@@ -158,12 +159,28 @@ namespace sxr {
 
     const BulletRootJoint* BulletJoint::findRoot() const
     {
-        return mParent->findRoot();
+        if (mMultiBody)
+        {
+            return (BulletRootJoint*) mMultiBody->getUserPointer();
+        }
+        if (mParent)
+        {
+            return mParent->findRoot();
+        }
+        return nullptr;
     }
 
     BulletRootJoint* BulletJoint::findRoot()
     {
-        return mParent->findRoot();
+        if (mMultiBody)
+        {
+            return (BulletRootJoint*) mMultiBody->getUserPointer();
+        }
+        if (mParent)
+        {
+            return mParent->findRoot();
+        }
+        return nullptr;
     }
 
     void BulletJoint::setMass(float mass)
@@ -210,16 +227,16 @@ namespace sxr {
 
     void BulletJoint::update(int jointIndex, BulletJoint* parent)
     {
-        mJointIndex = jointIndex;
-
+        btMultiBody* oldMB = getMultiBody();
         if (parent == nullptr)
         {
-            if (mCollider)
+            if (oldMB)
             {
-                delete mCollider;
-                mCollider = nullptr;
-                LOGV("BULLET: deleting link collider %s", getName());
+                btMultibodyLink& link = oldMB->getLink(jointIndex);
+                link.m_collider = nullptr;
+                link.m_userPtr = nullptr;
             }
+            mParent = nullptr;
             mMultiBody = nullptr;
             return;
         }
@@ -227,17 +244,28 @@ namespace sxr {
         mParent = parent;
         if (mCollider)
         {
-            if (mCollider->m_multiBody == mMultiBody)
+            mCollider->m_link = jointIndex;
+            mCollider->m_multiBody = mMultiBody;
+            if (oldMB != parent->getMultiBody())
             {
-                mCollider->m_link = jointIndex;
-            }
-            else
-            {
-                delete mCollider;
-                mCollider = new btMultiBodyLinkCollider(mMultiBody, jointIndex);
-                LOGV("BULLET: replacing link collider %s", getName());
+                if (oldMB)
+                {
+                    btMultibodyLink& oldlink = mMultiBody->getLink(mJointIndex);
+
+                    oldlink.m_collider = nullptr;
+                    oldlink.m_userPtr = nullptr;
+                }
+                if (mMultiBody)
+                {
+                    btMultibodyLink& newlink = mMultiBody->getLink(jointIndex);
+                    newlink.m_parent = parent->getJointIndex();
+                    newlink.m_collider = mCollider;
+                    newlink.m_userPtr = this;
+                }
+                LOGV("BULLET: updating link collider %s", getName());
             }
         }
+        mJointIndex = jointIndex;
     }
 
     int BulletJoint::getNumJoints() const { return findRoot()->getNumJoints(); }
@@ -334,16 +362,16 @@ namespace sxr {
         mMultiBody = parent->getMultiBody();
         btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
 
-        link.m_parent = getJointIndex();
         link.m_userPtr = this;
-        link.m_mass = mMass;
-        updateCollider(owner_object(), 0);
+        updateCollider(owner_object(), options);
         if (options & SyncOptions::TRANSFORM)
         {
             setPhysicsTransform();
         }
         if (creating)
         {
+            link.m_parent = getJointIndex();
+            link.m_mass = mMass;
             switch (mJointType)
             {
                 case JointType::fixedJoint: setupFixed(); break;
@@ -354,6 +382,7 @@ namespace sxr {
         }
         else if (options & SyncOptions::PROPERTIES)
         {
+            link.m_mass = mMass;
             switch (mJointType)
             {
                 case JointType::fixedJoint: updateFixed(); break;

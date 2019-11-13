@@ -96,7 +96,8 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             }
          }
         getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
-                                                    "onLoadError", mFileName,
+                                                    "onLoadError",
+                                                    mWorld, mFileName,
                                                     "Cannot open physics file");
         return null;
     }
@@ -135,7 +136,8 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             }
         }
         getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
-                                                    "onLoadError", mFileName,
+                                                    "onLoadError",
+                                                    world, mFileName,
                                                     "Cannot open physics file");
     }
 
@@ -706,7 +708,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         node.detachComponent(SXRRigidBody.getComponentType());
         if (joint != null)
         {
-            joint.disable();
+            joint.removeJointAt(joint.getJointIndex());
         }
         mTargetBones.put(name, link);
         if (parentBody == null)

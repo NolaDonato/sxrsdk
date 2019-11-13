@@ -545,8 +545,6 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
             world.removeBody(this);
         }
     }
-
-
 }
 
 class NativePhysicsJoint
