@@ -19,7 +19,7 @@
 #include <string>
 #include "glm/mat4x4.hpp"
 #include "../physics_joint.h"
-
+#include "bullet_world.h"
 #include <BulletDynamics/Featherstone/btMultiBody.h>
 #include <BulletDynamics/Featherstone/btMultiBodyLink.h>
 #include <BulletDynamics/Featherstone/btMultiBodyLinkCollider.h>
@@ -66,12 +66,12 @@ class BulletJoint : public PhysicsJoint
 	virtual void  detachFromWorld(bool deleteCollider = false);
 	virtual void  attachToWorld(PhysicsWorld* world);
 	virtual int   getNumJoints() const;
-	virtual void  setNumJoints(int n);
 	virtual int   addJointToBody(PhysicsJoint* newJoint);
 	virtual void  removeJointFromBody(int jointIndex);
 	void          setCollisionProperties(int collisionGroup, int collidesWith);
     void          update(int jointIndex, BulletJoint* parent);
 
+    btDynamicsWorld* 	     getPhysicsWorld() { return mWorld ? mWorld->getPhysicsWorld() : nullptr; }
 	btMultiBody*             getMultiBody() const { return mMultiBody; }
 	btMultibodyLink*         getLink() const { return &(mMultiBody->getLink(mJointIndex)); }
 	int                      getJointIndex() const { return mJointIndex; }
@@ -130,13 +130,12 @@ public:
 	virtual void detachFromWorld(bool deleteCollider = false);
 	virtual void attachToWorld(PhysicsWorld* world);
 	virtual void sync(int options = 0);
-	virtual void setNumJoints(int endIndex);
-	virtual int   addJointToBody(PhysicsJoint* newJoint);
-	virtual void  removeJointFromBody(int jointIndex);
-	bool	addJointToWorld(PhysicsJoint* joint, PhysicsWorld* world);
-	bool	removeJointFromWorld(PhysicsJoint* joint);
-	void	setPhysicsTransforms();
-	void	getPhysicsTransforms();
+	virtual int  addJointToBody(PhysicsJoint* newJoint);
+	virtual void removeJointFromBody(int jointIndex);
+	bool	     addJointToWorld(PhysicsJoint* joint, PhysicsWorld* world);
+	bool	     removeJointFromWorld(PhysicsJoint* joint);
+	void         setPhysicsTransforms();
+	void	     getPhysicsTransforms();
 
 protected:
     virtual void updateCollider(Node* owner, int options);

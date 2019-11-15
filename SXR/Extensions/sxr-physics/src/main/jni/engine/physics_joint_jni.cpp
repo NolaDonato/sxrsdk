@@ -83,13 +83,6 @@ Java_com_samsungxr_physics_NativePhysicsJoint_getNumJoints(JNIEnv *env, jclass o
     return mb->getNumJoints();
 }
 
-JNIEXPORT void JNICALL
-Java_com_samsungxr_physics_NativePhysicsJoint_setNumJoints(JNIEnv *env, jclass obj, jlong jjoint, jint n)
-{
-    PhysicsJoint *mb = reinterpret_cast<PhysicsJoint *>(jjoint);
-    mb->setNumJoints(n);
-}
-
 JNIEXPORT int JNICALL
 Java_com_samsungxr_physics_NativePhysicsJoint_addJoint(JNIEnv *env, jclass obj, jlong jroot, jlong jchild)
 {

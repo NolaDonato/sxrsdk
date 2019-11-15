@@ -73,8 +73,6 @@ class PhysicsJoint :  public PhysicsCollidable
 
 	virtual int getNumJoints() const = 0;
 
-	virtual void setNumJoints(int n) = 0;
-
 	virtual void removeJointFromBody(int index) = 0;
 
 	virtual int addJointToBody(PhysicsJoint* childJoint) = 0;

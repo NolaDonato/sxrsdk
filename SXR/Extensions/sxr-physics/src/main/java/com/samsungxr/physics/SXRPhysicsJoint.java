@@ -320,14 +320,6 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
         return NativePhysicsJoint.getNumJoints(getNative());
     }
 
-    public void setNumJoints(int numJoints)
-    {
-        if (getJointIndex() > 0)
-        {
-            throw new UnsupportedOperationException("Joint count can only be changed on the root joint");
-        }
-        NativePhysicsJoint.setNumJoints(getNative(), numJoints);
-    }
 
     /**
      * Apply a torque to a single DOF joint {@linkplain SXRPhysicsJoint joint}
@@ -578,8 +570,6 @@ class NativePhysicsJoint
     static native void setName(long joint, String name);
 
     static native int getNumJoints(long joint);
-
-    static native void setNumJoints(long joint, int n);
 
     static native void removeJointAt(long joint, int index);
 

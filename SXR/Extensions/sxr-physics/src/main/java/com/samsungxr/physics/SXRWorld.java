@@ -639,11 +639,6 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
     {
         SXRPhysicsWorldObject bodyA = mPhysicsObject.get(info.bodyA);
         SXRPhysicsWorldObject bodyB = mPhysicsObject.get(info.bodyB);
-
-        if ((bodyA == null) || (bodyB == null))
-        {
-            return;
-        }
         SXRNode nodeA = bodyA.getOwnerObject();
         SXRNode nodeB = bodyB.getOwnerObject();
         SXREventManager em =  getSXRContext().getEventManager();

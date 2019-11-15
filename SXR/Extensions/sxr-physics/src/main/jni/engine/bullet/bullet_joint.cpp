@@ -120,11 +120,10 @@ namespace sxr {
         BulletRootJoint* newRoot = findRoot();
         int nextJointIndex = newRoot->getNumJoints();
 
-        if (childJoint->getMultiBody())
+        if (newRoot)
         {
-            childJoint->removeJointFromBody(childJoint->getJointIndex());
+            newRoot->addJointToBody(child);
         }
-        newRoot->setNumJoints(nextJointIndex + 1);
         childJoint->update(nextJointIndex, this);
         return nextJointIndex;
     }
@@ -242,35 +241,24 @@ namespace sxr {
         }
         mMultiBody = parent->getMultiBody();
         mParent = parent;
+        mJointIndex = jointIndex;
         if (mCollider)
         {
             mCollider->m_link = jointIndex;
             mCollider->m_multiBody = mMultiBody;
-            if (oldMB != parent->getMultiBody())
+            mCollider->setUserPointer(this);
+            if (mMultiBody)
             {
-                if (oldMB)
-                {
-                    btMultibodyLink& oldlink = mMultiBody->getLink(mJointIndex);
-
-                    oldlink.m_collider = nullptr;
-                    oldlink.m_userPtr = nullptr;
-                }
-                if (mMultiBody)
-                {
-                    btMultibodyLink& newlink = mMultiBody->getLink(jointIndex);
-                    newlink.m_parent = parent->getJointIndex();
-                    newlink.m_collider = mCollider;
-                    newlink.m_userPtr = this;
-                }
-                LOGV("BULLET: updating link collider %s", getName());
+                btMultibodyLink& link = mMultiBody->getLink(jointIndex);
+                link.m_parent = parent->getJointIndex();
+                link.m_collider = mCollider;
+                link.m_userPtr = this;
             }
+            LOGV("BULLET: updating link collider %s", getName());
         }
-        mJointIndex = jointIndex;
     }
 
     int BulletJoint::getNumJoints() const { return findRoot()->getNumJoints(); }
-
-    void BulletJoint::setNumJoints(int n) { }
 
     void BulletJoint::getWorldTransform(btTransform& t)
     {
