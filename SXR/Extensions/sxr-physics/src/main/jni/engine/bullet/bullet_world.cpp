@@ -257,7 +257,7 @@ void BulletWorld::removeJoint(PhysicsJoint *body)
     if (isMultiBody())
     {
         BulletRootJoint* root = static_cast<BulletJoint*>(body)->findRoot();
-        if (root && root->removeJointFromWorld(body))
+        if (root && root->removeJointFromWorld(body, false))
         {
             auto it = std::find(mMultiBodies.begin(), mMultiBodies.end(), body);
             if (it != mMultiBodies.end())

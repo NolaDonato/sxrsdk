@@ -133,7 +133,7 @@ public:
 	virtual int  addJointToBody(PhysicsJoint* newJoint);
 	virtual void removeJointFromBody(int jointIndex);
 	bool	     addJointToWorld(PhysicsJoint* joint, PhysicsWorld* world);
-	bool	     removeJointFromWorld(PhysicsJoint* joint);
+	bool	     removeJointFromWorld(PhysicsJoint* joint, bool deleteCollider);
 	void         setPhysicsTransforms();
 	void	     getPhysicsTransforms();
 

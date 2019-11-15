@@ -103,8 +103,9 @@ void BulletPoint2PointConstraint::updateConstructionInfo(PhysicsWorld* world)
             btRigidBody* rbB = bodyB->getRigidBody();
             BulletJoint* jointA = static_cast<BulletJoint*>(mBodyA);
             btMultiBody* mbA = jointA->getMultiBody();
-            btMultiBodyPoint2Point* constraint = new btMultiBodyPoint2Point(mbA,
-                                                                            jointA->getJointIndex(), rbB, pA, pB);
+            btMultiBodyPoint2Point* constraint = new btMultiBodyPoint2Point(
+                    mbA, jointA->getJointIndex(),
+                    rbB, pA, pB);
             mMBConstraint = constraint;
             constraint->setMaxAppliedImpulse(mBreakingImpulse);
         }

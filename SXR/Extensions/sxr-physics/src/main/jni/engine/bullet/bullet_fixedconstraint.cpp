@@ -90,26 +90,28 @@ namespace sxr
         frameB.setOrigin(pB);
         if (bodyB)
         {
-            if (mBodyA->getType() == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
+            if ((bodyB != mBodyA) && (mBodyA->getType() == COMPONENT_TYPE_PHYSICS_RIGID_BODY))
             {
                 btRigidBody* rbB = bodyB->getRigidBody();
                 btRigidBody* rbA = static_cast<BulletRigidBody*>(mBodyA)->getRigidBody();
                 btFixedConstraint* constraint = new btFixedConstraint(*rbA, *rbB, frameA, frameB);
                 constraint->setBreakingImpulseThreshold(mBreakingImpulse);
                 mConstraint = constraint;
+                return;
             }
             else if (mBodyA->getType() == COMPONENT_TYPE_PHYSICS_JOINT)
             {
                 btRigidBody* rbB = bodyB->getRigidBody();
                 BulletJoint* jointA = static_cast<BulletJoint*>(mBodyA);
                 btMultiBody* mbA = jointA->getMultiBody();
-                btMultiBodyFixedConstraint* constraint = new btMultiBodyFixedConstraint(mbA,
-                                                                                        jointA->getJointIndex() - 1, rbB,
-                                                            pA, pB, frameA.getBasis(), frameB.getBasis());
+                btMultiBodyFixedConstraint* constraint = new btMultiBodyFixedConstraint(
+                        mbA, jointA->getJointIndex(),
+                        rbB, pA, pB,
+                        frameA.getBasis(), frameB.getBasis());
                 mMBConstraint = constraint;
                 constraint->setMaxAppliedImpulse(mBreakingImpulse);
+                return;
             }
-            return;
         }
         BulletJoint* jointB = static_cast<BulletJoint*>
                                 (owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT));
@@ -117,7 +119,7 @@ namespace sxr
         {
             btMultiBody *mbB = jointB->getMultiBody();
 
-            if (mBodyA->getType() == COMPONENT_TYPE_PHYSICS_JOINT)
+            if ((jointB != mBodyA) && (mBodyA->getType() == COMPONENT_TYPE_PHYSICS_JOINT))
             {
                 BulletJoint *jointA = static_cast<BulletJoint *>(mBodyA);
                 btMultiBody *mbA = jointA->getMultiBody();

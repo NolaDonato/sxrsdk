@@ -154,19 +154,19 @@ namespace sxr {
 
     void BulletRootJoint::removeJointFromBody(int jointIndex)
     {
-        if ((--jointIndex < 0) || (jointIndex >= mNumJoints))
+        if (jointIndex >= mNumJoints)
         {
             return;
         }
-        BulletJoint* bj = getJoint(jointIndex);
+        BulletJoint* bj = (--jointIndex < 0) ? this : getJoint(jointIndex);
         btMultiBodyDynamicsWorld *bw = nullptr;
         BulletJoint* parent = (BulletJoint*) bj->getParent();
 
         if (bj)
         {
-            removeJointFromWorld(bj);
-            bj->update(0, nullptr);
             LOGD("BULLET: removing joint %s at index %d from body", bj->getName(), jointIndex);
+            removeJointFromWorld(bj, true);
+            bj->update(0, nullptr);
         }
         if (mWorld)
         {
@@ -421,7 +421,7 @@ namespace sxr {
         return false;
     }
 
-    bool BulletRootJoint::removeJointFromWorld(PhysicsJoint* joint)
+    bool BulletRootJoint::removeJointFromWorld(PhysicsJoint* joint, bool deleteCollider)
     {
         if (mLinksAdded <= 0)
         {
@@ -430,11 +430,11 @@ namespace sxr {
         LOGD("BULLET: unlinking joint %s at index %d", joint->getName(), joint->getJointIndex());
         if (joint != this)
         {
-            static_cast<BulletJoint*>(joint)->detachFromWorld();
+            static_cast<BulletJoint*>(joint)->detachFromWorld(deleteCollider);
         }
         if (--mLinksAdded == 0)
         {
-            detachFromWorld();
+            detachFromWorld(deleteCollider);
             return true;
         }
         return false;

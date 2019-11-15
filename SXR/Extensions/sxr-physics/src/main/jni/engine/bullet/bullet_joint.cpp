@@ -116,16 +116,13 @@ namespace sxr {
 
     int BulletJoint::addJointToBody(PhysicsJoint* child)
     {
-        BulletJoint* childJoint = static_cast<BulletJoint*>(child);
         BulletRootJoint* newRoot = findRoot();
-        int nextJointIndex = newRoot->getNumJoints();
 
         if (newRoot)
         {
-            newRoot->addJointToBody(child);
+            return newRoot->addJointToBody(child);
         }
-        childJoint->update(nextJointIndex, this);
-        return nextJointIndex;
+        return -1;
     }
 
     void BulletJoint::removeJointFromBody(int jointIndex)
@@ -244,15 +241,17 @@ namespace sxr {
         mJointIndex = jointIndex;
         if (mCollider)
         {
-            mCollider->m_link = jointIndex;
-            mCollider->m_multiBody = mMultiBody;
             mCollider->setUserPointer(this);
             if (mMultiBody)
             {
                 btMultibodyLink& link = mMultiBody->getLink(jointIndex);
-                link.m_parent = parent->getJointIndex();
-                link.m_collider = mCollider;
+
+                mCollider->m_link = jointIndex;
+                mCollider->m_multiBody = mMultiBody;
+                mCollider->m_link = jointIndex;
                 link.m_userPtr = this;
+                link.m_collider = mCollider;
+                link.m_parent = parent->getJointIndex();
             }
             LOGV("BULLET: updating link collider %s", getName());
         }
@@ -422,9 +421,9 @@ namespace sxr {
             LOGV("BULLET: creating link collider %s", getName());
             mCollider->setCollisionShape(newShape);
             mCollider->m_link = getJointIndex();
-            mCollider->setUserPointer(this);
             link.m_collider = mCollider;
         }
+        mCollider->setUserPointer(this);
         ownerScale.setValue(trans->scale_x(), trans->scale_y(), trans->scale_z());
         newShape->setLocalScaling(ownerScale);
         newShape->calculateLocalInertia(getMass(), localInertia);
@@ -450,15 +449,18 @@ namespace sxr {
             {
                 btMultiBodyDynamicsWorld* w = dynamic_cast<btMultiBodyDynamicsWorld*>(mWorld->getPhysicsWorld());
                 w->removeCollisionObject(mCollider);
+                mWorld = nullptr;
                 LOGD("BULLET: detaching joint %s from world", getName());
             }
             if (deleteCollider)
             {
+                btCollisionShape* shape = mCollider->getCollisionShape();
+                mMultiBody->getLink(mJointIndex).m_collider = nullptr;
                 delete mCollider;
+                delete shape;
                 mCollider = nullptr;
             }
         }
-        mWorld = nullptr;
     }
 
     void BulletJoint::attachToWorld(PhysicsWorld* w)
