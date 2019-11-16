@@ -350,7 +350,10 @@ namespace sxr {
         btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
 
         link.m_userPtr = this;
-        updateCollider(owner_object(), options);
+        if ((mCollider == nullptr) || (options & SyncOptions::COLLISION_SHAPE))
+        {
+            updateCollider(owner_object(), options);
+        }
         if (options & SyncOptions::TRANSFORM)
         {
             setPhysicsTransform();
@@ -370,6 +373,7 @@ namespace sxr {
         else if (options & SyncOptions::PROPERTIES)
         {
             link.m_mass = mMass;
+            return;
             switch (mJointType)
             {
                 case JointType::fixedJoint: updateFixed(); break;
@@ -386,10 +390,10 @@ namespace sxr {
         btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
         btCollisionShape* oldShape = nullptr;
         btCollisionShape* newShape = nullptr;
-        btVector3 ownerScale;
         Transform* trans = owner->transform();
         btVector3 localInertia;
         Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
+        btVector3 ownerScale(trans->scale_x(), trans->scale_y(), trans->scale_z());
 
         if (collider == nullptr)
         {
@@ -412,6 +416,7 @@ namespace sxr {
             }
             if (oldShape)
             {
+                ownerScale = oldShape->getLocalScaling();
                 delete oldShape;
             }
         }
@@ -424,7 +429,6 @@ namespace sxr {
             link.m_collider = mCollider;
         }
         mCollider->setUserPointer(this);
-        ownerScale.setValue(trans->scale_x(), trans->scale_y(), trans->scale_z());
         newShape->setLocalScaling(ownerScale);
         newShape->calculateLocalInertia(getMass(), localInertia);
         link.m_inertiaLocal = localInertia;
@@ -487,7 +491,7 @@ namespace sxr {
         btVector3          pivotB(mPivot.x, mPivot.y, mPivot.z);
         btTransform        worldA;  jointA->getWorldTransform(worldA);
         btTransform        worldB; getWorldTransform(worldB);
-        btQuaternion       rot(worldA.getRotation());
+        btQuaternion       rotA(worldA.getRotation());
         btVector3          bodyACOM(worldA.getOrigin());
         btVector3          bodyBCOM(worldB.getOrigin());
         btVector3          diffCOM = bodyBCOM + pivotB - bodyACOM;
@@ -497,7 +501,7 @@ namespace sxr {
                                link.m_mass,
                                link.m_inertiaLocal,
                                jointA->getJointIndex(),
-                               rot,
+                               rotA,
                                diffCOM,
                                -pivotB,
                                true);
@@ -509,15 +513,15 @@ namespace sxr {
         btVector3          pivotB(mPivot.x, mPivot.y, mPivot.z);
         btTransform        worldA;  jointA->getWorldTransform(worldA);
         btTransform        worldB; getWorldTransform(worldB);
-        btQuaternion       rot(worldA.getRotation());
+        btQuaternion       rotA(worldA.getRotation());
         btVector3          bodyACOM(worldA.getOrigin());
         btVector3          bodyBCOM(worldB.getOrigin());
         btVector3          diffCOM = bodyBCOM + pivotB - bodyACOM;
         btMultibodyLink&   link = mMultiBody->getLink(getJointIndex());
 
-        link.m_zeroRotParentToThis = rot;
-        link.m_dVector = diffCOM;
-        link.m_eVector = -pivotB;
+        link.m_zeroRotParentToThis = rotA;
+        link.m_eVector = diffCOM;
+        link.m_dVector = -pivotB;
         link.updateCacheMultiDof();
     }
 
@@ -555,8 +559,8 @@ namespace sxr {
         btMultibodyLink&   link = mMultiBody->getLink(getJointIndex());
 
         link.m_zeroRotParentToThis = rotA;
-        link.m_dVector = diffCOM;
-        link.m_eVector = -pivotB;
+        link.m_eVector = diffCOM;
+        link.m_dVector = -pivotB;
         link.setAxisBottom(0, link.getAxisTop(0).cross(link.m_dVector));
         link.setAxisBottom(1, link.getAxisTop(1).cross(link.m_dVector));
         link.setAxisBottom(2, link.getAxisTop(2).cross(link.m_dVector));
@@ -618,8 +622,8 @@ namespace sxr {
 
         hingeAxis.normalize();
         link.m_zeroRotParentToThis = rotA;
-        link.m_dVector = diffCOM;
-        link.m_eVector = -pivotB;
+        link.m_eVector = diffCOM;
+        link.m_dVector = -pivotB;
         link.setAxisTop(0, hingeAxis);
         link.setAxisBottom(0, hingeAxis.cross(link.m_dVector));
         link.updateCacheMultiDof();
@@ -664,8 +668,8 @@ namespace sxr {
 
         sliderAxis.normalize();
         link.m_zeroRotParentToThis = rotA;
-        link.m_dVector = diffCOM;
-        link.m_eVector = -pivotB;
+        link.m_eVector = diffCOM;
+        link.m_dVector = -pivotB;
         link.setAxisBottom(0, sliderAxis);
         link.updateCacheMultiDof();
     }

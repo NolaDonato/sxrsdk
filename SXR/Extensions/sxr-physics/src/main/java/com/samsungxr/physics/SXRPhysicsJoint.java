@@ -113,6 +113,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     {
         super(ctx, NativePhysicsJoint.ctorRoot(mass, numJoints));
         mCollisionGroup = collisionGroup;
+        mType = getComponentType();
     }
 
     /**
@@ -129,6 +130,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
         super(skel.getSXRContext(), NativePhysicsJoint.ctorRoot(mass, numJoints));
         mSkeleton = skel;
         mCollisionGroup = collisionGroup;
+        mType = getComponentType();
     }
 
     /**
@@ -168,6 +170,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
         {
             throw new IllegalArgumentException("BoneID must be greater than zero");
         }
+        mType = getComponentType();
         mSkeleton = parent.mSkeleton;
         mBoneIndex = parent.mBoneIndex + 1;
         mCollisionGroup = collisionGroup;
@@ -177,6 +180,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     SXRPhysicsJoint(SXRContext ctx, long nativeJoint)
     {
         super(ctx, nativeJoint);
+        mType = getComponentType();
         mCollisionGroup = -1;
         mBoneIndex = 0;
     }
@@ -368,7 +372,6 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
         {
             childOwner.detachComponent(SXRPhysicsJoint.getComponentType());
         }
-        childJoint.removeJointAt(childJoint.getJointIndex());
         childJoint.mSkeleton = mSkeleton;
         childJoint.mBoneIndex = mSkeleton.getNumBones();
         return NativePhysicsJoint.addJoint(getNative(), childJoint.getNative());

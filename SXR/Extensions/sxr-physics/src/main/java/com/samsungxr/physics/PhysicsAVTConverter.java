@@ -17,6 +17,8 @@ package com.samsungxr.physics;
 
 
 
+import android.provider.ContactsContract;
+
 import com.samsungxr.SXRAndroidResource;
 import com.samsungxr.SXRBoxCollider;
 import com.samsungxr.SXRCapsuleCollider;
@@ -61,6 +63,10 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
     private SXRPhysicsContent mWorld;
     private String mFileName;
     private int mAttachBoneIndex;
+    private ArrayList<SXRRigidBody> mBodies = new ArrayList<>();
+    private ArrayList<SXRPhysicsJoint> mJoints = new ArrayList<>();
+    private ArrayList<SXRCollider> mColliders = new ArrayList<>();
+    private ArrayList<SXRConstraint> mConstraints = new ArrayList<>();
 
     public PhysicsAVTConverter(SXRContext ctx)
     {
@@ -241,6 +247,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         mAngularDamping = (float) multibody.optDouble("Angular Damping", 0.0f);
         mLinearDamping = (float) multibody.optDouble("Linear Damping", 0.0f);
         parseSkeleton(basebone, childbones);
+        makeRoom(mSkeleton.getNumBones());
         if (mAttachBoneIndex < 0)
         {
             parseRigidBody(basebone);
@@ -254,6 +261,55 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             if ((boneIndex < 0) || (boneIndex >= mAttachBoneIndex))
             {
                 parseRigidBody(link);
+            }
+        }
+        attachBodies();
+    }
+
+    private void attachBodies()
+    {
+        if (mAttachBoneIndex < 0)
+        {
+            mAttachBoneIndex = 0;
+        }
+        SXRNode root = mSkeleton.getBone(mAttachBoneIndex);
+        SXRCollider collider = mColliders.get(mAttachBoneIndex);
+
+        if (collider == null)
+        {
+            throw new UnsupportedOperationException("Collider missing for body " + root.getName());
+        }
+        root.detachComponent(SXRCollider.getComponentType());
+        root.attachComponent(collider);
+        root.attachComponent(mBodies.get(mAttachBoneIndex));
+        for (int i = mAttachBoneIndex + 1; i < mSkeleton.getNumBones(); ++i)
+        {
+            SXRRigidBody body = mBodies.get(i);
+            SXRPhysicsJoint joint = mJoints.get(i);
+            SXRConstraint constraint = mConstraints.get(i);
+            SXRNode node = mSkeleton.getBone(i);
+
+            collider = mColliders.get(i);
+            if (body != null)
+            {
+                if (collider == null)
+                {
+                    throw new UnsupportedOperationException("Collider missing for body " + body.getName());
+                }
+                node.detachComponent(SXRCollider.getComponentType());
+                node.attachComponent(collider);
+                if (joint != null)
+                {
+                    if (joint.getOwnerObject() != null)
+                    {
+                        joint.removeJointAt(joint.getJointIndex());
+                    }
+                }
+                node.attachComponent(body);
+                if (constraint != null)
+                {
+                    node.attachComponent(constraint);
+                }
             }
         }
     }
@@ -414,6 +470,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             nextJointIndex = mSkeleton.getNumBones();
         }
         parseSkeleton(basebone, childbones);
+        makeRoom(mSkeleton.getNumBones());
         while (true)
         {
             String nodeName = link.getString("Target Bone");
@@ -438,7 +495,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             rootJoint.setFriction((float) link.getJSONObject("Physic Material").getDouble("Friction"));
             rootJoint.setBoneIndex(0);
             rootJoint.setName(name);
-            parseCollider(link, name);
+            parseCollider(link, 0, name);
             mSkeleton.getBone(0).attachComponent(rootJoint);
         }
         else
@@ -446,15 +503,75 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             extendingSkel = true;
             rootJoint = (SXRPhysicsJoint) mSkeleton.getBone(0).getComponent(SXRPhysicsJoint.getComponentType());
         }
+        mJoints.add(0, rootJoint);
         for (int j = 1, jointIndex = nextJointIndex; j < newJoints.size(); ++j)
         {
             parseJoint(newJoints.get(j), ++jointIndex, extendingSkel);
         }
+        attachJoints();
         rootJoint.getSkeleton();
         return rootJoint;
     }
 
-    private SXRCollider parseCollider(JSONObject link, String targetBone) throws JSONException
+    private void makeRoom(int n)
+    {
+        mBodies.clear();
+        mJoints.clear();
+        mConstraints.clear();
+        mColliders.clear();
+        mBodies.ensureCapacity(n);
+        mJoints.ensureCapacity(n);
+        mConstraints.ensureCapacity(n);
+        mColliders.ensureCapacity(n);
+        for (int i = 0; i < n; ++i)
+        {
+            mBodies.add(null);
+            mJoints.add(null);
+            mConstraints.add(null);
+            mColliders.add(null);
+        }
+    }
+    private void attachJoints()
+    {
+        if (mAttachBoneIndex < 0)
+        {
+            mAttachBoneIndex = 0;
+        }
+        SXRNode root = mSkeleton.getBone(mAttachBoneIndex);
+        SXRCollider collider = mColliders.get(mAttachBoneIndex);
+        if (collider == null)
+        {
+            throw new UnsupportedOperationException("Collider missing for joint " + root.getName());
+        }
+        root.detachComponent(SXRCollider.getComponentType());
+        root.attachComponent(collider);
+        root.attachComponent(mJoints.get(mAttachBoneIndex));
+        for (int i = mAttachBoneIndex + 1; i < mSkeleton.getNumBones(); ++i)
+        {
+            SXRPhysicsJoint joint = mJoints.get(i);
+            SXRNode node = mSkeleton.getBone(i);
+
+            collider = mColliders.get(i);
+            if (joint != null)
+            {
+                if (collider == null)
+                {
+                    throw new UnsupportedOperationException("Collider missing for joint " + joint.getName());
+                }
+                node.detachComponent(SXRCollider.getComponentType());
+                node.attachComponent(collider);
+                if (joint.getOwnerObject() != null)
+                {
+                    joint.sync(SXRPhysicsCollidable.SYNC_ALL);
+                }
+                else
+                {
+                    node.attachComponent(joint);
+                }
+            }
+        }
+    }
+    private SXRCollider parseCollider(JSONObject link, int boneIndex, String targetBone) throws JSONException
     {
         SXRContext ctx = mRoot.getSXRContext();
         JSONObject colliderRoot = link.getJSONObject("Collider").getJSONObject("value");
@@ -545,7 +662,8 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             {
                 throw new JSONException(type + " is an unknown collider type");
             }
-            owner.attachComponent(collider);
+//            owner.attachComponent(collider);
+            mColliders.set(boneIndex, collider);
             return collider;
         }
         return null;
@@ -558,22 +676,18 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             return null;
         }
         JSONObject parent = mTargetBones.get(parentName);
-        if (parent == null)
+        if (parent != null)
         {
-            return null;
-        }
-        String nodeName = parent.getString("Target Bone");
-        SXRNode parentNode = mSkeleton.getBone(mSkeleton.getBoneIndex(nodeName));
+            parentName = parent.getString("Target Bone");
+            int boneIndex = mSkeleton.getBoneIndex(parentName);
+            SXRRigidBody body = mBodies.get(boneIndex);
 
-        if (parentNode != null)
-        {
-            SXRRigidBody body = (SXRRigidBody) parentNode.getComponent(SXRRigidBody.getComponentType());
             if (body != null)
             {
                 return body;
             }
         }
-        Log.e(TAG, "Cannot find bone %s referenced by AVT file", nodeName);
+        Log.e(TAG, "Cannot find bone %s referenced by AVT file", parentName);
         return null;
     }
 
@@ -582,9 +696,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         String nodeName = link.getString("Target Bone");
         int boneID = mSkeleton.getBoneIndex(nodeName);
         SXRNode node = mSkeleton.getBone(boneID);
-        JSONArray dofdata = link.getJSONArray("DOF Data");
         float[] pivotB = new float[] { 0, 0, 0 };
-        Vector3f axis = null;
         JSONObject trans = link.getJSONObject("Transform");
         JSONObject pos = trans.getJSONObject("Position");
         JSONObject piv = link.optJSONObject("Pivot Pos.");
@@ -597,12 +709,15 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             pivotB[2] = (float) (piv.getDouble("Z") - pos.getDouble("Z"));
         }
         JSONObject v = link.getJSONObject("Axis A");
-        axis = new Vector3f((float) v.getDouble("X"),
-                (float) v.getDouble("Y"),
-                (float) v.getDouble("Z"));
+        Vector3f axis = new Vector3f((float) v.getDouble("X"),
+                                     (float) v.getDouble("Y"),
+                                     (float) v.getDouble("Z"));
         if (joint == null)
         {
-            parseCollider(link, nodeName);
+            if (parseCollider(link, jointIndex, nodeName) == null)
+            {
+                return null;
+            }
             joint = createJoint(link, jointIndex, extendingSkeleton);
             if (joint == null)
             {
@@ -616,13 +731,16 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         }
         else if (jointIndex > mAttachBoneIndex)
         {
-            Log.e(TAG, "updating joint %s", link.getString("Name"));
+            Log.e(TAG, "updating joint %s pivotB(%3f, %3f, %3f) axis(%3f, %3f, %3f)",
+                  link.getString("Name"),
+                  pivotB[0], pivotB[1], pivotB[2],
+                  axis.x, axis.y, axis.z);
             joint.setPivot(pivotB[0], pivotB[1], pivotB[2]);
             joint.setAxis(axis.x, axis.y, axis.z);
             joint.setFriction((float) link.getJSONObject("Physic Material").getDouble("Friction"));
-            parseCollider(link, nodeName);
-            joint.sync(SXRPhysicsCollidable.SYNC_ALL);
+            parseCollider(link, jointIndex, nodeName);
        }
+        mJoints.set(jointIndex, joint);
         return joint;
     }
 
@@ -657,14 +775,19 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         String parentName = link.optString("Parent", null);
         float mass = (float) link.getDouble("Mass");
         JSONObject parent = mTargetBones.get(parentName);
-        int boneIndex = mSkeleton.getBoneIndex(parent.getString("Target Bone"));
-        SXRNode parentNode = mSkeleton.getBone(boneIndex);
-        SXRPhysicsJoint parentJoint = (SXRPhysicsJoint) parentNode.getComponent(SXRPhysicsJoint.getComponentType());
+        int parentIndex = mSkeleton.getBoneIndex(parent.getString("Target Bone"));
+        SXRPhysicsJoint parentJoint = mJoints.get(parentIndex);
 
         if (parentJoint == null)
         {
-            Log.e(TAG, "Parent %s not found", parentName);
-            return null;
+            SXRNode node = mSkeleton.getBone(parentIndex);
+
+            parentJoint = (SXRPhysicsJoint) node.getComponent(SXRPhysicsJoint.getComponentType());
+            if (parentJoint == null)
+            {
+                Log.e(TAG, "Parent %s not found", parentName);
+                return null;
+            }
         }
         Log.e(TAG, "creating joint %s parent = %s", link.getString("Name"), parentName);
         SXRPhysicsJoint joint = new SXRPhysicsJoint(parentJoint, jointType, jointIndex, mass, SXRCollisionMatrix.DEFAULT_GROUP);
@@ -673,53 +796,47 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         {
             parentJoint.addJoint(joint);
         }
+        mJoints.set(jointIndex, joint);
         return joint;
     }
 
     private SXRRigidBody parseRigidBody(JSONObject link) throws JSONException
     {
         String nodeName = link.getString("Target Bone");
-        SXRNode node = mSkeleton.getBone(mSkeleton.getBoneIndex(nodeName));
-        SXRContext ctx = getSXRContext();
+        int boneIndex = mSkeleton.getBoneIndex(nodeName);
+        SXRNode node = mSkeleton.getBone(boneIndex);
 
         if (node == null)
         {
             Log.e(TAG,"Cannot find bone " + nodeName + " referenced by AVT file");
             return null;
         }
-        String name = link.getString("Name");
-        String parentName = link.optString("Parent", null);
+
+        SXRContext ctx = getSXRContext();
         float mass = (float) link.getDouble("Mass");
-        SXRRigidBody parentBody = findParentBody(parentName);
+        SXRRigidBody parentBody = findParentBody(link.optString("Parent", null));
         SXRRigidBody body = new SXRRigidBody(ctx, mass, SXRCollisionMatrix.DEFAULT_GROUP);
         JSONObject props = link.getJSONObject("Physic Material");
-        SXRPhysicsJoint joint = (SXRPhysicsJoint) node.getComponent(SXRPhysicsJoint.getComponentType());
 
         body.setFriction((float) props.getDouble("Friction"));
         body.setDamping(mLinearDamping, mAngularDamping);
-        node.detachComponent(SXRRigidBody.getComponentType());
-        mTargetBones.put(name, link);
         if ((parentBody == null) && (mSkeleton == null))
         {
             mSkeleton = (SXRSkeleton) node.getComponent(SXRSkeleton.getComponentType());
         }
         if (!nodeName.equals(mAttachBoneName))
         {
-            if (joint != null)
-            {
-                joint.removeJointAt(joint.getJointIndex());
-            }
-            if (parseCollider(link, nodeName) == null)
+            if (parseCollider(link, boneIndex, nodeName) == null)
             {
                 return null;
             }
         }
-        node.attachComponent(body);
-        parseConstraint(link, parentBody, node);
+        mBodies.set(boneIndex, body);
+        parseConstraint(link, parentBody, node, boneIndex);
         return body;
     }
 
-    SXRConstraint parseConstraint(JSONObject link, SXRRigidBody parentBody, SXRNode node) throws JSONException
+    SXRConstraint parseConstraint(JSONObject link, SXRRigidBody parentBody, SXRNode node, int boneIndex) throws JSONException
     {
         if (parentBody == null)
         {
@@ -741,8 +858,8 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         if (pivot != null)
         {
             pivotB.set((float) (pivot.getDouble("X") - pos.getDouble("X")),
-                    (float) (pivot.getDouble("Y") - pos.getDouble("Y")),
-                    (float) (pivot.getDouble("Z") - pos.getDouble("Z")));
+                       (float) (pivot.getDouble("Y") - pos.getDouble("Y")),
+                       (float) (pivot.getDouble("Z") - pos.getDouble("Z")));
         }
         JSONObject parentLink = mTargetBones.get(parentName);
         Vector3f pivotA = new Vector3f(0, 0, 0);
@@ -751,8 +868,8 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         if (pivot != null)
         {
             pivotA.set((float) (pivot.getDouble("X") - pos.getDouble("X")),
-                    (float) (pivot.getDouble("Y") - pos.getDouble("Y")),
-                    (float) (pivot.getDouble("Z") - pos.getDouble("Z")));
+                       (float) (pivot.getDouble("Y") - pos.getDouble("Y")),
+                       (float) (pivot.getDouble("Z") - pos.getDouble("Z")));
         }
         if (type.equals("ball"))
         {
@@ -770,8 +887,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 SXRPoint2PointConstraint ball = new SXRPoint2PointConstraint(getSXRContext(), parentBody, pivotA, pivotB);
                 constraint = ball;
             }
-            Log.e(TAG, "Ball joint between %s and %s (%f, %f, %f)",
-                    parentName, name, pivotB.x, pivotB.y, pivotB.z);
         }
         else if (type.equals("universal"))
         {
@@ -815,8 +930,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             ly = dof1.getBoolean("useLimit") ? (float) Math.toRadians(dof1.getDouble("limitHigh")) : PIover2;
             ball.setAngularUpperLimits(0, ly, lz);
             constraint = ball;
-            Log.e(TAG, "Universal joint between %s and %s (%f, %f, %f)",
-                    parentName, name, pivotB.x, pivotB.y, pivotB.z);
         }
         else if (type.equals("hinge"))
         {
@@ -838,14 +951,11 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 hinge.setLimits(-PIover2, PIover2);
             }
             constraint = hinge;
-            Log.e(TAG, "Hinge joint between %s and %s (%f, %f, %f)",
-                    parentName, name, pivotB.x, pivotB.y, pivotB.z);
         }
         else if (type.equals("fixed"))
         {
             SXRFixedConstraint fixed = new SXRFixedConstraint(getSXRContext(), parentBody);
             constraint = fixed;
-            Log.e(TAG, "Fixed joint between %s and %s", parentName, name);
         }
         else
         {
@@ -855,7 +965,11 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         {
             constraint.setBreakingImpulse((float) link.getDouble("Breaking Reaction Impulse"));
         }
-        node.attachComponent(constraint);
+        Log.e(TAG, "%s constraint between %s pivotA(%3f, %3f, %3f) and %s pivotB(%3f, %3f, %3f)",
+              type, parentName,
+              pivotA.x, pivotA.y, pivotA.z,
+              name, pivotB.x, pivotB.y, pivotB.z);
+        mConstraints.set(boneIndex, constraint);
         return constraint;
     }
 
