@@ -97,6 +97,7 @@ protected:
     struct FileIO : b3BulletDefaultFileIO
     {
         AAssetManager* mAssetManager;
+        std::string    mBaseDir;
 
         FileIO(AAssetManager* am, int fileIOType = 0, const char* pathPrefix = nullptr);
         virtual int fileOpen(const char* fileName, const char* mode);

@@ -19,8 +19,14 @@ import com.samsungxr.SXRCollider;
 import com.samsungxr.SXRComponent;
 import com.samsungxr.SXRContext;
 import com.samsungxr.SXRNode;
+import com.samsungxr.SXRTransform;
 import com.samsungxr.animation.SXRPoseMapper;
 import com.samsungxr.animation.SXRSkeleton;
+
+import java.lang.annotation.Native;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * Represents a joint in an articulated body.
@@ -57,7 +63,6 @@ import com.samsungxr.animation.SXRSkeleton;
  */
 public class SXRPhysicsJoint extends SXRPhysicsCollidable
 {
-    protected final SXRPhysicsContext mPhysicsContext;
     protected SXRSkeleton             mSkeleton = null;
     protected final int               mCollisionGroup;
     protected int                     mBoneIndex = -1;
@@ -108,7 +113,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     {
         super(ctx, NativePhysicsJoint.ctorRoot(mass, numJoints));
         mCollisionGroup = collisionGroup;
-        mPhysicsContext = SXRPhysicsContext.getInstance();
+        mType = getComponentType();
     }
 
     /**
@@ -125,7 +130,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
         super(skel.getSXRContext(), NativePhysicsJoint.ctorRoot(mass, numJoints));
         mSkeleton = skel;
         mCollisionGroup = collisionGroup;
-        mPhysicsContext = SXRPhysicsContext.getInstance();
+        mType = getComponentType();
     }
 
     /**
@@ -165,17 +170,17 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
         {
             throw new IllegalArgumentException("BoneID must be greater than zero");
         }
+        mType = getComponentType();
         mSkeleton = parent.mSkeleton;
         mBoneIndex = parent.mBoneIndex + 1;
         mCollisionGroup = collisionGroup;
-        mPhysicsContext = SXRPhysicsContext.getInstance();
     }
 
     /** Used only by {@link SXRPhysicsLoader} */
     SXRPhysicsJoint(SXRContext ctx, long nativeJoint)
     {
         super(ctx, nativeJoint);
-        mPhysicsContext = SXRPhysicsContext.getInstance();
+        mType = getComponentType();
         mCollisionGroup = -1;
         mBoneIndex = 0;
     }
@@ -237,44 +242,6 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     }
 
     /**
-     * Returns the {@linkplain SXRWorld physics world} of this {@linkplain SXRRigidBody rigid body}.
-     *
-     * @return The physics world of this {@link SXRRigidBody}
-     */
-    public SXRWorld getWorld() {
-        return getWorld(getOwnerObject());
-    }
-
-    /**
-     * Returns the {@linkplain SXRWorld physics world} of the {@linkplain com.samsungxr.SXRScene scene}.
-     *
-     * @param owner Owner of the {@link SXRRigidBody}
-     * @return Returns the {@link SXRWorld} of the scene.
-     */
-    private static SXRWorld getWorld(SXRNode owner) {
-        return getWorldFromAscendant(owner);
-    }
-
-    /**
-     * Looks for {@link SXRWorld} component in the ascendants of the scene.
-     *
-     * @param worldOwner Scene object to search for a physics world in the scene.
-     * @return Physics world from the scene.
-     */
-    private static SXRWorld getWorldFromAscendant(SXRNode worldOwner)
-    {
-        SXRComponent world = null;
-
-        while (worldOwner != null && world == null)
-        {
-            world = worldOwner.getComponent(SXRWorld.getComponentType());
-            worldOwner = worldOwner.getParent();
-        }
-
-        return (SXRWorld) world;
-    }
-
-    /**
      * Returns the mass of the joint.
      *
      * @return The mass of the joint.
@@ -323,7 +290,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
      */
     public void applyTorque(final float x, final float y, final float z)
     {
-        mPhysicsContext.runOnPhysicsThread(new Runnable() {
+        SXRPhysicsContext.getInstance().runOnPhysicsThread(new Runnable() {
             @Override
             public void run() {
                 NativePhysicsJoint.applyTorque(getNative(), x, y, z);
@@ -340,7 +307,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
      */
     public void applyCentralForce(final float x, final float y, final float z)
     {
-        mPhysicsContext.runOnPhysicsThread(new Runnable() {
+        SXRPhysicsContext.getInstance().runOnPhysicsThread(new Runnable() {
             @Override
             public void run() {
                 NativePhysicsJoint.applyCentralForce(getNative(), x, y, z);
@@ -349,13 +316,23 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     }
 
     /**
+     * Get the total number of joints in the multibody system.
+     * @return number of joints, will always be positive.
+     */
+    public int getNumJoints()
+    {
+        return NativePhysicsJoint.getNumJoints(getNative());
+    }
+
+
+    /**
      * Apply a torque to a single DOF joint {@linkplain SXRPhysicsJoint joint}
      *
      * @param t torque on the joint
      */
     public void applyTorque(final float t)
     {
-        mPhysicsContext.runOnPhysicsThread(new Runnable() {
+        SXRPhysicsContext.getInstance().runOnPhysicsThread(new Runnable() {
             @Override
             public void run() {
                 NativePhysicsJoint.applyTorque(getNative(), t, 0, 0);
@@ -375,6 +352,136 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
      * </p>
      */
     public int getBoneIndex() { return mBoneIndex; }
+
+    public void removeJointAt(int jointIndex)
+    {
+        SXRNode owner = getOwnerObject();
+
+        if (owner != null)
+        {
+            owner.detachComponent(SXRPhysicsJoint.getComponentType());
+        }
+        NativePhysicsJoint.removeJointAt(getNative(), jointIndex);
+    }
+
+    public int addJoint(SXRPhysicsJoint childJoint)
+    {
+        SXRNode childOwner = childJoint.getOwnerObject();
+
+        if (childOwner != null)
+        {
+            childOwner.detachComponent(SXRPhysicsJoint.getComponentType());
+        }
+        childJoint.mSkeleton = mSkeleton;
+        childJoint.mBoneIndex = mSkeleton.getNumBones();
+        return NativePhysicsJoint.addJoint(getNative(), childJoint.getNative());
+    }
+
+    public SXRSkeleton getSkeleton()
+    {
+        if (mSkeleton != null)
+        {
+            return mSkeleton;
+        }
+        mSkeleton = (SXRSkeleton) getComponent(SXRSkeleton.getComponentType());
+        if (mSkeleton != null)
+        {
+            return mSkeleton;
+        }
+        long nativeSkeleton = NativePhysicsJoint.getSkeleton(getNative());
+        if (nativeSkeleton != 0)
+        {
+            mSkeleton = new SXRSkeleton(getSXRContext(), nativeSkeleton);
+        }
+        return mSkeleton;
+    }
+
+    public void merge(final SXRSkeleton destSkel, final SXRSkeleton srcSkel)
+    {
+        Runnable mergeSkel = new Runnable()
+        {
+            public void run()
+            {
+                String attachBoneName = getName();
+                int srcIndex = srcSkel.getBoneIndex(attachBoneName);
+
+                if (srcIndex <= 0)
+                {
+                    srcIndex = 0;
+                }
+                ++srcIndex;
+                destSkel.merge(srcSkel, attachBoneName);
+                for (int i = srcIndex; i < srcSkel.getNumBones(); ++i)
+                {
+                    SXRNode newBone = srcSkel.getBone(i);
+                    if (newBone == null)
+                    {
+                        continue;
+                    }
+                    SXRPhysicsJoint newJoint = (SXRPhysicsJoint) newBone.getComponent(SXRPhysicsJoint.getComponentType());
+                    if (newJoint == null)
+                    {
+                        continue;
+                    }
+                    int dstIndex = destSkel.getBoneIndex(srcSkel.getBoneName(i));
+                    SXRNode parentBone = null;
+
+                    if (dstIndex >= 0)
+                    {
+                        SXRNode oldBone = destSkel.getBone(dstIndex);
+                        SXRPhysicsJoint oldJoint = (SXRPhysicsJoint) oldBone.getComponent(SXRPhysicsJoint.getComponentType());
+
+                        if (oldJoint != null)
+                        {
+                            SXRPhysicsJoint.this.updateFrom(newBone);
+                            oldJoint.sync(SYNC_ALL);
+                            newBone.detachComponent(SXRPhysicsJoint.getComponentType());
+                            continue;
+                        }
+                        int parentIndex = destSkel.getParentBoneIndex(dstIndex);
+                        parentBone = destSkel.getBone(parentIndex);
+                    }
+                    newJoint.removeJointAt(newJoint.getJointIndex());
+                    if (parentBone == null)
+                    {
+                        parentBone = getOwnerObject();
+                    }
+                    SXRPhysicsJoint parentJoint = (SXRPhysicsJoint) parentBone.getComponent(SXRPhysicsJoint.getComponentType());
+                    parentJoint.addJoint(newJoint);
+                }
+                for (int i = srcIndex; i >= 0; --i)
+                {
+                    SXRNode newBone = srcSkel.getBone(i);
+                    if (newBone != null)
+                    {
+                        newBone.detachComponent(SXRPhysicsJoint.getComponentType());
+                    }
+                }
+            }
+        };
+        SXRPhysicsContext.getInstance().runOnPhysicsThread(mergeSkel);
+    }
+
+    public void updateFrom(SXRNode sourceNode)
+    {
+        SXRNode curOwner = getOwnerObject();
+        SXRTransform newTrans = sourceNode.getTransform();
+        SXRCollider collider = sourceNode.getCollider();
+        SXRConstraint constraint = (SXRConstraint) sourceNode.getComponent(SXRConstraint.getComponentType());
+
+        getTransform().setModelMatrix(newTrans.getModelMatrix());
+        if (constraint != null)
+        {
+            sourceNode.detachComponent(SXRConstraint.getComponentType());
+            curOwner.attachComponent(constraint);
+        }
+        sourceNode.detachComponent(SXRPhysicsJoint.getComponentType());
+        if (collider != null)
+        {
+            sourceNode.detachCollider();
+            curOwner.attachCollider(collider);
+        }
+    }
 
     /**
      * Sets the bone index in the {@link SXRSkeleton} this joint should affect.
@@ -407,6 +514,12 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     }
 
     @Override
+    public void sync(int options)
+    {
+        NativePhysicsJoint.sync(getNative(), options);
+    }
+
+    @Override
     protected void addToWorld(SXRPhysicsContent world)
     {
         if (world != null)
@@ -427,27 +540,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
             world.removeBody(this);
         }
     }
-
-    public SXRSkeleton getSkeleton()
-    {
-        if (mSkeleton != null)
-        {
-            return mSkeleton;
-        }
-        mSkeleton = (SXRSkeleton) getComponent(SXRSkeleton.getComponentType());
-        if (mSkeleton != null)
-        {
-            return mSkeleton;
-        }
-        long nativeSkeleton = NativePhysicsJoint.getSkeleton(getNative());
-        if (nativeSkeleton != 0)
-        {
-            mSkeleton = new SXRSkeleton(getSXRContext(), nativeSkeleton);
-        }
-        return mSkeleton;
-    }
 }
-
 
 class NativePhysicsJoint
 {
@@ -479,4 +572,11 @@ class NativePhysicsJoint
 
     static native void setName(long joint, String name);
 
+    static native int getNumJoints(long joint);
+
+    static native void removeJointAt(long joint, int index);
+
+    static native int addJoint(long rootjoint, long newjoint);
+
+    static native void sync(long joint, int options);
 }

@@ -512,8 +512,8 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
             {
                 if ((body != null) && contains(body))
                 {
-                    NativePhysics3DWorld.removeRigidBody(getNative(), body.getNative());
                     mPhysicsObject.remove(body.getNative());
+                    NativePhysics3DWorld.removeRigidBody(getNative(), body.getNative());
                     getSXRContext().getEventManager().sendEvent(SXRWorld.this,
                             IPhysicsEvents.class,
                             "onRemoveRigidBody",
@@ -541,8 +541,8 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
             {
                 if ((joint != null) || contains(joint))
                 {
-                    NativePhysics3DWorld.removeJoint(getNative(), joint.getNative());
                     mPhysicsObject.remove(joint.getNative());
+                    NativePhysics3DWorld.removeJoint(getNative(), joint.getNative());
                     getSXRContext().getEventManager().sendEvent(SXRWorld.this, IPhysicsEvents.class,
                             "onRemoveJoint", SXRWorld.this, joint);
                 }
@@ -623,33 +623,30 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
 
         for (SXRCollisionInfo info : collisionInfos)
         {
-            if (info.isHit)
+            if ((mPhysicsObject.get(info.bodyA) != null) &&
+                (mPhysicsObject.get(info.bodyB) != null))
             {
-                sendCollisionEvent(info, "onEnter");
-            }
-            else if ((mPhysicsObject.get(info.bodyA) != null) &&
-                     (mPhysicsObject.get(info.bodyB) != null))
-            {
-                sendCollisionEvent(info, "onExit");
+                sendCollisionEvent(info, info.isHit ? "onEnter" : "onExit");
             }
         }
     }
 
     private void sendCollisionEvent(SXRCollisionInfo info, String eventName)
     {
-        SXRNode bodyA = mPhysicsObject.get(info.bodyA).getOwnerObject();
-        SXRNode bodyB = mPhysicsObject.get(info.bodyB).getOwnerObject();
+        SXRPhysicsWorldObject bodyA = mPhysicsObject.get(info.bodyA);
+        SXRPhysicsWorldObject bodyB = mPhysicsObject.get(info.bodyB);
+        SXRNode nodeA = bodyA.getOwnerObject();
+        SXRNode nodeB = bodyB.getOwnerObject();
         SXREventManager em =  getSXRContext().getEventManager();
 
-        em.sendEvent(bodyA, ICollisionEvents.class, eventName,
-                     bodyA, bodyB, info.normal, info.distance);
+        em.sendEvent(nodeA, ICollisionEvents.class, eventName,
+                     nodeA, nodeB, info.normal, info.distance);
 
-        em.sendEvent(bodyB, ICollisionEvents.class, eventName,
-                     bodyB, bodyA, info.normal, info.distance);
+        em.sendEvent(nodeB, ICollisionEvents.class, eventName,
+                     nodeB, nodeA, info.normal, info.distance);
 
         em.sendEvent(this, ICollisionEvents.class, eventName,
-                     bodyA, bodyB, info.normal, info.distance);
-
+                     nodeA, nodeB, info.normal, info.distance);
     }
 
 

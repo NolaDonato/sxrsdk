@@ -59,7 +59,7 @@ abstract public class SXRConstraint extends SXRPhysicsWorldObject
     public void onAttach(SXRNode newOwner)
     {
         mBodyB = (SXRRigidBody) newOwner.getComponent(SXRRigidBody.getComponentType());
-        if (mBodyB == null)
+        if ((mBodyB == null) || (mBodyB == mBodyA))
         {
             mBodyB = (SXRPhysicsJoint) newOwner.getComponent(SXRPhysicsJoint.getComponentType());
             if (mBodyB == null)

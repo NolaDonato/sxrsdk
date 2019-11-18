@@ -13,8 +13,12 @@ import java.util.List;
  * @see SXRRigidBody
  * @see SXRPhysicsJoint
  */
-abstract class SXRPhysicsCollidable extends SXRPhysicsWorldObject
+abstract public class SXRPhysicsCollidable extends SXRPhysicsWorldObject
 {
+    public static final int SYNC_COLLISION_SHAPE = 1;
+    public static final int SYNC_TRANSFORM = 2;
+    public static final int SYNC_PROPERTIES = 4;
+    public static final int SYNC_ALL = SYNC_COLLISION_SHAPE | SYNC_TRANSFORM | SYNC_PROPERTIES;
 
     protected SXRPhysicsCollidable(SXRContext gvrContext, long nativePointer)
     {
@@ -31,4 +35,6 @@ abstract class SXRPhysicsCollidable extends SXRPhysicsWorldObject
     abstract public String getName();
 
     abstract public void setName(String s);
+
+    abstract public void sync(int syncOptions);
 }

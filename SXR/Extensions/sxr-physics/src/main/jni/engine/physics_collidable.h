@@ -24,6 +24,13 @@ namespace sxr {
     class PhysicsCollidable : public Component
     {
     public:
+        enum SyncOptions
+        {
+            COLLISION_SHAPE = 1,
+            TRANSFORM = 2,
+            PROPERTIES = 4,
+            ALL = COLLISION_SHAPE | TRANSFORM | PROPERTIES
+        };
         PhysicsCollidable(long componentType) : Component(componentType)  { }
 
         virtual const char* getName() const = 0;
@@ -40,7 +47,7 @@ namespace sxr {
 
         virtual void applyTorque(float x, float y, float z) = 0;
 
-        virtual void updateConstructionInfo(PhysicsWorld*) = 0;
+        virtual void sync(int options = 0) = 0;
     };
 
 }

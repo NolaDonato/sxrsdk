@@ -16,14 +16,13 @@
 #include "collider.h"
 
 namespace sxr {
-extern "C" {
+extern "C"
+{
     JNIEXPORT jlong JNICALL
-    Java_com_samsungxr_NativeCollider_getComponentType(JNIEnv * env, jobject obj);
-}
-
-JNIEXPORT jlong JNICALL
-Java_com_samsungxr_NativeCollider_getComponentType(JNIEnv * env, jobject obj) {
-    return Collider::getComponentType();
-}
+    Java_com_samsungxr_NativeCollider_getComponentType(JNIEnv * env, jclass obj)
+    {
+        return Collider::getComponentType();
+    }
+ }
 
 }

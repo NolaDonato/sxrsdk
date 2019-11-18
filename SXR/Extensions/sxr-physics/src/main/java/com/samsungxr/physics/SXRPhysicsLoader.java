@@ -29,6 +29,7 @@ import com.samsungxr.SXRResourceVolume;
 import com.samsungxr.SXRScene;
 import com.samsungxr.SXRNode;
 import com.samsungxr.animation.SXRSkeleton;
+import com.samsungxr.utility.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -39,8 +40,8 @@ import java.util.List;
 public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 {
     static private final String TAG = SXRPhysicsLoader.class.getSimpleName();
-    protected boolean mCreateNodes = false;
     protected boolean mIsMultiBody = false;
+    protected String mErrors = "";
     private SXREventReceiver mListeners;
 
     static
@@ -57,14 +58,14 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
          *                  May be null if the load failed.
          * @param filename  Name of file or resource loaded.
          */
-        public void onPhysicsLoaded(SXRPhysicsContent world, String filename);
+        public void onPhysicsLoaded(SXRPhysicsContent world, SXRSkeleton skel, String filename);
 
         /**
          * Called if a physics file fails to load.
          * @param filename  Name of file or resource loaded.
          * @param errors    Errors during loading, null if load was successful.
          */
-        public void onLoadError(String filename, String errors);
+        public void onLoadError(SXRPhysicsContent world, String filename, String errors);
     }
 
     public SXRPhysicsLoader(SXRContext ctx)
@@ -148,17 +149,18 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         String fname = resource.getResourceFilename().toLowerCase();
         SXRWorld world = (SXRWorld) scene.getRoot().getComponent(SXRWorld.getComponentType());
 
-        mCreateNodes = false;
         if (world == null)
         {
             getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
-                                                        "onLoadError", fname,
+                                                        "onLoadError",
+                                                        world, fname,
                                                         "To load physics files, you must have a physics world attached to the scene");
             return null;
         }
         if (fname.endsWith(".urdf"))
         {
-            return loadPhysics(resource, ignoreUpAxis);
+            loadPhysics(world, resource, ignoreUpAxis);
+            return world;
         }
         else if (fname.endsWith(".bullet"))
         {
@@ -167,7 +169,8 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
             if (inputData == null || inputData.length == 0)
             {
                 getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
-                                                            "onLoadError", fname,
+                                                            "onLoadError",
+                                                            world, fname,
                                                             "Cannot open physics file");
                 return null;
             }
@@ -177,7 +180,8 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         else
         {
             getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
-                                                        "onLoadError", fname,
+                                                        "onLoadError",
+                                                        world, fname,
                                                         "Unknown physics file type, must be .bullet or .urdf");
             return null;
         }
@@ -218,17 +222,14 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
             root.setName(resource.getResourceFilename());
             root.attachComponent(world);
         }
-        if (root.getChildrenCount() == 0)
-        {
-            mCreateNodes = true;
-        }
         if (fname.endsWith(".urdf"))
         {
             String urdfXML = SXRPhysicsLoader.toString(resource);
             if (urdfXML == null)
             {
                 getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
-                                                            "onLoadError", fname,
+                                                            "onLoadError",
+                                                            world, fname,
                                                             "Cannot parse URDF file");
                 return;
             }
@@ -241,7 +242,8 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
             if (inputData == null || inputData.length == 0)
             {
                 getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
-                                                            "onLoadError", fname,
+                                                            "onLoadError",
+                                                            world, fname,
                                                             "Cannot open physics file");
                 return;
             }
@@ -250,7 +252,8 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         else
         {
             getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
-                                                        "onLoadError", fname,
+                                                        "onLoadError",
+                                                        world, fname,
                                                         "Unknown physics file type, must be .bullet or .urdf");
         }
     }
@@ -280,7 +283,6 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         SXRNode root = new SXRNode(getSXRContext());
         SXRWorld world = new SXRWorld(root, mIsMultiBody);
 
-        mCreateNodes = true;
         root.setName(resource.getResourceFilename());
         loadPhysics(world, resource, ignoreUpAxis);
         return world;
@@ -304,30 +306,46 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
          * They are attached to each other but not to nodes in the scene.
          */
         long loader = getNative();
-        boolean result = NativeBulletLoader.parse(loader, inputData, inputData.length, ignoreUpAxis);
+        boolean result;
+        SXRWorld world = (SXRWorld) sceneRoot.getComponent(SXRWorld.getComponentType());
 
+        if (mIsMultiBody)
+        {
+            if (!world.isMultiBody())
+            {
+                throw new UnsupportedOperationException("Cannot load multibody content into a world that is not multibody");
+            }
+            result = NativeBulletLoader.parseMB(loader, world.getNative(), inputData, inputData.length, ignoreUpAxis);
+        }
+        else
+        {
+            result = NativeBulletLoader.parse(loader, inputData, inputData.length, ignoreUpAxis);
+        }
         if (!result)
         {
             NativeBulletLoader.clear(loader);
-            mCreateNodes = false;
             getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
-                                                        "onLoadError", sceneRoot.getName(),
+                                                        "onLoadError",
+                                                        world, sceneRoot.getName(),
                                                         "Failed to parse bullet file");
             return;
         }
         /*
          * attach physics components to scene objects.
          */
-        String errors = attachPhysics(sceneRoot);
+        SXRSkeleton skel = attachPhysics(sceneRoot);
         NativeBulletLoader.clear(loader);
-        mCreateNodes = false;
-        if (errors != null)
+        if (!mErrors.isEmpty())
         {
-            getSXRContext().getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onLoadError", sceneRoot.getName(), errors);
+            String errors = mErrors;
+            mErrors = "";
+            getSXRContext().getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class,
+                                                        "onLoadError",
+                                                        world, sceneRoot.getName(), errors);
         }
         else
         {
-            getSXRContext().getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", null, sceneRoot.getName());
+            getSXRContext().getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", world, skel, sceneRoot.getName());
         }
     }
 
@@ -343,6 +361,10 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 
         if (mIsMultiBody)
         {
+            if (!world.isMultiBody())
+            {
+                throw new UnsupportedOperationException("Cannot load multibody content into a world that is not multibody");
+            }
             result = NativeBulletLoader.parseMB(loader, world.getNative(), inputData, inputData.length, ignoreUpAxis);
         }
         else
@@ -352,9 +374,9 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         if (!result)
         {
             NativeBulletLoader.clear(loader);
-            mCreateNodes = false;
             getSXRContext().getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
-                                            "onLoadError", sceneRoot.getName(),
+                                                        "onLoadError",
+                                                        world, sceneRoot.getName(),
                                                         "Failed to parse bullet file");
             return;
         }
@@ -365,16 +387,21 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         {
             public void run()
             {
-                String errors = attachPhysics(sceneRoot);
+                SXRSkeleton skel = attachPhysics(sceneRoot);
                 NativeBulletLoader.clear(loader);
-                mCreateNodes = false;
-                if (errors != null)
+                if (!mErrors.isEmpty())
                 {
-                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onLoadError", sceneRoot.getName(), errors);
+                    String errors = mErrors;
+                    mErrors = "";
+                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class,
+                                                    "onLoadError",
+                                                    world, sceneRoot.getName(), errors);
                 }
                 else
                 {
-                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", world, sceneRoot.getName());
+                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class,
+                                                    "onPhysicsLoaded",
+                                                    world, skel, sceneRoot.getName());
                 }
             }
         });
@@ -394,9 +421,9 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         if (!result)
         {
             NativeBulletLoader.clear(loader);
-            mCreateNodes = false;
             ctx.getEventManager().sendEvent(this, IPhysicsLoaderEvents.class,
-                                             "onLoadError", sceneRoot.getName(),
+                                             "onLoadError",
+                                            world, sceneRoot.getName(),
                                              "Failed to parse URDF file");
             return;
         }
@@ -407,16 +434,21 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         {
             public void run()
             {
-                String errors = attachPhysics(sceneRoot);
+                SXRSkeleton skel = attachPhysics(sceneRoot);
                 NativeBulletLoader.clear(loader);
-                mCreateNodes = false;
-                if (errors != null)
+                if (!mErrors.isEmpty())
                 {
-                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onLoadError", sceneRoot.getName(), errors);
-                 }
+                    String errors = mErrors;
+                    mErrors = "";
+                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class,
+                                                    "onLoadError",
+                                                    world, sceneRoot.getName(), errors);
+                }
                 else
                 {
-                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class, "onPhysicsLoaded", world, sceneRoot.getName());
+                    ctx.getEventManager().sendEvent(SXRPhysicsLoader.this, IPhysicsLoaderEvents.class,
+                                                    "onPhysicsLoaded",
+                                                    world, skel, sceneRoot.getName());
                 }
             }
         });
@@ -427,12 +459,10 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
      * nodes based on name matching.
      * @param sceneRoot root of scene hierarchy to add physics to
      */
-    private String attachPhysics(SXRNode sceneRoot)
+    private SXRSkeleton attachPhysics(SXRNode sceneRoot)
     {
         SXRContext ctx = sceneRoot.getSXRContext();
         long loader = getNative();
-        String errors = "";
-        List<SXRPhysicsJoint> rootJoints = new ArrayList<SXRPhysicsJoint>();
 
         /*
          * Attach imported SXRRigidBody objects to the corresponding
@@ -447,16 +477,17 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 
             if (sceneObject == null)
             {
-                if (mCreateNodes)
+                sceneObject = new SXRNode(getSXRContext());
+                sceneObject.setName(name);
+                sceneRoot.addChildObject(sceneObject);
+                Log.w("PHYSICS LOADER", "Didn't find node for rigid body " + name);
+            }
+            else
+            {
+                SXRPhysicsJoint joint = (SXRPhysicsJoint) sceneObject.getComponent(SXRPhysicsJoint.getComponentType());
+                if (joint != null)
                 {
-                    sceneObject = new SXRNode(getSXRContext());
-                    sceneObject.setName(name);
-                    sceneRoot.addChildObject(sceneObject);
-                }
-                else
-                {
-                    errors += "Didn't find node for rigid body '" + name + "'\n";
-                    continue;
+                    joint.removeJointAt(joint.getJointIndex());
                 }
             }
             if (sceneObject.getComponent(SXRCollider.getComponentType()) == null)
@@ -477,6 +508,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
          * for the joint, attach it to the scene object too.
          */
         SXRPhysicsJoint[] joints = NativeBulletLoader.getJoints(loader);
+        SXRPhysicsJoint rootJoint = null;
         for (SXRPhysicsJoint joint : joints)
         {
             String name = joint.getName();
@@ -484,21 +516,14 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 
             if (sceneObject == null)
             {
-                if (mCreateNodes)
-                {
-                    sceneObject = new SXRNode(getSXRContext());
-                    sceneObject.setName(name);
-                    sceneRoot.addChildObject(sceneObject);
-                }
-                else
-                {
-                    errors += "Didn't find node for joint '" + name + "'\n";
-                    continue;
-                }
-            }
+                sceneObject = new SXRNode(getSXRContext());
+                sceneObject.setName(name);
+                sceneRoot.addChildObject(sceneObject);
+                Log.w("PHYSICS LOADER","Didn't find node for joint " + name);
+             }
             if (joint.getJointIndex() <= 0)
             {
-                rootJoints.add(joint);
+                rootJoint = joint;
             }
             if (sceneObject.getComponent(SXRCollider.getComponentType()) == null)
             {
@@ -512,36 +537,32 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
             sceneObject.attachComponent(joint);
         }
 
-        for (SXRPhysicsJoint joint : rootJoints)
+        SXRSkeleton skel = (rootJoint != null) ? rootJoint.getSkeleton() : null;
+
+        if (skel != null)
         {
-            SXRSkeleton skel = joint.getSkeleton();
-
-            if (mCreateNodes)
+            for (int i = 0; i < skel.getNumBones(); ++i)
             {
-                for (int i = 0; i < skel.getNumBones(); ++i)
+                String boneName = skel.getBoneName(i);
+                SXRNode bone = sceneRoot.getNodeByName(boneName);
+                int parentIndex = skel.getParentBoneIndex(i);
+
+                if (bone != null)
                 {
-                    String boneName = skel.getBoneName(i);
-                    SXRNode bone = sceneRoot.getNodeByName(boneName);
-                    int parentIndex = skel.getParentBoneIndex(i);
-
-                    if (bone != null)
+                    skel.setBone(i, bone);
+                    if (parentIndex >= 0)
                     {
-                        skel.setBone(i, bone);
-                        if (parentIndex >= 0)
-                        {
-                            SXRNode parentBone = skel.getBone(parentIndex);
+                        SXRNode parentBone = skel.getBone(parentIndex);
 
-                            if (parentBone != null)
-                            {
-                                sceneRoot.removeChildObject(bone);
-                                parentBone.addChildObject(bone);
-                            }
+                        if (parentBone != null)
+                        {
+                            sceneRoot.removeChildObject(bone);
+                            parentBone.addChildObject(bone);
                         }
                     }
                 }
             }
         }
-
         /*
          * Attach imported SXRConstraint objects to the corresponding
          * scene nodes based on name matching. The Java constraints
@@ -556,12 +577,12 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 
             if (sceneObject == null)
             {
-                errors += "Didn't find node for constraint '" + name + "'\n";
+                mErrors += "Didn't find node for constraint '" + name + "'\n";
                 continue;
             }
             sceneObject.attachComponent(constraint);
         }
-        return errors.isEmpty() ? null : errors;
+        return skel;
     }
 
     protected static byte[] toByteArray(SXRAndroidResource resource)
