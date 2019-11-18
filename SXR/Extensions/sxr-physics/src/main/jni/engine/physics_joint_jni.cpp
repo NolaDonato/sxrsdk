@@ -69,6 +69,66 @@ Java_com_samsungxr_physics_NativePhysicsJoint_setFriction(JNIEnv *env, jclass ob
     mb->setFriction(friction);
 }
 
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_setLinearDamping(JNIEnv *env, jclass obj, jlong jjoint,
+                                                               jfloat damping)
+{
+    PhysicsJoint *mb = reinterpret_cast<PhysicsJoint *>(jjoint);
+    mb->setLinearDamping(damping);
+}
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_setAngularDamping(JNIEnv *env, jclass obj, jlong jjoint,
+                                                               jfloat damping)
+{
+    PhysicsJoint *mb = reinterpret_cast<PhysicsJoint *>(jjoint);
+    mb->setAngularDamping(damping);
+}
+
+JNIEXPORT jfloat JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_getLinearDamping(JNIEnv *env, jclass obj, jlong jjoint)
+{
+    PhysicsJoint *mb = reinterpret_cast<PhysicsJoint *>(jjoint);
+    return mb->getLinearDamping();
+}
+
+JNIEXPORT jfloat JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_getAngularDamping(JNIEnv *env, jclass obj, jlong jjoint)
+{
+    PhysicsJoint *mb = reinterpret_cast<PhysicsJoint *>(jjoint);
+    return mb->getAngularDamping();
+}
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_setMaxAppliedImpulse(JNIEnv *env, jclass obj, jlong jjoint,
+                                                                   jfloat v)
+{
+    PhysicsJoint *mb = reinterpret_cast<PhysicsJoint *>(jjoint);
+    mb->setMaxAppliedImpulse(v);
+}
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_setMaxCoordVelocity(JNIEnv *env, jclass obj, jlong jjoint,
+                                                                  jfloat v)
+{
+    PhysicsJoint *mb = reinterpret_cast<PhysicsJoint *>(jjoint);
+    mb->setMaxCoordVelocity(v);
+}
+
+JNIEXPORT jfloat JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_getMaxAppliedImpulse(JNIEnv *env, jclass obj, jlong jjoint)
+{
+    PhysicsJoint *mb = reinterpret_cast<PhysicsJoint *>(jjoint);
+    return mb->getMaxAppliedImpulse();
+}
+
+JNIEXPORT jfloat JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_getMaxCoordVelocity(JNIEnv *env, jclass obj, jlong jjoint)
+{
+    PhysicsJoint *mb = reinterpret_cast<PhysicsJoint *>(jjoint);
+    return mb->getMaxCoordVelocity();
+}
+
 JNIEXPORT jint JNICALL
 Java_com_samsungxr_physics_NativePhysicsJoint_getJointIndex(JNIEnv *env, jclass obj, jlong jjoint)
 {

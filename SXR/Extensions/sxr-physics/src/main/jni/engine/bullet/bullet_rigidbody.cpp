@@ -250,12 +250,14 @@ namespace sxr
             oldShape = mRigidBody->getCollisionShape();
             if (oldShape)
             {
+                mConstructionInfo.m_collisionShape = nullptr;
                 delete oldShape;
             }
         }
         if (newShape)
         {
             mRigidBody->setCollisionShape(newShape);
+            mConstructionInfo.m_collisionShape = newShape;
             newShape->setLocalScaling(ownerScale);
             if (mConstructionInfo.m_mass > 0)
             {

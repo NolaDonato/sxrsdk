@@ -464,7 +464,11 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         int i = -1;
         int nextJointIndex = 0;
         boolean extendingSkel = false;
+        float maximpulse = (float) multibody.optDouble("Max Applied Impulse", 1000.0f);
+        float maxcoordvel = (float) multibody.optDouble("Max Coord Vel", 100.0f);
 
+        mAngularDamping = (float) multibody.optDouble("Angular Damping", 0.0f);
+        mLinearDamping = (float) multibody.optDouble("Linear Damping", 0.0f);
         if ((mSkeleton != null) && (mAttachBoneName != null))
         {
             nextJointIndex = mSkeleton.getNumBones();
@@ -495,6 +499,11 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             rootJoint.setFriction((float) link.getJSONObject("Physic Material").getDouble("Friction"));
             rootJoint.setBoneIndex(0);
             rootJoint.setName(name);
+            rootJoint.setLinearDamping(mLinearDamping);
+            rootJoint.setAngularDamping(mAngularDamping);
+            rootJoint.setMaxAppliedImpulse(maximpulse);
+            rootJoint.setMaxCoordVelocity(maxcoordvel);
+            Log.e(TAG, "creating root joint %s mass = %3f", link.getString("Name"), mass);
             parseCollider(link, 0, name);
         }
         else
@@ -787,7 +796,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 return null;
             }
         }
-        Log.e(TAG, "creating joint %s parent = %s", link.getString("Name"), parentName);
+        Log.e(TAG, "creating joint %s parent = %s, mass = %3f", link.getString("Name"), parentName, mass);
         SXRPhysicsJoint joint = new SXRPhysicsJoint(parentJoint, jointType, jointIndex, mass, SXRCollisionMatrix.DEFAULT_GROUP);
         joint.setBoneIndex(jointIndex);
         if (addToBody)

@@ -62,6 +62,8 @@ namespace sxr {
       mPivot(0, 0, 0),
       mWorld(nullptr),
       mMass(mass),
+      mLinearDamping(0),
+      mAngularDamping(0),
       mCollisionGroup(btBroadphaseProxy::DefaultFilter),
       mCollisionMask(btBroadphaseProxy::AllFilter),
       mJointType(JointType::sphericalJoint)
@@ -78,6 +80,8 @@ namespace sxr {
       mMass(mass),
       mPivot(0, 0, 0),
       mJointType(jointType),
+      mLinearDamping(0),
+      mAngularDamping(0),
       mWorld(nullptr)
     {
     }
@@ -94,6 +98,8 @@ namespace sxr {
         mCollider = link.m_collider;
         mJointType = (JointType) link.m_jointType;
         mMass = link.m_mass;
+        mLinearDamping = mMultiBody->getLinearDamping();
+        mAngularDamping = mMultiBody->getAngularDamping();
     }
 
     void BulletJoint::setName(const char* name)
@@ -177,6 +183,26 @@ namespace sxr {
             return mParent->findRoot();
         }
         return nullptr;
+    }
+
+    void BulletJoint::setLinearDamping(float ld)
+    {
+        mLinearDamping = ld;
+    }
+
+    void BulletJoint::setAngularDamping(float ad)
+    {
+        mAngularDamping = ad;
+    }
+
+    void BulletJoint::setMaxAppliedImpulse(float v)
+    {
+        mMaxAppliedImpulse = v;
+    }
+
+    void BulletJoint::setMaxCoordVelocity(float v)
+    {
+        mMaxCoordVelocity = v;
     }
 
     void BulletJoint::setMass(float mass)
@@ -373,7 +399,6 @@ namespace sxr {
         else if (options & SyncOptions::PROPERTIES)
         {
             link.m_mass = mMass;
-            return;
             switch (mJointType)
             {
                 case JointType::fixedJoint: updateFixed(); break;
@@ -399,9 +424,18 @@ namespace sxr {
         {
             return;
         }
-        newShape = convertCollider2CollisionShape(collider);
-        if (mCollider && ((options & SyncOptions::COLLISION_SHAPE) != 0))
+        if (mCollider == nullptr)
         {
+            mCollider = new btMultiBodyLinkCollider(mMultiBody, mJointIndex);
+            LOGV("BULLET: creating link collider %s", getName());
+            newShape = convertCollider2CollisionShape(collider);
+            mCollider->setCollisionShape(newShape);
+            mCollider->m_link = getJointIndex();
+            link.m_collider = mCollider;
+        }
+        else if ((options & SyncOptions::COLLISION_SHAPE) != 0)
+        {
+            newShape = convertCollider2CollisionShape(collider);
             oldShape = mCollider->getCollisionShape();
             if (mWorld)
             {
@@ -419,14 +453,6 @@ namespace sxr {
                 ownerScale = oldShape->getLocalScaling();
                 delete oldShape;
             }
-        }
-        else
-        {
-            mCollider = new btMultiBodyLinkCollider(mMultiBody, mJointIndex);
-            LOGV("BULLET: creating link collider %s", getName());
-            mCollider->setCollisionShape(newShape);
-            mCollider->m_link = getJointIndex();
-            link.m_collider = mCollider;
         }
         mCollider->setUserPointer(this);
         newShape->setLocalScaling(ownerScale);
