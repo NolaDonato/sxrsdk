@@ -88,6 +88,7 @@ public class SXRRigidBody extends SXRPhysicsCollidable
     public SXRRigidBody(SXRContext ctx, float mass)
     {
         super(ctx, NativeRigidBody.ctor(mass));
+        mType = getComponentType();
         mCollisionGroup = (mass > 0) ? SXRCollisionMatrix.DEFAULT_GROUP : SXRCollisionMatrix.STATIC_GROUP;
         mPhysicsContext = SXRPhysicsContext.getInstance();
     }
@@ -113,6 +114,7 @@ public class SXRRigidBody extends SXRPhysicsCollidable
     public SXRRigidBody(SXRContext ctx, float mass, int collisionGroup)
     {
         super(ctx, NativeRigidBody.ctor(mass));
+        mType = getComponentType();
         mCollisionGroup = collisionGroup;
         mPhysicsContext = SXRPhysicsContext.getInstance();
     }
@@ -121,6 +123,7 @@ public class SXRRigidBody extends SXRPhysicsCollidable
     SXRRigidBody(SXRContext ctx, long nativeRigidBody)
     {
         super(ctx, nativeRigidBody);
+        mType = getComponentType();
         mCollisionGroup = (getMass() > 0) ? SXRCollisionMatrix.DEFAULT_GROUP : SXRCollisionMatrix.STATIC_GROUP;
         mPhysicsContext = SXRPhysicsContext.getInstance();
     }
