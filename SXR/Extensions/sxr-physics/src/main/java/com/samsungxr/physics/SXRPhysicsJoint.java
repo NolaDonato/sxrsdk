@@ -168,7 +168,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
                                           jointType, jointIndex, mass));
         if (jointIndex < 1)
         {
-            throw new IllegalArgumentException("BoneID must be greater than zero");
+            throw new IllegalArgumentException("Joint index must be greater than zero");
         }
         mType = getComponentType();
         mSkeleton = parent.mSkeleton;
