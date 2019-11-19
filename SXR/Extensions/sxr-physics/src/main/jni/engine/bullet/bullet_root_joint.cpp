@@ -134,7 +134,13 @@ namespace sxr {
             {
                 btMultibodyLink& oldLink = mMultiBody->getLink(i);
                 btMultibodyLink& newLink = mb->getLink(i);
+                btMultiBodyLinkCollider* coll = newLink.m_collider;
+
                 newLink = oldLink;
+                if (coll != nullptr)
+                {
+                    coll->m_multiBody = mb;
+                }
             }
             mb->setUserPointer(this);
             mb->setBaseCollider(mMultiBody->getBaseCollider());
@@ -345,7 +351,10 @@ namespace sxr {
 
     void BulletRootJoint::sync(int options)
     {
-        updateCollider(owner_object(), options);
+        if ((mCollider == nullptr) || (options & SyncOptions::COLLISION_SHAPE))
+        {
+            updateCollider(owner_object(), options);
+        }
         if (options & SyncOptions::TRANSFORM)
         {
             setPhysicsTransform();

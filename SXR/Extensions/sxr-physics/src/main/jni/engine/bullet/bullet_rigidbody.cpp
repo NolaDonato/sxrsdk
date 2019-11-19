@@ -179,21 +179,19 @@ namespace sxr
         {
             LOGE("PHYSICS: Cannot attach rigid body without collider");
         }
-        if (mRigidBody == nullptr)
-        {
-            mRigidBody = new btRigidBody(mConstructionInfo);
-            mRigidBody->setUserPointer(this);
-            options |= SyncOptions::ALL;
-        }
         if (options & SyncOptions::TRANSFORM)
         {
             getWorldTransform(mConstructionInfo.m_startWorldTransform);
         }
-        if ((mRigidBody->getCollisionShape() == nullptr) ||
-            (options & SyncOptions::COLLISION_SHAPE))
+        if (mRigidBody == nullptr)
         {
-            updateCollider(owner, options);
+            mConstructionInfo.m_motionState = this;
+            mRigidBody = new btRigidBody(mConstructionInfo);
+            mRigidBody->setUserPointer(this);
+            mRigidBody->setMotionState(this);
+            options |= SyncOptions::ALL;
         }
+        updateCollider(owner, options);
         if (options & SyncOptions::PROPERTIES)
         {
             switch (mSimType)
@@ -202,7 +200,7 @@ namespace sxr
                 mRigidBody->setCollisionFlags(collisionFlags &
                                               ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
                                                 btCollisionObject::CollisionFlags::CF_STATIC_OBJECT));
-                mRigidBody->setActivationState(enabled() ? ACTIVE_TAG : DISABLE_SIMULATION);
+                mRigidBody->setActivationState(enabled() ? ACTIVE_TAG : ISLAND_SLEEPING);
                 break;
 
                 case SimulationType::STATIC:
@@ -220,8 +218,6 @@ namespace sxr
                 break;
             }
         }
-        mConstructionInfo.m_motionState = this;
-        mRigidBody->setMotionState(this);
     }
 
     void BulletRigidBody::onAddedToWorld(PhysicsWorld* world)
@@ -233,35 +229,32 @@ namespace sxr
 
     void BulletRigidBody::updateCollider(Node* owner, int options)
     {
-        btCollisionShape* oldShape = nullptr;
+        btCollisionShape* curShape = mRigidBody->getCollisionShape();
         btCollisionShape* newShape = nullptr;
         Transform* trans = owner->transform();
         Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
         btVector3 ownerScale(trans->scale_x(), trans->scale_y(), trans->scale_z());
-        bool creating = (mRigidBody == nullptr);
 
-        if (collider == nullptr)
-        {
-            return;
-        }
-        if (options & SyncOptions::COLLISION_SHAPE)
+        if ((curShape == nullptr) ||
+            (options & SyncOptions::COLLISION_SHAPE))
         {
             newShape = convertCollider2CollisionShape(collider);
-            oldShape = mRigidBody->getCollisionShape();
-            if (oldShape)
-            {
-                delete oldShape;
-            }
-        }
-        if (newShape)
-        {
             mRigidBody->setCollisionShape(newShape);
-            newShape->setLocalScaling(ownerScale);
-            if (mConstructionInfo.m_mass > 0)
+            if (curShape)
             {
-                newShape->calculateLocalInertia(mConstructionInfo.m_mass,
-                                                mConstructionInfo.m_localInertia);
+                delete curShape;
             }
+            options |= SyncOptions::PROPERTIES;
+            curShape = newShape;
+        }
+        if (options & SyncOptions::TRANSFORM)
+        {
+            curShape->setLocalScaling(ownerScale);
+        }
+        if ((mConstructionInfo.m_mass > 0) && (options & SyncOptions::PROPERTIES))
+        {
+            curShape->calculateLocalInertia(mConstructionInfo.m_mass,
+                                            mConstructionInfo.m_localInertia);
         }
     }
 
@@ -369,7 +362,7 @@ namespace sxr
             trans->set_position(pos.getX(), pos.getY(), pos.getZ());
             trans->set_rotation(rot.getW(), rot.getX(), rot.getY(), rot.getZ());
         }
-        LOGD("PHYSICS: rigid body %s pos = %f, %f, %f", owner->name().c_str(),
+        LOGD("BULLET: rigid body %s pos = %f, %f, %f", owner->name().c_str(),
                 trans->position_x(),
                 trans->position_y(),
                 trans->position_z());

@@ -275,12 +275,11 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         SXRNode root = mSkeleton.getBone(mAttachBoneIndex);
         SXRCollider collider = mColliders.get(mAttachBoneIndex);
 
-        if (collider == null)
+        if (collider != null)
         {
-            throw new UnsupportedOperationException("Collider missing for body " + root.getName());
+            root.detachComponent(SXRCollider.getComponentType());
+            root.attachComponent(collider);
         }
-        root.detachComponent(SXRCollider.getComponentType());
-        root.attachComponent(collider);
         root.attachComponent(mBodies.get(mAttachBoneIndex));
         for (int i = mAttachBoneIndex + 1; i < mSkeleton.getNumBones(); ++i)
         {
@@ -292,12 +291,11 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             collider = mColliders.get(i);
             if (body != null)
             {
-                if (collider == null)
+                if (collider != null)
                 {
-                    throw new UnsupportedOperationException("Collider missing for body " + body.getName());
+                    node.detachComponent(SXRCollider.getComponentType());
+                    node.attachComponent(collider);
                 }
-                node.detachComponent(SXRCollider.getComponentType());
-                node.attachComponent(collider);
                 if (joint != null)
                 {
                     if (joint.getOwnerObject() != null)
@@ -497,7 +495,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             rootJoint.setName(name);
             mJoints.add(0, rootJoint);
             parseCollider(link, 0, name);
-            mSkeleton.getBone(0).attachComponent(rootJoint);
         }
         else
         {
@@ -531,6 +528,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             mColliders.add(null);
         }
     }
+
     private void attachJoints()
     {
         if (mAttachBoneIndex < 0)
@@ -725,8 +723,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             joint.setPivot(pivotB[0], pivotB[1], pivotB[2]);
             joint.setAxis(axis.x, axis.y, axis.z);
             joint.setFriction((float) link.getJSONObject("Physic Material").getDouble("Friction"));
-            node.attachComponent(joint);
-            return joint;
         }
         else if (jointIndex > mAttachBoneIndex)
         {
@@ -792,7 +788,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 return null;
             }
         }
-        Log.e(TAG, "creating joint %s parent = %s", link.getString("Name"), parentName);
+        Log.e(TAG, "creating joint %s parent = %s, mass = %3f", link.getString("Name"), parentName, mass);
         SXRPhysicsJoint joint = new SXRPhysicsJoint(parentJoint, jointType, jointIndex, mass, SXRCollisionMatrix.DEFAULT_GROUP);
         joint.setBoneIndex(jointIndex);
         if (addToBody)
@@ -823,16 +819,15 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
 
         body.setFriction((float) props.getDouble("Friction"));
         body.setDamping(mLinearDamping, mAngularDamping);
+        Log.e(TAG, "creating rigid body %s, mass = %3f", link.getString("Name"), mass);
+
         if ((parentBody == null) && (mSkeleton == null))
         {
             mSkeleton = (SXRSkeleton) node.getComponent(SXRSkeleton.getComponentType());
         }
-        if (!nodeName.equals(mAttachBoneName))
+        if (parseCollider(link, boneIndex, nodeName) == null)
         {
-            if (parseCollider(link, boneIndex, nodeName) == null)
-            {
-                return null;
-            }
+            return null;
         }
         mBodies.set(boneIndex, body);
         parseConstraint(link, parentBody, node, boneIndex);

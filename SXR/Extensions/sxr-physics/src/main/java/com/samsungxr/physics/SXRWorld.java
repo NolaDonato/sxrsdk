@@ -623,14 +623,10 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
 
         for (SXRCollisionInfo info : collisionInfos)
         {
-            if (info.isHit)
+            if ((mPhysicsObject.get(info.bodyA) != null) &&
+                (mPhysicsObject.get(info.bodyB) != null))
             {
-                sendCollisionEvent(info, "onEnter");
-            }
-            else if ((mPhysicsObject.get(info.bodyA) != null) &&
-                     (mPhysicsObject.get(info.bodyB) != null))
-            {
-                sendCollisionEvent(info, "onExit");
+                sendCollisionEvent(info, info.isHit ? "onEnter" : "onExit");
             }
         }
     }
