@@ -493,6 +493,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         if (nextJointIndex == 0)
         {
             String name = basebone.getString("Target Bone");
+            Vector3f scale = new Vector3f(1, 1, 1);
             rootJoint = new SXRPhysicsJoint(mSkeleton, mass, newJoints.size(), SXRCollisionMatrix.DEFAULT_GROUP);
             rootJoint.setFriction((float) basebone.getJSONObject("Physic Material").getDouble("Friction"));
             rootJoint.setBoneIndex(0);
@@ -503,7 +504,8 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             rootJoint.setMaxCoordVelocity(maxcoordvel);
             mJoints.set(0, rootJoint);
             Log.e(TAG, "creating root joint %s mass = %3f", basebone.getString("Name"), mass);
-            parseCollider(link, 0, name);
+            parseCollider(link, 0, name, scale);
+            rootJoint.setScale(scale);
         }
         else
         {
@@ -578,33 +580,36 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         }
     }
 
-    private SXRCollider parseCollider(JSONObject link, int boneIndex, String targetBone) throws JSONException
+    private SXRCollider parseCollider(JSONObject link, int boneIndex, String targetBone, Vector3f scale) throws JSONException
     {
         SXRContext ctx = mRoot.getSXRContext();
         JSONObject colliderRoot = link.getJSONObject("Collider").getJSONObject("value");
         JSONArray colliders = colliderRoot.getJSONObject("Child Colliders").getJSONArray("property_value");
+        String name = colliderRoot.optString("Name");
 
         for (int i = 0; i < colliders.length(); ++i)
         {
-            JSONObject c = colliders.getJSONObject(i).getJSONObject("Collider");
-            JSONObject xform = colliders.getJSONObject(i).getJSONObject("Transform");
-            String type = c.optString("type");
-            SXRNode owner = mSkeleton.getBone(mSkeleton.getBoneIndex(targetBone));
+            JSONObject  child = colliders.getJSONObject(i);
+            JSONObject  trans = child.getJSONObject("Transform");
+            JSONObject  c = child.getJSONObject("Collider");
+            String      type = c.optString("type");
+            JSONObject  s = trans.optJSONObject("Scale");
+            SXRNode     owner = mSkeleton.getBone(mSkeleton.getBoneIndex(targetBone));
             SXRCollider collider;
-            String name = colliderRoot.getString("Name");
 
             if (owner == null)
             {
                 throw new IllegalArgumentException("Target bone " + targetBone + " referenced in AVT file not found in scene");
             }
             owner.detachComponent(SXRCollider.getComponentType());
-            JSONObject scale = xform.getJSONObject("Scale");
-            Vector3f s = new Vector3f(1, 1, 1);
 
+            if (s != null)
+            {
+                scale.set((float) s.getDouble("X"),
+                          (float) s.getDouble("Y"),
+                          (float) s.getDouble("Z"));
+            }
             c = c.getJSONObject("value");
-            s.set((float) scale.getDouble("X"),
-                  (float) scale.getDouble("Y"),
-                  (float) scale.getDouble("Z"));
             if (type.equals("dmCapsuleCollider"))
             {
                 SXRCapsuleCollider capsule = new SXRCapsuleCollider(ctx);
@@ -616,24 +621,18 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 capsule.setRadius(radius);
                 if (direction.equals("X"))
                 {
-                    radius *= s.z;
-                    height *= s.x;
                     capsule.setDirection(SXRCapsuleCollider.CapsuleDirection.X_AXIS);
                     dimensions.x = height + radius;
                     dimensions.y = dimensions.z = radius;
                 }
                 else if (direction.equals("Y"))
                 {
-                    height *= s.y;
-                    radius *= s.x;
                     dimensions.y = height + radius;
                     dimensions.x = dimensions.z = radius;
                     capsule.setDirection(SXRCapsuleCollider.CapsuleDirection.Y_AXIS);
                 }
                 else if (direction.equals("Z"))
                 {
-                    height *= s.z;
-                    radius *= s.x;
                     dimensions.z = height + radius;
                     dimensions.x = dimensions.y = radius;
                     capsule.setDirection(SXRCapsuleCollider.CapsuleDirection.Z_AXIS);
@@ -641,19 +640,19 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 capsule.setHeight(height);
                 capsule.setRadius(radius);
                 Log.e(TAG, "capsule collider %s height %f radius %f %s axis",
-                      colliderRoot.getString("Name"), height, radius, direction);
+                      name, height, radius, direction);
                 collider = capsule;
             }
             else if (type.equals("dmBoxCollider"))
             {
                 SXRBoxCollider box = new SXRBoxCollider(ctx);
                 JSONObject size = c.getJSONObject("Half Size");
-                float x = (float) size.getDouble("X") * s.x;
-                float y = (float) size.getDouble("Y") * s.y;
-                float z = (float) size.getDouble("Z") * s.z;
+                float x = (float) size.getDouble("X");
+                float y = (float) size.getDouble("Y");
+                float z = (float) size.getDouble("Z");
 
                 Log.e(TAG, "box collider %s extents  %f, %f, %f",
-                      colliderRoot.getString("Name"), x, y, z);
+                      name, x, y, z);
                 box.setHalfExtents(x, y, z);
                 collider = box;
             }
@@ -662,7 +661,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 SXRSphereCollider sphere = new SXRSphereCollider(ctx);
                 float radius = (float) c.getDouble("Radius");
 
-                Log.e(TAG, "sphere collider %s radius %f", colliderRoot.getString("Name"), radius);
+                Log.e(TAG, "sphere collider %s radius %f", name, radius);
                 sphere.setRadius(radius);
                 collider = sphere;
             }
@@ -670,7 +669,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             {
                 throw new JSONException(type + " is an unknown collider type");
             }
-//            owner.attachComponent(collider);
             mColliders.set(boneIndex, collider);
             return collider;
         }
@@ -710,6 +708,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         JSONObject piv = link.optJSONObject("Pivot Pos.");
         SXRPhysicsJoint joint = (SXRPhysicsJoint) node.getComponent(SXRPhysicsJoint.getComponentType());
         float friction = (float) link.getJSONObject("Physic Material").getDouble("Friction");
+        Vector3f scale = new Vector3f(1, 1, 1);
 
         if (piv != null)
         {
@@ -721,7 +720,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         Vector3f axisA = new Vector3f((float) v.getDouble("X"),
                 (float) v.getDouble("Y"),
                 (float) v.getDouble("Z"));
-        parseCollider(link, jointIndex, nodeName);
+        parseCollider(link, jointIndex, nodeName, scale);
         if (joint == null)
         {
 
@@ -734,6 +733,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             joint.setPivot(pivotB[0], pivotB[1], pivotB[2]);
             joint.setAxis(axisA.x, axisA.y, axisA.z);
             joint.setFriction(friction);
+            joint.setScale(scale);
         }
         else if (jointIndex > mAttachBoneIndex)
         {
@@ -744,6 +744,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             joint.setPivot(pivotB[0], pivotB[1], pivotB[2]);
             joint.setAxis(axisA.x, axisA.y, axisA.z);
             joint.setFriction(friction);
+            joint.setScale(scale);
             joint.sync(SXRPhysicsCollidable.SYNC_ALL);
        }
         else if (jointIndex == mAttachBoneIndex)
@@ -815,6 +816,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         String nodeName = link.getString("Target Bone");
         int boneIndex = mSkeleton.getBoneIndex(nodeName);
         SXRNode node = mSkeleton.getBone(boneIndex);
+        Vector3f scale = new Vector3f(1, 1, 1);
 
         if (node == null)
         {
@@ -836,10 +838,11 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         {
             mSkeleton = (SXRSkeleton) node.getComponent(SXRSkeleton.getComponentType());
         }
-        if (parseCollider(link, boneIndex, nodeName) == null)
+        if (parseCollider(link, boneIndex, nodeName, scale) == null)
         {
             return null;
         }
+        body.setScale(scale);
         mBodies.set(boneIndex, body);
         parseConstraint(link, parentBody, node, boneIndex);
         return body;

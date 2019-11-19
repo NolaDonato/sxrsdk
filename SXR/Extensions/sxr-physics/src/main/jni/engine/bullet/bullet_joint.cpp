@@ -91,6 +91,7 @@ namespace sxr {
         mParent(parent),
         mMultiBody(parent->getMultiBody()),
         mJointIndex(jointIndex),
+        mScale(1, 1, 1),
         mWorld(nullptr)
     {
         btMultibodyLink& link = mMultiBody->getLink(jointIndex);
@@ -100,6 +101,17 @@ namespace sxr {
         mMass = link.m_mass;
         mLinearDamping = mMultiBody->getLinearDamping();
         mAngularDamping = mMultiBody->getAngularDamping();
+        if (mCollider)
+        {
+            btCollisionShape* shape = mCollider->getCollisionShape();
+            if (shape)
+            {
+                btVector3 v = shape->getLocalScaling();
+                mScale.x = v.x();
+                mScale.y = v.y();
+                mScale.z = v.z();
+            }
+        }
     }
 
     void BulletJoint::setName(const char* name)
@@ -367,6 +379,18 @@ namespace sxr {
         }
     }
 
+    void BulletJoint::setScale(const glm::vec3& s)
+    {
+        if (s != mScale)
+        {
+            mScale = s;
+            if (mMultiBody)
+            {
+                updateCollider(owner_object(), SyncOptions::PROPERTIES);
+            }
+        }
+    }
+
     void BulletJoint::sync(int options)
     {
         BulletJoint* parent = static_cast<BulletJoint*>(getParent());
@@ -415,7 +439,7 @@ namespace sxr {
         Transform* trans = owner->transform();
         btVector3 localInertia;
         Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
-        btVector3 ownerScale(trans->scale_x(), trans->scale_y(), trans->scale_z());
+        btVector3 scale(mScale.x, mScale.y, mScale.z);
 
         if (collider == nullptr)
         {
@@ -451,18 +475,15 @@ namespace sxr {
             }
             if (curShape)
             {
-                ownerScale = curShape->getLocalScaling();
+                scale = curShape->getLocalScaling();
                 delete curShape;
                 curShape = newShape;
             }
         }
         mCollider->setUserPointer(this);
-        if (options & SyncOptions::TRANSFORM)
-        {
-            curShape->setLocalScaling(ownerScale);
-        }
         if (options & SyncOptions::PROPERTIES)
         {
+            curShape->setLocalScaling(scale);
             curShape->calculateLocalInertia(getMass(), localInertia);
             link.m_inertiaLocal = localInertia;
         }

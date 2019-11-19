@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 #include <string>
+#include "glm/gtc/type_ptr.hpp"
 #include "bullet/bullet_joint.h"
 
 namespace sxr {
@@ -52,6 +53,26 @@ Java_com_samsungxr_physics_NativePhysicsJoint_setMass(JNIEnv *env, jclass obj, j
 {
     PhysicsJoint *mb = reinterpret_cast<PhysicsJoint *>(jjoint);
     mb->setMass(mass);
+}
+
+JNIEXPORT jfloatArray   JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_getScale(JNIEnv *env, jclass obj, jlong jjoint)
+{
+    PhysicsJoint* mb = reinterpret_cast<PhysicsJoint *>(jjoint);
+    const glm::vec3& v = mb->getScale();
+    jfloatArray result = env->NewFloatArray(3);
+
+    env->SetFloatArrayRegion(result, 0, 3, glm::value_ptr(v));
+    return result;
+}
+
+JNIEXPORT void   JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_setScale(JNIEnv *env, jclass obj, jlong jjoint,
+                                                       jfloat x, jfloat y, jfloat z)
+{
+    PhysicsJoint* mb = reinterpret_cast<PhysicsJoint *>(jjoint);
+
+    mb->setScale(glm::vec3(x, y, z));
 }
 
 JNIEXPORT jfloat JNICALL

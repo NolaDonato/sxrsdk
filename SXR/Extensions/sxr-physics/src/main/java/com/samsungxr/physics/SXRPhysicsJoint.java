@@ -23,6 +23,8 @@ import com.samsungxr.SXRTransform;
 import com.samsungxr.animation.SXRPoseMapper;
 import com.samsungxr.animation.SXRSkeleton;
 
+import org.joml.Vector3f;
+
 import java.lang.annotation.Native;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -217,6 +219,29 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     public void setName(String name)
     {
         NativePhysicsJoint.setName(getNative(), name);
+    }
+
+    public void setScale(Vector3f v)
+    {
+        setScale(v.x, v.y, v.z);
+    }
+
+    public void setScale(float x, float y, float z)
+    {
+        NativePhysicsJoint.setScale(getNative(), x, y, z);
+    }
+
+    public void getScale(Vector3f v)
+    {
+        float[] scale = getScale();
+        v.x = scale[0];
+        v.y = scale[1];
+        v.z = scale[2];
+    }
+
+    public float[] getScale()
+    {
+        return NativePhysicsJoint.getScale(getNative());
     }
 
     /**
@@ -689,6 +714,7 @@ class NativePhysicsJoint
     static native float   getFriction(long joint);
     static native long    getSkeleton(long joint);
     static native String  getName(long joint);
+    static native float[] getScale(long joint);
     static native int     getNumJoints(long joint);
 
     static native void setFriction(long joint, float friction);
@@ -699,6 +725,7 @@ class NativePhysicsJoint
     static native void setAngularDamping(long joint, float d);
     static native void setMaxAppliedImpulse(long joint, float d);
     static native void setMaxCoordVelocity(long joint, float d);
+    static native void setScale(long joint, float x, float y, float z);
 
     static native void applyTorque(long joint, float x, float y, float z);
     static native void applyCentralForce(long joint, float x, float y, float z);

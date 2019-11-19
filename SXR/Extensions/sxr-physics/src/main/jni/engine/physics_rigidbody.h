@@ -84,6 +84,7 @@ class PhysicsRigidBody : public PhysicsCollidable
 	virtual float getCcdMotionThreshold() const = 0;
 	virtual float getCcdSweptSphereRadius() const = 0;
 	virtual float getContactProcessingThreshold() const = 0;
+
 };
 
 }

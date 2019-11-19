@@ -56,12 +56,15 @@ class BulletJoint : public PhysicsJoint
 	virtual float 			 getAngularDamping() const { return mAngularDamping; }
 	virtual float            getMaxAppliedImpulse() const { return mMaxAppliedImpulse; }
 	virtual float            getMaxCoordVelocity() const { return mMaxCoordVelocity; }
+	virtual const glm::vec3& getScale() const { return mScale; }
+
 	virtual void  setName(const char*);
 	virtual void  setMass(float mass);
 	virtual void  setLinearDamping(float ld);
 	virtual void  setAngularDamping(float ad);
 	virtual void  setMaxAppliedImpulse(float v);
 	virtual void  setMaxCoordVelocity(float v);
+	virtual void  setScale(const glm::vec3& v);
 	virtual float getFriction() const;
 	virtual void  setFriction(float f);
 	virtual void  applyCentralForce(float x, float y, float z);
@@ -112,7 +115,8 @@ protected:
     JointType                mJointType;
     glm::vec3                mAxis;
     glm::vec3                mPivot;
-    int                      mJointIndex;
+	glm::vec3				 mScale;
+	int                      mJointIndex;
     float                    mMass;
     int 					 mCollisionGroup;
     int 					 mCollisionMask;

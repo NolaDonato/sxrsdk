@@ -39,6 +39,7 @@ namespace sxr
     BulletRigidBody::BulletRigidBody()
     :   mConstructionInfo(btScalar(0.0f), nullptr, nullptr),
         mRigidBody(nullptr),
+        mScale(1, 1, 1),
         mSimType(SimulationType::DYNAMIC)
     {
         mWorld = nullptr;
@@ -62,8 +63,11 @@ namespace sxr
     :   mConstructionInfo(rigidBody->isStaticObject() ? 0.f : 1.f / rigidBody->getInvMass(),
                           this, rigidBody->getCollisionShape()),
         mRigidBody(rigidBody),
+        mScale(1, 1, 1),
         mSimType(SimulationType::DYNAMIC)
     {
+        btCollisionShape* shape = rigidBody->getCollisionShape();
+
         mRigidBody->setUserPointer(this);
         mConstructionInfo.m_startWorldTransform = mRigidBody->getCenterOfMassTransform();
         mConstructionInfo.m_friction = rigidBody->getFriction();
@@ -81,7 +85,13 @@ namespace sxr
         mConstructionInfo.m_additionalLinearDampingThresholdSqr = 0;
         mConstructionInfo. m_additionalAngularDampingThresholdSqr = 0;
         mConstructionInfo.m_additionalAngularDampingFactor = 0.01f;
-
+        if (shape)
+        {
+            btVector3 scale = shape->getLocalScaling();
+            mScale.x = scale.x();
+            mScale.y = scale.y();
+            mScale.z = scale.z();
+        }
         if (rigidBody->isStaticObject())
         {
             mSimType = SimulationType::STATIC;
@@ -231,9 +241,8 @@ namespace sxr
     {
         btCollisionShape* curShape = mRigidBody->getCollisionShape();
         btCollisionShape* newShape = nullptr;
-        Transform* trans = owner->transform();
         Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
-        btVector3 ownerScale(trans->scale_x(), trans->scale_y(), trans->scale_z());
+        btVector3 scale(mScale.x, mScale.y, mScale.z);
 
         if ((curShape == nullptr) ||
             (options & SyncOptions::COLLISION_SHAPE))
@@ -247,14 +256,23 @@ namespace sxr
             options |= SyncOptions::PROPERTIES;
             curShape = newShape;
         }
-        if (options & SyncOptions::TRANSFORM)
+        if (options & SyncOptions::PROPERTIES)
         {
-            curShape->setLocalScaling(ownerScale);
-        }
-        if ((mConstructionInfo.m_mass > 0) && (options & SyncOptions::PROPERTIES))
-        {
+            curShape->setLocalScaling(scale);
             curShape->calculateLocalInertia(mConstructionInfo.m_mass,
                                             mConstructionInfo.m_localInertia);
+        }
+    }
+
+    void BulletRigidBody::setScale(const glm::vec3& s)
+    {
+        if (s != mScale)
+        {
+            mScale = s;
+            if (mRigidBody)
+            {
+                updateCollider(owner_object(), SyncOptions::PROPERTIES);
+            }
         }
     }
 

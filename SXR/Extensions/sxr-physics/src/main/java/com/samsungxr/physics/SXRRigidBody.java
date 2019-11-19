@@ -22,6 +22,8 @@ import com.samsungxr.SXRRenderData;
 import com.samsungxr.SXRNode;
 import com.samsungxr.animation.SXRSkeleton;
 
+import org.joml.Vector3f;
+
 /**
  * Represents a rigid body with physical properties that can
  * collide with other objects.
@@ -159,6 +161,29 @@ public class SXRRigidBody extends SXRPhysicsCollidable
     public void setName(String name)
     {
         NativeRigidBody.setName(getNative(), name);
+    }
+
+    public void setScale(float x, float y, float z)
+    {
+        NativeRigidBody.setScale(getNative(), x, y, z);
+    }
+
+    public void setScale(Vector3f v)
+    {
+        setScale(v.x, v.y, v.z);
+    }
+
+    public void getScale(Vector3f v)
+    {
+        float[] scale = getScale();
+        v.x = scale[0];
+        v.y = scale[1];
+        v.z = scale[2];
+    }
+
+    public float[] getScale()
+    {
+        return NativeRigidBody.getScale(getNative());
     }
 
     /**
@@ -618,82 +643,51 @@ public class SXRRigidBody extends SXRPhysicsCollidable
 
 }
 
-class NativeRigidBody {
+class NativeRigidBody
+{
     static native long ctor(float mass);
-
     static native long getComponentType();
 
-    static native float getMass(long jrigid_body);
-
-    static native String getName(long jrigid_body);
-
-    static native void setName(long jrigid_body, String name);
-
-    static native void applyCentralForce(long jrigid_body, float x, float y, float z);
-
-    static native void applyForce(long jrigid_body, float force_x, float force_y, float force_z,
-                                  float rel_pos_x, float rel_pos_y, float rel_pos_z);
-
-    static native void applyCentralImpulse(long jrigid_body, float x, float y, float z);
-
-    static native void applyImpulse(long jrigid_body, float impulse_x, float impulse_y, float impulse_z,
-                                  float rel_pos_x, float rel_pos_y, float rel_pos_z);
-
-    static native void applyTorque(long jrigid_body, float x, float y, float z);
-
-    static native void applyTorqueImpulse(long jrigid_body, float x, float y, float z);
+    static native float   getMass(long jrigid_body);
+    static native String  getName(long jrigid_body);
+    static native float[] getGravity(long jrigid_body);
+    static native float[] getLinearVelocity(long jrigid_body);
+    static native float[] getAngularVelocity(long jrigid_body);
+    static native float[] getAngularFactor(long jrigid_body);
+    static native float[] getLinearFactor(long jrigid_body);
+    static native float[] getDamping(long jrigid_body);
+    static native float   getFriction(long jrigid_body);
+    static native float   getRestitution(long jrigid_body);
+    static native float   getCcdMotionThreshold(long jrigid_body);
+    static native float   getCcdSweptSphereRadius(long jrigid_body);
+    static native float   getContactProcessingThreshold(long jrigid_body);
+    static native int     getSimulationType(long jrigid_body);
+    static native float[] getScale(long joint);
 
     static native void setGravity(long jrigid_body, float x, float y, float z);
-
     static native void setDamping(long jrigid_body, float linear, float angular);
-
     static native void setLinearVelocity(long jrigid_body, float x, float y, float z);
-
     static native void setAngularVelocity(long jrigid_body, float x, float y, float z);
-
     static native void setAngularFactor(long jrigid_body, float x, float y, float z);
-
     static native void setLinearFactor(long jrigid_body, float x, float y, float z);
-
     static native void setFriction(long jrigid_body, float n);
-
     static native void setRestitution(long jrigid_body, float n);
-
     static native void setSleepingThresholds(long jrigid_body, float linear, float angular);
-
     static native void setCcdMotionThreshold(long jrigid_body, float n);
-
     static native void setCcdSweptSphereRadius(long jrigid_body, float n);
-
     static native void setContactProcessingThreshold(long jrigid_body, float n);
-
     static native void setIgnoreCollisionCheck(long jrigid_body, long jcollision_object, boolean ignore);
-
-    static native float[] getGravity(long jrigid_body);
-
-    static native float[] getLinearVelocity(long jrigid_body);
-
-    static native float[] getAngularVelocity(long jrigid_body);
-
-    static native float[] getAngularFactor(long jrigid_body);
-
-    static native float[] getLinearFactor(long jrigid_body);
-
-    static native float[] getDamping(long jrigid_body);
-
-    static native float getFriction(long jrigid_body);
-
-    static native float getRestitution(long jrigid_body);
-
-    static native float getCcdMotionThreshold(long jrigid_body);
-
-    static native float getCcdSweptSphereRadius(long jrigid_body);
-
-    static native float getContactProcessingThreshold(long jrigid_body);
-
-    static native int getSimulationType(long jrigid_body);
-
+    static native void setScale(long jrigid_body, float x, float y, float z);
+    static native void setName(long jrigid_body, String name);
     static native void setSimulationType(long jrigid_body, int jtype);
 
+    static native void applyCentralForce(long jrigid_body, float x, float y, float z);
+    static native void applyForce(long jrigid_body, float force_x, float force_y, float force_z,
+                                  float rel_pos_x, float rel_pos_y, float rel_pos_z);
+    static native void applyCentralImpulse(long jrigid_body, float x, float y, float z);
+    static native void applyImpulse(long jrigid_body, float impulse_x, float impulse_y, float impulse_z,
+                                  float rel_pos_x, float rel_pos_y, float rel_pos_z);
+    static native void applyTorque(long jrigid_body, float x, float y, float z);
+    static native void applyTorqueImpulse(long jrigid_body, float x, float y, float z);
     static native void sync(long jrigid_body, int options);
 }

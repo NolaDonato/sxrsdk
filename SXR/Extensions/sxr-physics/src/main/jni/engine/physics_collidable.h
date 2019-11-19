@@ -45,6 +45,10 @@ namespace sxr {
 
         virtual float getFriction() const = 0;
 
+        virtual const glm::vec3& getScale() const = 0;
+
+        virtual void setScale(const glm::vec3& v) = 0;
+
         virtual void applyTorque(float x, float y, float z) = 0;
 
         virtual void sync(int options = 0) = 0;

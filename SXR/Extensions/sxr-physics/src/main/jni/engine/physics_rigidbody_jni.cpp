@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+#include "glm/gtc/type_ptr.hpp"
 #include "bullet/bullet_rigidbody.h"
 
 namespace sxr {
@@ -133,6 +133,16 @@ Java_com_samsungxr_physics_NativeRigidBody_setGravity(JNIEnv *env, jclass obj,
 }
 
 JNIEXPORT void   JNICALL
+Java_com_samsungxr_physics_NativeRigidBody_setScale(JNIEnv *env, jclass obj,
+                                                      jlong jrigid_body, jfloat x, jfloat y,
+                                                      jfloat z)
+{
+    PhysicsRigidBody *rigid_body = reinterpret_cast<PhysicsRigidBody *>(jrigid_body);
+
+    rigid_body->setScale(glm::vec3(x, y, z));
+}
+
+JNIEXPORT void   JNICALL
 Java_com_samsungxr_physics_NativeRigidBody_setDamping(JNIEnv *env, jclass obj,
                                                       jlong jrigid_body, jfloat linear,
                                                       jfloat angular)
@@ -241,7 +251,7 @@ Java_com_samsungxr_physics_NativeRigidBody_setContactProcessingThreshold(JNIEnv 
 JNIEXPORT void   JNICALL
 Java_com_samsungxr_physics_NativeRigidBody_setIgnoreCollisionCheck(JNIEnv *env, jclass obj,
                                                                    jlong jrigid_body,
-                                                                   jobject collisionObj,
+                                                                   jlong collisionObj,
                                                                    jboolean ignore)
 {
     PhysicsRigidBody *rigid_body = reinterpret_cast<PhysicsRigidBody *>(jrigid_body);
@@ -263,6 +273,18 @@ Java_com_samsungxr_physics_NativeRigidBody_getGravity(JNIEnv *env, jclass obj,
 
     env->SetFloatArrayRegion(result, 0, 3, temp);
 
+    return result;
+}
+
+JNIEXPORT jfloatArray   JNICALL
+Java_com_samsungxr_physics_NativeRigidBody_getScale(JNIEnv *env, jclass obj,
+                                                      jlong jrigid_body)
+{
+    PhysicsRigidBody *rigid_body = reinterpret_cast<PhysicsRigidBody *>(jrigid_body);
+    const glm::vec3& v = rigid_body->getScale();
+    jfloatArray result = env->NewFloatArray(3);
+
+    env->SetFloatArrayRegion(result, 0, 3, glm::value_ptr(v));
     return result;
 }
 

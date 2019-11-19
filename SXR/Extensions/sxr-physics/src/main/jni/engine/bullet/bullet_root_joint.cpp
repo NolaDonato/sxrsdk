@@ -76,6 +76,14 @@ namespace sxr {
         mAngularDamping = mMultiBody->getAngularDamping();
         if (mCollider)
         {
+            btCollisionShape* shape = mCollider->getCollisionShape();
+            if (shape)
+            {
+                btVector3 scale = shape->getLocalScaling();
+                mScale.x = scale.x();
+                mScale.y = scale.y();
+                mScale.z = scale.z();
+            }
             mCollider->setUserPointer(this);
         }
         for (int i = 0; i < mNumJoints; ++i)
@@ -160,40 +168,12 @@ namespace sxr {
         BulletJoint* childJoint = static_cast<BulletJoint*>(child);
         int nextJointIndex = getNumJoints();
 
-        if (mMultiBody)
-        {
-            detachFromWorld(false);
-            btMultiBody* mb = new btMultiBody(nextJointIndex + 1,
-                                              mMultiBody->getBaseMass(),
-                                              mMultiBody->getBaseInertia(),
-                                              mMultiBody->hasFixedBase(),
-                                              mMultiBody->getCanSleep());
-            for (int i = 0; i < mNumJoints; ++i)
-            {
-                btMultibodyLink& oldLink = mMultiBody->getLink(i);
-                btMultibodyLink& newLink = mb->getLink(i);
-                btMultiBodyLinkCollider* coll = newLink.m_collider;
-
-                newLink = oldLink;
-                if (coll != nullptr)
-                {
-                    coll->m_multiBody = mb;
-                }
-            }
-            mb->setUserPointer(this);
-            mb->setBaseCollider(mMultiBody->getBaseCollider());
-            mb->setBaseWorldTransform(mMultiBody->getBaseWorldTransform());
-            mb->setBaseName(getName());
-            mb->setLinearDamping(mMultiBody->getLinearDamping());
-            mb->setAngularDamping(mMultiBody->getAngularDamping());
-            mb->setMaxAppliedImpulse(mMultiBody->getMaxAppliedImpulse());
-            mb->setMaxCoordinateVelocity(mMultiBody->getMaxCoordinateVelocity());
-            mb->finalizeMultiDof();
-            delete mMultiBody;
-            mMultiBody = mb;
-        }
         mJoints.resize(++mNumJoints);
         mJoints[nextJointIndex] = childJoint;
+        if (mMultiBody)
+        {
+            mMultiBody->setNumLinks(nextJointIndex + 1);
+        }
         childJoint->update(nextJointIndex, this);
         childJoint->sync(SyncOptions::ALL);
         LOGD("BULLET: adding joint %s at index %d to body",child->getName(), nextJointIndex);
@@ -412,10 +392,9 @@ namespace sxr {
     {
         btCollisionShape* curShape = nullptr;
         btCollisionShape* newShape = nullptr;
-        Transform* trans = owner->transform();
         btVector3 localInertia;
         Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
-        btVector3 ownerScale(trans->scale_x(), trans->scale_y(), trans->scale_z());
+        btVector3 scale(mScale.x, mScale.y, mScale.z);
 
         if (collider == nullptr)
         {
@@ -450,18 +429,16 @@ namespace sxr {
             }
             if (curShape)
             {
-                ownerScale = curShape->getLocalScaling();
+                scale = curShape->getLocalScaling();
+                options |= SyncOptions::TRANSFORM | SyncOptions::PROPERTIES;
                 delete curShape;
                 curShape = newShape;
             }
         }
         mCollider->setUserPointer(this);
-        if (options & SyncOptions::TRANSFORM)
-        {
-            curShape->setLocalScaling(ownerScale);
-        }
         if (options & SyncOptions::PROPERTIES)
         {
+            curShape->setLocalScaling(scale);
             curShape->calculateLocalInertia(getMass(), localInertia);
             mMultiBody->setBaseInertia(localInertia);
         }

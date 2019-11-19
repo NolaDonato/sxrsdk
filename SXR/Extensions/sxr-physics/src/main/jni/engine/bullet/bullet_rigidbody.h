@@ -38,13 +38,15 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
 
     virtual void onDisable(Node* owner);
     virtual void onEnable(Node* owner);
-    virtual const char* getName() const;
     virtual void setName(const char*);
     virtual void setSimulationType(SimulationType type);
     virtual void setFriction(float f);
     virtual void sync(int options = 0);
     virtual void getWorldTransform(btTransform &worldTrans) const;
     virtual void setWorldTransform(const btTransform &worldTrans);
+    virtual void setScale(const glm::vec3& v);
+    virtual const glm::vec3& getScale() const { return mScale; }
+    virtual const char* getName() const;
 
     void    setCenterOfMass(Transform *t);
     void    getRotation(float &w, float &x, float &y, float &z);
@@ -119,6 +121,7 @@ private:
     btRigidBody*        mRigidBody;
     SimulationType      mSimType;
     BulletWorld*        mWorld;
+    glm::vec3           mScale;
     mutable std::string mName;
 
     friend class BulletWorld;
