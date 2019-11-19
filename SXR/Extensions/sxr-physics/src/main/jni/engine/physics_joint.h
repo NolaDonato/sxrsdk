@@ -44,38 +44,32 @@ class PhysicsJoint :  public PhysicsCollidable
 
 	PhysicsJoint(float mass, int numJoints) : PhysicsCollidable(PhysicsJoint::getComponentType()) { }
 	PhysicsJoint(PhysicsJoint* parent, JointType type, int boneID, float mass) : PhysicsCollidable(PhysicsJoint::getComponentType()) { }
-
     virtual ~PhysicsJoint() {}
-
 	static long long getComponentType() { return COMPONENT_TYPE_PHYSICS_JOINT; }
 
-	virtual JointType getJointType() const = 0;
-
-	virtual int getJointIndex() const = 0;
-
+	virtual JointType        getJointType() const = 0;
+	virtual int              getNumJoints() const = 0;
+	virtual int              getJointIndex() const = 0;
 	virtual const glm::vec3& getPivot() const = 0;
-
-	virtual void setPivot(const glm::vec3& pivot) = 0;
-
-	virtual PhysicsJoint* getParent() const = 0;
-
+	virtual PhysicsJoint*    getParent() const = 0;
 	virtual const glm::vec3& getAxis() const = 0;
+	virtual float 			 getLinearDamping() const = 0;
+	virtual float 			 getAngularDamping() const = 0;
+	virtual Skeleton*        getSkeleton() const = 0;
+	virtual float            getMaxAppliedImpulse() const = 0;
+	virtual float            getMaxCoordVelocity() const = 0;
 
-	virtual void setAxis(const glm::vec3& axis) = 0;
-
-	virtual void applyCentralForce(float x, float y, float z) = 0;
-
-	virtual void applyTorque(float x, float y, float z) = 0;
-
-	virtual void applyTorque(float t) = 0;
-
-	virtual Skeleton* getSkeleton() const = 0;
-
-	virtual int getNumJoints() const = 0;
-
-	virtual void removeJointFromBody(int index) = 0;
-
-	virtual int addJointToBody(PhysicsJoint* childJoint) = 0;
+	virtual void  setAxis(const glm::vec3& axis) = 0;
+	virtual void  setPivot(const glm::vec3& pivot) = 0;
+	virtual void  setLinearDamping(float ld) = 0;
+	virtual void  setAngularDamping(float ad) = 0;
+	virtual void  setMaxAppliedImpulse(float v) = 0;
+	virtual void  setMaxCoordVelocity(float v) = 0;
+	virtual void  applyCentralForce(float x, float y, float z) = 0;
+	virtual void  applyTorque(float x, float y, float z) = 0;
+	virtual void  applyTorque(float t) = 0;
+	virtual void  removeJointFromBody(int index) = 0;
+	virtual int   addJointToBody(PhysicsJoint* childJoint) = 0;
 };
 
 }

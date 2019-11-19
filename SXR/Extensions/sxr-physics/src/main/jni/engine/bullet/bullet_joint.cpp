@@ -62,6 +62,8 @@ namespace sxr {
       mPivot(0, 0, 0),
       mWorld(nullptr),
       mMass(mass),
+      mLinearDamping(0),
+      mAngularDamping(0),
       mCollisionGroup(btBroadphaseProxy::DefaultFilter),
       mCollisionMask(btBroadphaseProxy::AllFilter),
       mJointType(JointType::sphericalJoint)
@@ -78,6 +80,8 @@ namespace sxr {
       mMass(mass),
       mPivot(0, 0, 0),
       mJointType(jointType),
+      mLinearDamping(0),
+      mAngularDamping(0),
       mWorld(nullptr)
     {
     }
@@ -94,6 +98,8 @@ namespace sxr {
         mCollider = link.m_collider;
         mJointType = (JointType) link.m_jointType;
         mMass = link.m_mass;
+        mLinearDamping = mMultiBody->getLinearDamping();
+        mAngularDamping = mMultiBody->getAngularDamping();
     }
 
     void BulletJoint::setName(const char* name)
@@ -177,6 +183,26 @@ namespace sxr {
             return mParent->findRoot();
         }
         return nullptr;
+    }
+
+    void BulletJoint::setLinearDamping(float ld)
+    {
+        mLinearDamping = ld;
+    }
+
+    void BulletJoint::setAngularDamping(float ad)
+    {
+        mAngularDamping = ad;
+    }
+
+    void BulletJoint::setMaxAppliedImpulse(float v)
+    {
+        mMaxAppliedImpulse = v;
+    }
+
+    void BulletJoint::setMaxCoordVelocity(float v)
+    {
+        mMaxCoordVelocity = v;
     }
 
     void BulletJoint::setMass(float mass)
@@ -350,10 +376,7 @@ namespace sxr {
         btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
 
         link.m_userPtr = this;
-        if ((mCollider == nullptr) || (options & SyncOptions::COLLISION_SHAPE))
-        {
-            updateCollider(owner_object(), options);
-        }
+        updateCollider(owner_object(), options);
         if (options & SyncOptions::TRANSFORM)
         {
             setPhysicsTransform();
@@ -373,7 +396,6 @@ namespace sxr {
         else if (options & SyncOptions::PROPERTIES)
         {
             link.m_mass = mMass;
-            return;
             switch (mJointType)
             {
                 case JointType::fixedJoint: updateFixed(); break;
@@ -388,7 +410,7 @@ namespace sxr {
     void BulletJoint::updateCollider(Node* owner, int options)
     {
         btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
-        btCollisionShape* oldShape = nullptr;
+        btCollisionShape* curShape = nullptr;
         btCollisionShape* newShape = nullptr;
         Transform* trans = owner->transform();
         btVector3 localInertia;
@@ -399,39 +421,51 @@ namespace sxr {
         {
             return;
         }
-        newShape = convertCollider2CollisionShape(collider);
-        if (mCollider && ((options & SyncOptions::COLLISION_SHAPE) != 0))
-        {
-            oldShape = mCollider->getCollisionShape();
-            if (mWorld)
-            {
-                btDynamicsWorld* bw = mWorld->getPhysicsWorld();
-                bw->removeCollisionObject(mCollider);
-                mCollider->setCollisionShape(newShape);
-                bw->addCollisionObject(mCollider);
-            }
-            else
-            {
-                mCollider->setCollisionShape(newShape);
-            }
-            if (oldShape)
-            {
-                ownerScale = oldShape->getLocalScaling();
-                delete oldShape;
-            }
-        }
-        else
+        if (mCollider == nullptr)
         {
             mCollider = new btMultiBodyLinkCollider(mMultiBody, mJointIndex);
             LOGV("BULLET: creating link collider %s", getName());
+            curShape = newShape = convertCollider2CollisionShape(collider);
             mCollider->setCollisionShape(newShape);
             mCollider->m_link = getJointIndex();
             link.m_collider = mCollider;
+            options |= SyncOptions::TRANSFORM | SyncOptions::PROPERTIES;
+        }
+        else
+        {
+            curShape = mCollider->getCollisionShape();
+            if ((options & SyncOptions::COLLISION_SHAPE) != 0)
+            {
+                newShape = convertCollider2CollisionShape(collider);
+                if (mWorld)
+                {
+                    btDynamicsWorld* bw = mWorld->getPhysicsWorld();
+                    bw->removeCollisionObject(mCollider);
+                    mCollider->setCollisionShape(newShape);
+                    bw->addCollisionObject(mCollider);
+                }
+                else
+                {
+                    mCollider->setCollisionShape(newShape);
+                }
+            }
+            if (curShape)
+            {
+                ownerScale = curShape->getLocalScaling();
+                delete curShape;
+                curShape = newShape;
+            }
         }
         mCollider->setUserPointer(this);
-        newShape->setLocalScaling(ownerScale);
-        newShape->calculateLocalInertia(getMass(), localInertia);
-        link.m_inertiaLocal = localInertia;
+        if (options & SyncOptions::TRANSFORM)
+        {
+            curShape->setLocalScaling(ownerScale);
+        }
+        if (options & SyncOptions::PROPERTIES)
+        {
+            curShape->calculateLocalInertia(getMass(), localInertia);
+            link.m_inertiaLocal = localInertia;
+        }
     }
 
     void BulletJoint::setCollisionProperties(int collisionGroup, int collidesWith)

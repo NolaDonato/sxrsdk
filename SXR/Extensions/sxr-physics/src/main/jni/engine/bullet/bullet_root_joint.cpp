@@ -72,6 +72,8 @@ namespace sxr {
         mJoints.resize(mNumJoints);
         mMultiBody->setUserPointer(this);
         mCollider = mMultiBody->getBaseCollider();
+        mLinearDamping = mMultiBody->getLinearDamping();
+        mAngularDamping = mMultiBody->getAngularDamping();
         if (mCollider)
         {
             mCollider->setUserPointer(this);
@@ -117,6 +119,42 @@ namespace sxr {
 
     int BulletRootJoint::getNumJoints() const { return mNumJoints + 1; }
 
+    void BulletRootJoint::setLinearDamping(float ld)
+    {
+        mLinearDamping = ld;
+        if (mMultiBody)
+        {
+            mMultiBody->setLinearDamping(ld);
+        }
+    }
+
+    void BulletRootJoint::setAngularDamping(float ad)
+    {
+        mAngularDamping = ad;
+        if (mMultiBody)
+        {
+            mMultiBody->setAngularDamping(ad);
+        }
+    }
+
+    void BulletRootJoint::setMaxAppliedImpulse(float v)
+    {
+        mMaxAppliedImpulse = v;
+        if (mMultiBody)
+        {
+            mMultiBody->setMaxAppliedImpulse(v);
+        }
+    }
+
+    void BulletRootJoint::setMaxCoordVelocity(float v)
+    {
+        mMaxCoordVelocity = v;
+        if (mMultiBody)
+        {
+            mMultiBody->setMaxCoordinateVelocity(v);
+        }
+    }
+
     int BulletRootJoint::addJointToBody(PhysicsJoint* child)
     {
         BulletJoint* childJoint = static_cast<BulletJoint*>(child);
@@ -146,6 +184,10 @@ namespace sxr {
             mb->setBaseCollider(mMultiBody->getBaseCollider());
             mb->setBaseWorldTransform(mMultiBody->getBaseWorldTransform());
             mb->setBaseName(getName());
+            mb->setLinearDamping(mMultiBody->getLinearDamping());
+            mb->setAngularDamping(mMultiBody->getAngularDamping());
+            mb->setMaxAppliedImpulse(mMultiBody->getMaxAppliedImpulse());
+            mb->setMaxCoordinateVelocity(mMultiBody->getMaxCoordinateVelocity());
             mb->finalizeMultiDof();
             delete mMultiBody;
             mMultiBody = mb;
@@ -188,9 +230,14 @@ namespace sxr {
                                           mMultiBody->hasFixedBase(),
                                           mMultiBody->getCanSleep());
         mb->setUserPointer(this);
+        mb->setHasSelfCollision(mMultiBody->hasSelfCollision());
         mb->setBaseCollider(mMultiBody->getBaseCollider());
         mb->setBaseWorldTransform(mMultiBody->getBaseWorldTransform());
         mb->setBaseName(getName());
+        mb->setLinearDamping(mMultiBody->getLinearDamping());
+        mb->setAngularDamping(mMultiBody->getAngularDamping());
+        mb->setMaxAppliedImpulse(mMultiBody->getMaxAppliedImpulse());
+        mb->setMaxCoordinateVelocity(mMultiBody->getMaxCoordinateVelocity());
         mb->finalizeMultiDof();
         mJoints.erase(mJoints.begin() + jointIndex);
         --mNumJoints;
@@ -363,40 +410,61 @@ namespace sxr {
 
     void BulletRootJoint::updateCollider(Node* owner, int options)
     {
-        btCollisionShape* oldShape = nullptr;
+        btCollisionShape* curShape = nullptr;
         btCollisionShape* newShape = nullptr;
-        btVector3 ownerScale;
         Transform* trans = owner->transform();
         btVector3 localInertia;
         Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
+        btVector3 ownerScale(trans->scale_x(), trans->scale_y(), trans->scale_z());
 
         if (collider == nullptr)
         {
             return;
         }
-        newShape = convertCollider2CollisionShape(collider);
-        if (mCollider && ((options & SyncOptions::COLLISION_SHAPE) != 0))
+        if (mCollider == nullptr)
         {
-            oldShape = mCollider->getCollisionShape();
+            mCollider = new btMultiBodyLinkCollider(mMultiBody, mJointIndex);
+            LOGV("BULLET: creating link collider %s", getName());
+            curShape = newShape = convertCollider2CollisionShape(collider);
             mCollider->setCollisionShape(newShape);
-            if (oldShape)
-            {
-                delete oldShape;
-            }
+            mMultiBody->setBaseCollider(mCollider);
+            options |= SyncOptions::TRANSFORM | SyncOptions::PROPERTIES;
         }
         else
         {
-            mCollider = new btMultiBodyLinkCollider(mMultiBody, mJointIndex);
-            LOGV("BULLET: creating base collider %s", getName());
-            mCollider->setCollisionShape(newShape);
-            mCollider->m_link = getJointIndex();
-            mCollider->setUserPointer(this);
-            mMultiBody->setBaseCollider(mCollider);
+            curShape = mCollider->getCollisionShape();
+            if ((options & SyncOptions::COLLISION_SHAPE) != 0)
+            {
+                newShape = convertCollider2CollisionShape(collider);
+                if (mWorld)
+                {
+                    btDynamicsWorld* bw = mWorld->getPhysicsWorld();
+                    bw->removeCollisionObject(mCollider);
+                    mCollider->setCollisionShape(newShape);
+                    bw->addCollisionObject(mCollider);
+                }
+                else
+                {
+                    mCollider->setCollisionShape(newShape);
+                }
+            }
+            if (curShape)
+            {
+                ownerScale = curShape->getLocalScaling();
+                delete curShape;
+                curShape = newShape;
+            }
         }
-        ownerScale.setValue(trans->scale_x(), trans->scale_y(), trans->scale_z());
-        newShape->setLocalScaling(ownerScale);
-        newShape->calculateLocalInertia(getMass(), localInertia);
-        mMultiBody->setBaseInertia(localInertia);
+        mCollider->setUserPointer(this);
+        if (options & SyncOptions::TRANSFORM)
+        {
+            curShape->setLocalScaling(ownerScale);
+        }
+        if (options & SyncOptions::PROPERTIES)
+        {
+            curShape->calculateLocalInertia(getMass(), localInertia);
+            mMultiBody->setBaseInertia(localInertia);
+        }
     }
 
 
@@ -459,11 +527,14 @@ namespace sxr {
                                          mMass,
                                          btVector3(0, 0, 0),
                                          (mMass == 0),
-                                         false);
+                                         true);
             mMultiBody->setUserPointer(this);
-            mMultiBody->setCanSleep(false);
             mMultiBody->setHasSelfCollision(false);
             mMultiBody->setBaseMass(mMass);
+            mMultiBody->setLinearDamping(mLinearDamping);
+            mMultiBody->setAngularDamping(mAngularDamping);
+            mMultiBody->setMaxAppliedImpulse(mMaxAppliedImpulse);
+            mMultiBody->setMaxCoordinateVelocity(mMaxCoordVelocity);
         }
         sync(SyncOptions::PROPERTIES | SyncOptions::TRANSFORM);
         for (int i = 0; i < mNumJoints; ++i)

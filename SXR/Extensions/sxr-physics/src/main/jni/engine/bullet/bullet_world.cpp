@@ -156,13 +156,14 @@ void BulletWorld::addConstraint(PhysicsConstraint *constraint)
     {
         btMultiBodyConstraint* constr = static_cast<btMultiBodyConstraint *>(constraint->getUnderlying());
         dynamic_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld)->addMultiBodyConstraint(constr);
+        LOGD("BULLET: constraint for joint %s added to world", joint->getName());
     }
     else if (body != nullptr)
     {
         btTypedConstraint* constr = static_cast<btTypedConstraint *>(constraint->getUnderlying());
         mPhysicsWorld->addConstraint(constr, true);
+        LOGD("BULLET: constraint for rigid body %s added to world", body->getName());
     }
-
 }
 
 void BulletWorld::removeConstraint(PhysicsConstraint *constraint)
@@ -174,10 +175,12 @@ void BulletWorld::removeConstraint(PhysicsConstraint *constraint)
     if (body != nullptr)
     {
         mPhysicsWorld->removeConstraint(static_cast<btTypedConstraint *>(constraint->getUnderlying()));
+        LOGD("BULLET: constraint for rigid body %s removed from world", body->getName());
     }
     else if (mIsMultiBody && (joint != nullptr))
     {
         dynamic_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld)->removeMultiBodyConstraint(static_cast<btMultiBodyConstraint *>(constraint->getUnderlying()));
+        LOGD("BULLET: constraint for joint %s removed from world", joint->getName());
     }
 }
 
@@ -212,6 +215,7 @@ void BulletWorld::addRigidBody(PhysicsRigidBody* body)
     BulletRigidBody* rb = static_cast<BulletRigidBody*>(body);
     rb->onAddedToWorld(this);
     mPhysicsWorld->addRigidBody(rb->getRigidBody());
+    LOGD("BULLET: rigid body %s added to world", body->getName());
 }
 
 void BulletWorld::addRigidBody(PhysicsRigidBody* body, int collisionGroup, int collidesWith)
@@ -219,6 +223,7 @@ void BulletWorld::addRigidBody(PhysicsRigidBody* body, int collisionGroup, int c
     BulletRigidBody* rb = static_cast<BulletRigidBody*>(body);
     rb->onAddedToWorld(this);
     mPhysicsWorld->addRigidBody(rb->getRigidBody(), collisionGroup, collidesWith);
+    LOGD("BULLET: rigid body %s added to world", body->getName());
 }
 
 void BulletWorld::removeRigidBody(PhysicsRigidBody *body)

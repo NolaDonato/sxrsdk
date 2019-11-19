@@ -168,7 +168,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
                                           jointType, jointIndex, mass));
         if (jointIndex < 1)
         {
-            throw new IllegalArgumentException("BoneID must be greater than zero");
+            throw new IllegalArgumentException("Joint index must be greater than zero");
         }
         mType = getComponentType();
         mSkeleton = parent.mSkeleton;
@@ -183,6 +183,11 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
         mType = getComponentType();
         mCollisionGroup = -1;
         mBoneIndex = 0;
+    }
+
+    static public long getComponentType()
+    {
+        return NativePhysicsJoint.getComponentType();
     }
 
     /**
@@ -236,17 +241,13 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
         NativePhysicsJoint.setPivot(getNative(), x, y, z);
     }
 
-    static public long getComponentType()
-    {
-        return NativePhysicsJoint.getComponentType();
-    }
-
     /**
      * Returns the mass of the joint.
      *
      * @return The mass of the joint.
      */
-    public float getMass() {
+    public float getMass()
+    {
         return NativePhysicsJoint.getMass(getNative());
     }
 
@@ -256,8 +257,139 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
      * @return The collision group id as an int
      */
     @Override
-    public int getCollisionGroup() {
+    public int getCollisionGroup()
+    {
         return mCollisionGroup;
+    }
+
+    /**
+     * Set the linear damping for the multibody system.
+     * Linear damping can only be set for the root of the system
+     * and applies to all of the joints.
+     * @param damping   linear damping value between 0 and 1.
+     *                  0 = no damping, 1 = maximum damping
+     * @see #setAngularDamping(float)
+     * @see #getLinearDamping()
+     */
+    public void setLinearDamping(float damping)
+    {
+        if ((damping < 0) || (damping > 1))
+        {
+            throw new IllegalArgumentException("The damping value must be between 0 and 1");
+        }
+        if (getJointIndex() > 0)
+        {
+            throw new UnsupportedOperationException("Linear damping can only be applied to the root of the multibody system");
+        }
+        NativePhysicsJoint.setLinearDamping(getNative(), damping);
+    }
+
+    /**
+     * Set the angular damping for the multibody system.
+     * Angular damping can only be set for the root of the system
+     * and applies to all of the joints.
+     * @param damping   linear damping value between 0 and 1.
+     *                  0 = no damping, 1 = maximum damping
+     * @see #setLinearDamping(float)
+     * @see #getAngularDamping()
+     */
+    public void setAngularDamping(float damping)
+    {
+        if ((damping < 0) || (damping > 1))
+        {
+            throw new IllegalArgumentException("The damping value must be between 0 and 1");
+        }
+        if (getJointIndex() > 0)
+        {
+            throw new UnsupportedOperationException("Linear damping can only be applied to the root of the multibody system");
+        }
+        NativePhysicsJoint.setAngularDamping(getNative(), damping);
+    }
+
+    /**
+     * Returns the linear damping for the multibody system.
+     *
+     * @return linear damping value between 0 and 1
+     * @see #setLinearDamping(float)
+     */
+    public float getLinearDamping()
+    {
+        return NativePhysicsJoint.getLinearDamping(getNative());
+    }
+
+    /**
+     * Returns the linear damping for the multibody system.
+     *
+     * @return linear damping value between 0 and 1
+     * @see #setAngularDamping(float)
+     */
+    public float getAngularDamping()
+    {
+        return NativePhysicsJoint.getAngularDamping(getNative());
+    }
+
+
+    /**
+     * Set the maximum applied impulse for the multibody system.
+     * This factor can only be set for the root of the system
+     * and applies to all of the joints.
+     * @param v   non-negative maximum applied impulse
+     * @see #setLinearDamping(float)
+     * @see #getAngularDamping()
+     */
+    public void setMaxAppliedImpulse(float v)
+    {
+        if (v < 0)
+        {
+            throw new IllegalArgumentException("The maximum applied impulse value cannot be negative");
+        }
+        if (getJointIndex() > 0)
+        {
+            throw new UnsupportedOperationException("Maximum applied impulse can only be set on the root of the multibody system");
+        }
+        NativePhysicsJoint.setMaxAppliedImpulse(getNative(), v);
+    }
+
+    /**
+     * Set the maximum applied impulse for the multibody system.
+     * This factor can only be set for the root of the system
+     * and applies to all of the joints.
+     * @param v   non-negative maximum applied impulse
+     * @see #getMaxCoordVelocity()
+     */
+    public void setMaxCoordVelocity(float v)
+    {
+        if (v < 0)
+        {
+            throw new IllegalArgumentException("The maximum coordinate velocity cannot be negative");
+        }
+        if (getJointIndex() > 0)
+        {
+            throw new UnsupportedOperationException("Maximum coordinate velocity can only be set on the root of the multibody system");
+        }
+        NativePhysicsJoint.setMaxCoordVelocity(getNative(), v);
+    }
+
+    /**
+     * Returns the maximum applied impluse for the multibody system.
+     *
+     * @return maximum applied impulse
+     * @see #setMaxAppliedImpulse(float)
+     */
+    public float getMaxAppliedImpulse()
+    {
+        return NativePhysicsJoint.getMaxAppliedImpulse(getNative());
+    }
+
+    /**
+     * Returns the maximum applied impluse for the multibody system.
+     *
+     * @return maximum applied impulse
+     * @see #setMaxCoordVelocity(float)
+     */
+    public float getMaxCoordVelocity()
+    {
+        return NativePhysicsJoint.getMaxCoordVelocity(getNative());
     }
 
     /**
@@ -545,38 +677,33 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
 class NativePhysicsJoint
 {
     static native long ctorRoot(float mass, int numBones);
-
     static native long ctorLink(long parent_joint, int jointType, int boneid, float mass);
-
     static native long getComponentType();
 
-    static native float getMass(long joint);
-
-    static native int getJointIndex(long joint);
+    static native float   getMass(long joint);
+    static native int     getJointIndex(long joint);
+    static native float   getLinearDamping(long joint);
+    static native float   getAngularDamping(long joint);
+    static native float   getMaxAppliedImpulse(long joint);
+    static native float   getMaxCoordVelocity(long joint);
+    static native float   getFriction(long joint);
+    static native long    getSkeleton(long joint);
+    static native String  getName(long joint);
+    static native int     getNumJoints(long joint);
 
     static native void setFriction(long joint, float friction);
-
-    static native float getFriction(long joint);
-
     static native void setAxis(long joint, float x, float y, float z);
-
     static native void setPivot(long joint, float x, float y, float z);
+    static native void setName(long joint, String name);
+    static native void setLinearDamping(long joint, float d);
+    static native void setAngularDamping(long joint, float d);
+    static native void setMaxAppliedImpulse(long joint, float d);
+    static native void setMaxCoordVelocity(long joint, float d);
 
     static native void applyTorque(long joint, float x, float y, float z);
-
     static native void applyCentralForce(long joint, float x, float y, float z);
 
-    static native long getSkeleton(long joint);
-
-    static native String getName(long joint);
-
-    static native void setName(long joint, String name);
-
-    static native int getNumJoints(long joint);
-
     static native void removeJointAt(long joint, int index);
-
-    static native int addJoint(long rootjoint, long newjoint);
-
+    static native int  addJoint(long rootjoint, long newjoint);
     static native void sync(long joint, int options);
 }

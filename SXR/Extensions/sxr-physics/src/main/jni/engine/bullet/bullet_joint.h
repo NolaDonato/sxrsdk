@@ -52,8 +52,16 @@ class BulletJoint : public PhysicsJoint
 	virtual BulletRootJoint* findRoot();
 	virtual const char*      getName() const;
 	virtual Skeleton*        getSkeleton() const;
+	virtual float 			 getLinearDamping() const { return mLinearDamping; }
+	virtual float 			 getAngularDamping() const { return mAngularDamping; }
+	virtual float            getMaxAppliedImpulse() const { return mMaxAppliedImpulse; }
+	virtual float            getMaxCoordVelocity() const { return mMaxCoordVelocity; }
 	virtual void  setName(const char*);
 	virtual void  setMass(float mass);
+	virtual void  setLinearDamping(float ld);
+	virtual void  setAngularDamping(float ad);
+	virtual void  setMaxAppliedImpulse(float v);
+	virtual void  setMaxCoordVelocity(float v);
 	virtual float getFriction() const;
 	virtual void  setFriction(float f);
 	virtual void  applyCentralForce(float x, float y, float z);
@@ -108,6 +116,10 @@ protected:
     float                    mMass;
     int 					 mCollisionGroup;
     int 					 mCollisionMask;
+    float 					 mLinearDamping;
+    float 					 mAngularDamping;
+    float                    mMaxAppliedImpulse;
+    float                    mMaxCoordVelocity;
 };
 
 class BulletRootJoint : public BulletJoint
@@ -122,7 +134,13 @@ public:
     virtual Skeleton*        getSkeleton() const;
     virtual BulletJoint*     getJoint(int jointIndex) { return mJoints[jointIndex]; }
 	virtual int  getNumJoints() const;
+
     virtual void setMass(float mass);
+    virtual void setLinearDamping(float ld);
+    virtual void setAngularDamping(float ad);
+    virtual void setMaxAppliedImpulse(float v);
+    virtual void setMaxCoordVelocity(float v);
+
     virtual void applyCentralForce(float x, float y, float z);
     virtual void applyTorque(float x, float y, float z);
     virtual void applyTorque(float t);

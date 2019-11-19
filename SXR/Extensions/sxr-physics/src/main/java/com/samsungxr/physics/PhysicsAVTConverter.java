@@ -462,7 +462,11 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         int i = -1;
         int nextJointIndex = 0;
         boolean extendingSkel = false;
+        float maximpulse = (float) multibody.optDouble("Max Applied Impulse", 1000.0f);
+        float maxcoordvel = (float) multibody.optDouble("Max Coord Vel", 100.0f);
 
+        mAngularDamping = (float) multibody.optDouble("Angular Damping", 0.0f);
+        mLinearDamping = (float) multibody.optDouble("Linear Damping", 0.0f);
         if ((mSkeleton != null) && (mAttachBoneName != null))
         {
             nextJointIndex = mSkeleton.getNumBones();
@@ -490,10 +494,15 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         {
             String name = basebone.getString("Target Bone");
             rootJoint = new SXRPhysicsJoint(mSkeleton, mass, newJoints.size(), SXRCollisionMatrix.DEFAULT_GROUP);
-            rootJoint.setFriction((float) link.getJSONObject("Physic Material").getDouble("Friction"));
+            rootJoint.setFriction((float) basebone.getJSONObject("Physic Material").getDouble("Friction"));
             rootJoint.setBoneIndex(0);
             rootJoint.setName(name);
-            mJoints.add(0, rootJoint);
+            rootJoint.setLinearDamping(mLinearDamping);
+            rootJoint.setAngularDamping(mAngularDamping);
+            rootJoint.setMaxAppliedImpulse(maximpulse);
+            rootJoint.setMaxCoordVelocity(maxcoordvel);
+            mJoints.set(0, rootJoint);
+            Log.e(TAG, "creating root joint %s mass = %3f", basebone.getString("Name"), mass);
             parseCollider(link, 0, name);
         }
         else
@@ -537,12 +546,11 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         }
         SXRNode root = mSkeleton.getBone(mAttachBoneIndex);
         SXRCollider collider = mColliders.get(mAttachBoneIndex);
-        if (collider == null)
+        if (collider != null)
         {
-            throw new UnsupportedOperationException("Collider missing for joint " + root.getName());
+            root.detachComponent(SXRCollider.getComponentType());
+            root.attachComponent(collider);
         }
-        root.detachComponent(SXRCollider.getComponentType());
-        root.attachComponent(collider);
         root.attachComponent(mJoints.get(mAttachBoneIndex));
         for (int i = mAttachBoneIndex + 1; i < mSkeleton.getNumBones(); ++i)
         {
@@ -569,6 +577,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             }
         }
     }
+
     private SXRCollider parseCollider(JSONObject link, int boneIndex, String targetBone) throws JSONException
     {
         SXRContext ctx = mRoot.getSXRContext();
@@ -582,6 +591,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             String type = c.optString("type");
             SXRNode owner = mSkeleton.getBone(mSkeleton.getBoneIndex(targetBone));
             SXRCollider collider;
+            String name = colliderRoot.getString("Name");
 
             if (owner == null)
             {
@@ -694,12 +704,12 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         String nodeName = link.getString("Target Bone");
         int jointIndex = mSkeleton.getBoneIndex(nodeName);
         SXRNode node = mSkeleton.getBone(jointIndex);
-        JSONArray dofdata = link.getJSONArray("DOF Data");
         float[] pivotB = new float[] { 0, 0, 0 };
         JSONObject trans = link.getJSONObject("Transform");
         JSONObject pos = trans.getJSONObject("Position");
         JSONObject piv = link.optJSONObject("Pivot Pos.");
         SXRPhysicsJoint joint = (SXRPhysicsJoint) node.getComponent(SXRPhysicsJoint.getComponentType());
+        float friction = (float) link.getJSONObject("Physic Material").getDouble("Friction");
 
         if (piv != null)
         {
@@ -708,12 +718,13 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             pivotB[2] = (float) (piv.getDouble("Z") - pos.getDouble("Z"));
         }
         JSONObject v = link.getJSONObject("Axis A");
-        Vector3f axis = new Vector3f((float) v.getDouble("X"),
+        Vector3f axisA = new Vector3f((float) v.getDouble("X"),
                 (float) v.getDouble("Y"),
                 (float) v.getDouble("Z"));
         parseCollider(link, jointIndex, nodeName);
         if (joint == null)
         {
+
             joint = createJoint(link, jointIndex, extendingSkeleton);
             if (joint == null)
             {
@@ -721,20 +732,20 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             }
             joint.setName(nodeName);
             joint.setPivot(pivotB[0], pivotB[1], pivotB[2]);
-            joint.setAxis(axis.x, axis.y, axis.z);
-            joint.setFriction((float) link.getJSONObject("Physic Material").getDouble("Friction"));
+            joint.setAxis(axisA.x, axisA.y, axisA.z);
+            joint.setFriction(friction);
         }
         else if (jointIndex > mAttachBoneIndex)
         {
             Log.e(TAG, "updating joint %s pivotB(%3f, %3f, %3f) axis(%3f, %3f, %3f)",
                   link.getString("Name"),
                   pivotB[0], pivotB[1], pivotB[2],
-                  axis.x, axis.y, axis.z);
+                  axisA.x, axisA.y, axisA.z);
             joint.setPivot(pivotB[0], pivotB[1], pivotB[2]);
-            joint.setAxis(axis.x, axis.y, axis.z);
-            joint.setFriction((float) link.getJSONObject("Physic Material").getDouble("Friction"));
+            joint.setAxis(axisA.x, axisA.y, axisA.z);
+            joint.setFriction(friction);
             joint.sync(SXRPhysicsCollidable.SYNC_ALL);
-        }
+       }
         else if (jointIndex == mAttachBoneIndex)
         {
             joint.sync(SXRPhysicsCollidable.SYNC_COLLISION_SHAPE);
