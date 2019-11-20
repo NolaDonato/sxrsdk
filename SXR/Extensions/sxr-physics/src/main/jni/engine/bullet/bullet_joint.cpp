@@ -62,6 +62,7 @@ namespace sxr {
       mPivot(0, 0, 0),
       mWorld(nullptr),
       mMass(mass),
+      mFriction(0),
       mLinearDamping(0),
       mAngularDamping(0),
       mCollisionGroup(btBroadphaseProxy::DefaultFilter),
@@ -78,6 +79,7 @@ namespace sxr {
       mJointIndex(jointIndex - 1),
       mAxis(1, 0, 0),
       mMass(mass),
+      mFriction(0),
       mPivot(0, 0, 0),
       mJointType(jointType),
       mLinearDamping(0),
@@ -91,6 +93,7 @@ namespace sxr {
         mParent(parent),
         mMultiBody(parent->getMultiBody()),
         mJointIndex(jointIndex),
+        mFriction(0),
         mScale(1, 1, 1),
         mWorld(nullptr)
     {
@@ -219,38 +222,42 @@ namespace sxr {
 
     void BulletJoint::setMass(float mass)
     {
-        mMass = mass;
-        if (mMultiBody)
+        if (mMass != mass)
         {
-            mMultiBody->getLink(mJointIndex).m_mass = btScalar(mass);
+            LOGV("BULLET: joint %s mass %3f to %3f",
+                 getName(), mMass, mass);
+            mMass = mass;
         }
     }
 
     float  BulletJoint::getFriction() const
     {
-        if (mMultiBody)
-        {
-            return mMultiBody->getLink(mJointIndex).m_jointFriction;
-        }
-        return 0;
+        return mFriction;
     }
 
     void BulletJoint::setFriction(float friction)
     {
-        if (mMultiBody)
-        {
-            mMultiBody->getLink(mJointIndex).m_jointFriction = btScalar(friction);
-        }
+        mFriction = friction;
     }
 
     void BulletJoint::setPivot(const glm::vec3& pivot)
     {
-        mPivot = pivot;
+        if (pivot != mPivot)
+        {
+            LOGV("BULLET: joint %s pivot (%3f, %3f, %3f) to  (%3f, %3f, %3f)",
+                 getName(), mPivot.x, mPivot.y, mPivot.z, pivot.x, pivot.y, pivot.z);
+            mPivot = pivot;
+        }
     }
 
     void BulletJoint::setAxis(const glm::vec3& axis)
     {
-        mAxis = axis;
+        if (axis != mAxis)
+        {
+            LOGV("BULLET: joint %s axis (%3f, %3f, %3f) to  (%3f, %3f, %3f)",
+                 getName(), mAxis.x, mAxis.y, mAxis.z, axis.x, axis.y, axis.z);
+            mAxis = axis;
+        }
     }
 
     Skeleton* BulletJoint::getSkeleton() const
@@ -383,8 +390,10 @@ namespace sxr {
     {
         if (s != mScale)
         {
+            LOGV("BULLET: joint %s scale (%3f, %3f, %3f) to (%3f, %3f, %3f)",
+                 getName(), mScale.x, mScale.y, mScale.z, s.x, s.y, s.z);
             mScale = s;
-            if (mMultiBody)
+            if (mMultiBody && owner_object())
             {
                 updateCollider(owner_object(), SyncOptions::PROPERTIES);
             }
@@ -400,7 +409,6 @@ namespace sxr {
         btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
 
         link.m_userPtr = this;
-        updateCollider(owner_object(), options);
         if (options & SyncOptions::TRANSFORM)
         {
             setPhysicsTransform();
@@ -409,6 +417,7 @@ namespace sxr {
         {
             link.m_parent = getJointIndex();
             link.m_mass = mMass;
+            link.m_jointFriction = mFriction;
             switch (mJointType)
             {
                 case JointType::fixedJoint: setupFixed(); break;
@@ -420,6 +429,7 @@ namespace sxr {
         else if (options & SyncOptions::PROPERTIES)
         {
             link.m_mass = mMass;
+            link.m_jointFriction = mFriction;
             switch (mJointType)
             {
                 case JointType::fixedJoint: updateFixed(); break;
@@ -429,6 +439,7 @@ namespace sxr {
                 default: break;
             }
         }
+        updateCollider(owner_object(), options);
     }
 
     void BulletJoint::updateCollider(Node* owner, int options)
@@ -605,7 +616,7 @@ namespace sxr {
     {
         BulletJoint*       jointA = static_cast<BulletJoint*>(getParent());
         btVector3          pivotB(mPivot.x, mPivot.y, mPivot.z);
-        btTransform        worldA;  jointA->getWorldTransform(worldA);
+        btTransform        worldA; jointA->getWorldTransform(worldA);
         btTransform        worldB; getWorldTransform(worldB);
         btQuaternion       rotA(worldA.getRotation());
         btVector3          bodyACOM(worldA.getOrigin());

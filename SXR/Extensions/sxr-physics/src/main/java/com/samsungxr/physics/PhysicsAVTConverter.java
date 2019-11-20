@@ -27,6 +27,7 @@ import com.samsungxr.SXRContext;
 import com.samsungxr.SXRNode;
 import com.samsungxr.SXRScene;
 import com.samsungxr.SXRSphereCollider;
+import com.samsungxr.SXRTransform;
 import com.samsungxr.animation.SXRPose;
 import com.samsungxr.animation.SXRSkeleton;
 import com.samsungxr.utility.Log;
@@ -38,9 +39,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -67,6 +65,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
     private ArrayList<SXRPhysicsJoint> mJoints = new ArrayList<>();
     private ArrayList<SXRCollider> mColliders = new ArrayList<>();
     private ArrayList<SXRConstraint> mConstraints = new ArrayList<>();
+    private Vector3f mWorldOffset = new Vector3f();
 
     public PhysicsAVTConverter(SXRContext ctx)
     {
@@ -211,6 +210,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         {
             JSONObject start = new JSONObject(inputData);
             mAttachBoneIndex = -1;
+            mWorldOffset.set(0, 0, 0);
             if ((mSkeleton != null )&& (mAttachBoneName != null))
             {
                 mAttachBoneIndex = mSkeleton.getBoneIndex(mAttachBoneName);
@@ -232,6 +232,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         }
         catch (JSONException ex)
         {
+            ex.printStackTrace();
             return null;
         }
     }
@@ -319,8 +320,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         int boneparents[] = new int[maxInputBones];
         SXRNode boneNodes[] = new SXRNode[maxInputBones];
         int numInputBones = 0;
-        int firstBoneAdded = -1;
-        int attachBoneIndex = 0;
+        int attachBone = -1;
         SXRContext ctx = getSXRContext();
 
         boneparents[0] = -1;
@@ -329,27 +329,46 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         for (int i = 0; i < maxInputBones; ++i)
         {
             JSONObject bone = (i == 0) ? basebone : bonelist.getJSONObject(i - 1).getJSONObject("value");
-            String parentName = bone.optString("Parent", "");
+            String parentName = bone.optString("Parent", null);
             String targetBone = bone.getString("Target Bone");
-            JSONObject parent = mTargetBones.get(parentName);
-            SXRNode node = null;
+            JSONObject parent = (parentName != null) ? mTargetBones.get(parentName) : null;
+            SXRNode node;
+            SXRNode parentNode  = null;
+            int parentIndex = -1;
 
+            if (parent != null)
+            {
+                parentName = parent.getString("Target Bone");
+                for (int j = 0; j < i; ++j)
+                {
+                    if (parentName.equals(bonenames[j]))
+                    {
+                        parentIndex = j;
+                    }
+                }
+                if (parentIndex >= 0)
+                {
+                    parentNode = boneNodes[parentIndex];
+                    boneparents[numInputBones] = parentIndex;
+
+                    if (parentNode == null)
+                    {
+                        parentNode = mSkeleton.getBone(parentIndex);
+                    }
+                }
+            }
             mTargetBones.put(bone.getString("Name"), bone);
             /*
              * Skip all bones which are parents of the attachment point.
              * These will presumably be in the skeleton we attach to.
              */
-            if ((mAttachBoneName != null) &&
-                (numInputBones == 0))
+            if (targetBone.equals(mAttachBoneName))
             {
-                if (targetBone.equals(mAttachBoneName))
-                {
-                    attachBoneIndex = i;
-                }
-                else
-                {
-                    continue;
-                }
+                bonenames[numInputBones] = targetBone;
+            }
+            else if ((mAttachBoneName != null) && (numInputBones == 0))
+            {
+                continue;
             }
             if (mSkeleton != null)
             {
@@ -362,34 +381,20 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             }
             node = new SXRNode(ctx);
             boneparents[numInputBones] = -1;
-            parentName = (parent != null) ? parent.getString("Target Bone") : "";
             bonenames[numInputBones] = targetBone;
             boneNodes[numInputBones] = node;
             node.setName(bonenames[numInputBones]);
-            if (firstBoneAdded < 0)
+            if (attachBone < 0)
             {
-                firstBoneAdded = i;
+                attachBone = i;
             }
-            if (!parentName.isEmpty())
+            if (parentNode != null)
             {
-                for (int j = 0; j < i; ++j)
-                {
-                    if (parentName.equals(bonenames[j]))
-                    {
-                        SXRNode p = boneNodes[j];
-                        boneparents[numInputBones] = j;
-
-                        if (p != null)
-                        {
-                            p.addChildObject(boneNodes[numInputBones]);
-                        }
-                        break;
-                    }
-                }
+                parentNode.addChildObject(boneNodes[numInputBones]);
             }
             ++numInputBones;
         }
-        if (firstBoneAdded >= 0)
+        if (attachBone >= 0)
         {
             if (numInputBones < maxInputBones)
             {
@@ -404,7 +409,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 skel.setBoneName(i, bonenames[i]);
                 skel.setBone(i, boneNodes[i]);
             }
-            updateSkeletonPose(skel, numInputBones, basebone, bonelist, firstBoneAdded);
+            updateSkeletonPose(skel, numInputBones, basebone, bonelist, attachBone);
             if (mSkeleton == null)
             {
                 mSkeleton = skel;
@@ -428,20 +433,29 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         SXRPose worldPose = new SXRPose(skel);
         Matrix4f worldMtx = new Matrix4f();
 
-        for (int i = attachBoneIndex; i < numInputBones; ++i)
+        if (attachBoneIndex > 0)
+        {
+            JSONObject bone = bonelist.getJSONObject(attachBoneIndex - 1).getJSONObject("value");;
+            Vector3f newpos = getPosition(bone);
+            Vector3f oldpos = new Vector3f();
+
+            worldMtx = skel.getBone(attachBoneIndex).getTransform().getModelMatrix4f();
+            worldMtx.getTranslation(oldpos);
+            oldpos.sub(newpos, mWorldOffset);
+        }
+        for (int i = attachBoneIndex + 1; i < numInputBones; ++i)
         {
             JSONObject bone = (i == 0) ? basebone : bonelist.getJSONObject(i - 1).getJSONObject("value");
             JSONObject xform = bone.getJSONObject("Transform");
-            JSONObject position = xform.getJSONObject("Position");
             JSONObject orientation = xform.getJSONObject("Orientation");
+            Vector3f worldPos = getPosition(bone);
 
-            worldMtx.translationRotate((float) position.getDouble("X"),
-                    (float) position.getDouble("Y"),
-                    (float) position.getDouble("Z"),
-                    (float) orientation.getDouble("X"),
-                    (float) orientation.getDouble("Y"),
-                    (float) orientation.getDouble("Z"),
-                    (float) orientation.getDouble("W"));
+            worldPos.add(mWorldOffset, worldPos);
+            worldMtx.translationRotate(worldPos.x, worldPos.y, worldPos.z,
+                                       (float) orientation.getDouble("X"),
+                                       (float) orientation.getDouble("Y"),
+                                       (float) orientation.getDouble("Z"),
+                                       (float) orientation.getDouble("W"));
             worldPose.setWorldMatrix(i, worldMtx);
         }
         worldPose.sync();
@@ -697,39 +711,48 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         return null;
     }
 
+    private Vector3f getPosition(JSONObject link) throws JSONException
+    {
+        JSONObject trans = link.getJSONObject("Transform");
+        JSONObject pos = trans.getJSONObject("Position");
+
+        return new Vector3f((float) pos.getDouble("X"),
+                            (float) pos.getDouble("Y"),
+                            (float) pos.getDouble("Z"));
+    }
+
     private SXRPhysicsJoint parseJoint(JSONObject link, boolean extendingSkeleton) throws JSONException
     {
         String nodeName = link.getString("Target Bone");
         int jointIndex = mSkeleton.getBoneIndex(nodeName);
         SXRNode node = mSkeleton.getBone(jointIndex);
         float[] pivotB = new float[] { 0, 0, 0 };
-        JSONObject trans = link.getJSONObject("Transform");
-        JSONObject pos = trans.getJSONObject("Position");
         JSONObject piv = link.optJSONObject("Pivot Pos.");
         SXRPhysicsJoint joint = (SXRPhysicsJoint) node.getComponent(SXRPhysicsJoint.getComponentType());
         float friction = (float) link.getJSONObject("Physic Material").getDouble("Friction");
         Vector3f scale = new Vector3f(1, 1, 1);
+        SXRPhysicsJoint parentJoint = getParentJoint(link);
+        Vector3f worldPos = getPosition(link);
 
         if (piv != null)
         {
-            pivotB[0] = (float) (piv.getDouble("X") - pos.getDouble("X"));
-            pivotB[1] = (float) (piv.getDouble("Y") - pos.getDouble("Y"));
-            pivotB[2] = (float) (piv.getDouble("Z") - pos.getDouble("Z"));
+            pivotB[0] = (float) (piv.getDouble("X") - worldPos.x);
+            pivotB[1] = (float) (piv.getDouble("Y") - worldPos.y);
+            pivotB[2] = (float) (piv.getDouble("Z") - worldPos.z);
         }
         JSONObject v = link.getJSONObject("Axis A");
         Vector3f axisA = new Vector3f((float) v.getDouble("X"),
-                (float) v.getDouble("Y"),
-                (float) v.getDouble("Z"));
+                                      (float) v.getDouble("Y"),
+                                      (float) v.getDouble("Z"));
         parseCollider(link, jointIndex, nodeName, scale);
         if (joint == null)
         {
 
-            joint = createJoint(link, jointIndex, extendingSkeleton);
+            joint = createJoint(link, jointIndex, parentJoint, extendingSkeleton);
             if (joint == null)
             {
                 return null;
             }
-            joint.setName(nodeName);
             joint.setPivot(pivotB[0], pivotB[1], pivotB[2]);
             joint.setAxis(axisA.x, axisA.y, axisA.z);
             joint.setFriction(friction);
@@ -749,7 +772,8 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
        }
         else if (jointIndex == mAttachBoneIndex)
         {
-            joint.sync(SXRPhysicsCollidable.SYNC_COLLISION_SHAPE);
+            joint.setScale(scale);
+            joint.sync(SXRPhysicsCollidable.SYNC_COLLISION_SHAPE | SXRPhysicsCollidable.SYNC_PROPERTIES);
         }
         mJoints.set(jointIndex, joint);
         return joint;
@@ -779,12 +803,9 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         }
     }
 
-    private SXRPhysicsJoint createJoint(JSONObject link, int jointIndex, boolean addToBody) throws JSONException
+    SXRPhysicsJoint getParentJoint(JSONObject link) throws JSONException
     {
-        String type = link.getString("Joint Type");
-        int jointType = findJointType(type);
         String parentName = link.optString("Parent", null);
-        float mass = (float) link.getDouble("Mass");
         JSONObject parent = mTargetBones.get(parentName);
         int parentIndex = mSkeleton.getBoneIndex(parent.getString("Target Bone"));
         SXRPhysicsJoint parentJoint = mJoints.get(parentIndex);
@@ -800,14 +821,29 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 return null;
             }
         }
-        Log.e(TAG, "creating joint %s parent = %s, mass = %3f", link.getString("Name"), parentName, mass);
+        return parentJoint;
+    }
+
+    private SXRPhysicsJoint createJoint(JSONObject link, int jointIndex, SXRPhysicsJoint parentJoint, boolean addToBody) throws JSONException
+    {
+        String type = link.getString("Joint Type");
+        int jointType = findJointType(type);
+        String parentName = link.optString("Parent", null);
+        float mass = (float) link.getDouble("Mass");
+
+        if (parentJoint == null)
+        {
+            return null;
+        }
+        Log.e(TAG, "creating joint %s parent = %s, mass = %3f",
+              link.getString("Name"), parentName, mass);
         SXRPhysicsJoint joint = new SXRPhysicsJoint(parentJoint, jointType, jointIndex, mass, SXRCollisionMatrix.DEFAULT_GROUP);
         joint.setBoneIndex(jointIndex);
+        joint.setName(link.getString("Target Bone"));
         if (addToBody)
         {
             parentJoint.addJoint(joint);
         }
-        mJoints.set(jointIndex, joint);
         return joint;
     }
 
@@ -854,34 +890,32 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         {
             return null;
         }
-        String name = link.getString("Name");
-        JSONObject trans = link.getJSONObject("Transform");
-        JSONObject pos = trans.getJSONObject("Position");
-        JSONObject pivot = link.optJSONObject("Pivot Pos.");
-        String parentName = link.optString("Parent", null);
-        float PIover2 = (float) Math.PI / 2;
-        Vector3f pivotB = new Vector3f(0, 0, 0);
-        String type = link.getString("Joint Type");
-        JSONArray dofdata = link.getJSONArray("DOF Data");
-        Matrix4f worldMtx = node.getTransform().getModelMatrix4f();
+        String        name = link.getString("Name");
+        JSONObject    pivot = link.optJSONObject("Pivot Pos.");
+        String        parentName = link.optString("Parent", null);
+        float         PIover2 = (float) Math.PI / 2;
+        Vector3f      pivotB = new Vector3f(0, 0, 0);
+        String        type = link.getString("Joint Type");
+        JSONArray     dofdata = link.getJSONArray("DOF Data");
+        Matrix4f      worldMtx = node.getTransform().getModelMatrix4f();
+        Vector3f      worldPos = getPosition(link);
         SXRConstraint constraint;
-        JSONObject v;
+        JSONObject    v;
 
         if (pivot != null)
         {
-            pivotB.set((float) (pivot.getDouble("X") - pos.getDouble("X")),
-                       (float) (pivot.getDouble("Y") - pos.getDouble("Y")),
-                       (float) (pivot.getDouble("Z") - pos.getDouble("Z")));
+            pivotB.set((float) (pivot.getDouble("X") - worldPos.x),
+                       (float) (pivot.getDouble("Y") - worldPos.y),
+                       (float) (pivot.getDouble("Z") - worldPos.z));
         }
         JSONObject parentLink = mTargetBones.get(parentName);
         Vector3f pivotA = new Vector3f(0, 0, 0);
-        trans = parentLink.getJSONObject("Transform");
-        pos = trans.getJSONObject("Position");
+        worldPos = getPosition(parentLink);
         if (pivot != null)
         {
-            pivotA.set((float) (pivot.getDouble("X") - pos.getDouble("X")),
-                       (float) (pivot.getDouble("Y") - pos.getDouble("Y")),
-                       (float) (pivot.getDouble("Z") - pos.getDouble("Z")));
+            pivotA.set((float) (pivot.getDouble("X") - worldPos.x),
+                       (float) (pivot.getDouble("Y") - worldPos.y),
+                       (float) (pivot.getDouble("Z") - worldPos.z));
         }
         if (type.equals("ball"))
         {
@@ -902,16 +936,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         }
         else if (type.equals("universal"))
         {
-            if (pivot != null)
-            {
-                pivotB.set((float) (pivot.getDouble("X")),
-                        (float) (pivot.getDouble("Y")),
-                        (float) (pivot.getDouble("Z")));
-            }
-            else
-            {
-                pivotB.set(0, 0, 0);
-            }
             v = link.getJSONObject("Axis A");
             Vector4f aa = new Vector4f(
                     (float) v.getDouble("X"),

@@ -118,6 +118,7 @@ protected:
 	glm::vec3				 mScale;
 	int                      mJointIndex;
     float                    mMass;
+    float                    mFriction;
     int 					 mCollisionGroup;
     int 					 mCollisionMask;
     float 					 mLinearDamping;

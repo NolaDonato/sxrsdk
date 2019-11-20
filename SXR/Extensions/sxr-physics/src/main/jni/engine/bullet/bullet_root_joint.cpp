@@ -166,7 +166,7 @@ namespace sxr {
     int BulletRootJoint::addJointToBody(PhysicsJoint* child)
     {
         BulletJoint* childJoint = static_cast<BulletJoint*>(child);
-        int nextJointIndex = getNumJoints();
+        int nextJointIndex = getNumJoints() - 1;
 
         mJoints.resize(++mNumJoints);
         mJoints[nextJointIndex] = childJoint;
@@ -175,8 +175,7 @@ namespace sxr {
             mMultiBody->setNumLinks(nextJointIndex + 1);
         }
         childJoint->update(nextJointIndex, this);
-        childJoint->sync(SyncOptions::ALL);
-        LOGD("BULLET: adding joint %s at index %d to body",child->getName(), nextJointIndex);
+        LOGD("BULLET: adding joint %s at index %d to body", child->getName(), nextJointIndex);
         return nextJointIndex;
     }
 
@@ -378,14 +377,11 @@ namespace sxr {
 
     void BulletRootJoint::sync(int options)
     {
-        if ((mCollider == nullptr) || (options & SyncOptions::COLLISION_SHAPE))
-        {
-            updateCollider(owner_object(), options);
-        }
         if (options & SyncOptions::TRANSFORM)
         {
             setPhysicsTransform();
         }
+        updateCollider(owner_object(), options);
     }
 
     void BulletRootJoint::updateCollider(Node* owner, int options)
@@ -438,6 +434,7 @@ namespace sxr {
         mCollider->setUserPointer(this);
         if (options & SyncOptions::PROPERTIES)
         {
+            mMultiBody->setBaseMass(mMass);
             curShape->setLocalScaling(scale);
             curShape->calculateLocalInertia(getMass(), localInertia);
             mMultiBody->setBaseInertia(localInertia);
