@@ -46,9 +46,6 @@ class PhysicsRigidBody : public PhysicsCollidable
 
 	virtual void setSimulationType(SimulationType t) = 0;
 	virtual SimulationType getSimulationType() const = 0;
-    virtual void setCenterOfMass(Transform* t) = 0;
-	virtual void getRotation(float &w, float &x, float &y, float &z) = 0;
-    virtual void getTranslation(float &x, float &y, float &z) = 0;
     virtual void applyCentralForce(float x, float y, float z) = 0;
 	virtual void applyForce(float force_x, float force_y, float force_z,
 			float rel_pos_x, float rel_pos_y, float rel_pos_z) = 0;

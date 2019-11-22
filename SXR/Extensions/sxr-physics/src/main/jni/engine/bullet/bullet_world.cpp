@@ -155,8 +155,9 @@ void BulletWorld::addConstraint(PhysicsConstraint *constraint)
          (type == COMPONENT_TYPE_PHYSICS_JOINT)))
     {
         btMultiBodyConstraint* constr = static_cast<btMultiBodyConstraint *>(constraint->getUnderlying());
-        dynamic_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld)->addMultiBodyConstraint(constr);
-        LOGD("BULLET: constraint for joint %s added to world", joint->getName());
+        btMultiBodyDynamicsWorld* w = dynamic_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld);
+        w->addMultiBodyConstraint(constr);
+        LOGD("BULLET: constraint for joint %s added to world", constraint->owner_object()->name().c_str());
     }
     else if (body != nullptr)
     {
@@ -213,17 +214,15 @@ void BulletWorld::stopDrag()
 void BulletWorld::addRigidBody(PhysicsRigidBody* body)
 {
     BulletRigidBody* rb = static_cast<BulletRigidBody*>(body);
-    rb->onAddedToWorld(this);
-    mPhysicsWorld->addRigidBody(rb->getRigidBody());
-    LOGD("BULLET: rigid body %s added to world", body->getName());
+
+    rb->addToWorld(this);
 }
 
 void BulletWorld::addRigidBody(PhysicsRigidBody* body, int collisionGroup, int collidesWith)
 {
     BulletRigidBody* rb = static_cast<BulletRigidBody*>(body);
-    rb->onAddedToWorld(this);
-    mPhysicsWorld->addRigidBody(rb->getRigidBody(), collisionGroup, collidesWith);
-    LOGD("BULLET: rigid body %s added to world", body->getName());
+
+    rb->addToWorld(this, collisionGroup, collidesWith);
 }
 
 void BulletWorld::removeRigidBody(PhysicsRigidBody *body)

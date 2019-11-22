@@ -21,8 +21,7 @@ extern "C" {
 JNIEXPORT jlong JNICALL
 Java_com_samsungxr_physics_NativeRigidBody_ctor(JNIEnv *env, jclass obj, jfloat mass)
 {
-    BulletRigidBody *rb = new BulletRigidBody();
-    rb->setMass(mass);
+    BulletRigidBody *rb = new BulletRigidBody(mass);
     return reinterpret_cast<jlong>(rb);
 }
 

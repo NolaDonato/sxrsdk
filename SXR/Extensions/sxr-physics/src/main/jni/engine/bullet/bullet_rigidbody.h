@@ -31,8 +31,7 @@ class BulletWorld;
 class BulletRigidBody : public PhysicsRigidBody, btMotionState
 {
  public:
-    BulletRigidBody();
-
+    BulletRigidBody(float mass);
     BulletRigidBody(btRigidBody *rigidBody);
     virtual ~BulletRigidBody();
 
@@ -48,9 +47,6 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
     virtual const glm::vec3& getScale() const { return mScale; }
     virtual const char* getName() const;
 
-    void    setCenterOfMass(Transform *t);
-    void    getRotation(float &w, float &x, float &y, float &z);
-    void    getTranslation(float &x, float &y, float &z);
     void    applyCentralForce(float x, float y, float z);
 	void    applyForce(float force_x, float force_y, float force_z,
 			           float rel_pos_x, float rel_pos_y, float rel_pos_z);
@@ -66,6 +62,7 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
     void    setAngularFactor(float x, float y, float z);
     void    setLinearFactor(float x, float y, float z);
     void    setRestitution(float n);
+    void    setMass(float mass);
     void    setSleepingThresholds(float linear, float angular);
     void    setCcdMotionThreshold(float n);
     void    setCcdSweptSphereRadius(float n);
@@ -80,7 +77,8 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
     float   getCcdMotionThreshold() const;
     float   getContactProcessingThreshold() const;
     float   getCcdSweptSphereRadius() const;
-    void    onAddedToWorld(PhysicsWorld* world);
+    void    addToWorld(PhysicsWorld* world);
+    void    addToWorld(PhysicsWorld* world, int collisionGroup, int collidesWith);
 
     btRigidBody* getRigidBody() const
     {
@@ -90,11 +88,6 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
     virtual SimulationType getSimulationType() const
     {
         return mSimType;
-    }
-
-    virtual void setMass(float mass)
-    {
-        mConstructionInfo.m_mass = btScalar(mass);
     }
 
     virtual float getMass() const
@@ -113,7 +106,7 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
     }
 
 protected:
-    void updateCollider(Node* owner, int options);
+    bool updateCollider(Node* owner, int options);
     void finalize();
 
 private:
@@ -122,9 +115,10 @@ private:
     SimulationType      mSimType;
     BulletWorld*        mWorld;
     glm::vec3           mScale;
+    int                 mNeedsSync;
+    int 				mCollisionGroup;
+    int 				mCollisionMask;
     mutable std::string mName;
-
-    friend class BulletWorld;
 };
 
 }
