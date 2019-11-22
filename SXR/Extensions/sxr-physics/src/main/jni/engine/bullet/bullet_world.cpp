@@ -249,11 +249,11 @@ void BulletWorld::addJointWithMask(PhysicsJoint* joint, int collisionGroup, int 
     if (isMultiBody())
     {
         BulletRootJoint* root = static_cast<BulletJoint*>(joint)->findRoot();
+        ((BulletJoint*) joint)->setCollisionProperties(collisionGroup, collidesWith);
         if (root->addJointToWorld(joint, this))
         {
             mMultiBodies.push_back(root);
         }
-        ((BulletJoint*) joint)->setCollisionProperties(collisionGroup, collidesWith);
     }
 }
 

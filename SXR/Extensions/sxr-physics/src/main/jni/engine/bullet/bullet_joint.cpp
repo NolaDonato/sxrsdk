@@ -63,6 +63,8 @@ namespace sxr {
       mWorld(nullptr),
       mMass(mass),
       mFriction(0),
+      mScale(1, 1, 1),
+      mNeedsSync(SyncOptions::ALL),
       mLinearDamping(0),
       mAngularDamping(0),
       mCollisionGroup(btBroadphaseProxy::DefaultFilter),
@@ -78,10 +80,14 @@ namespace sxr {
       mCollider(nullptr),
       mJointIndex(jointIndex - 1),
       mAxis(1, 0, 0),
+      mScale(1, 1, 1),
       mMass(mass),
       mFriction(0),
+      mNeedsSync(SyncOptions::ALL),
       mPivot(0, 0, 0),
       mJointType(jointType),
+      mCollisionGroup(btBroadphaseProxy::DefaultFilter),
+      mCollisionMask(btBroadphaseProxy::AllFilter),
       mLinearDamping(0),
       mAngularDamping(0),
       mWorld(nullptr)
@@ -91,8 +97,11 @@ namespace sxr {
     BulletJoint::BulletJoint(BulletJoint* parent, int jointIndex)
     :   PhysicsJoint(parent, (JointType) parent->getMultiBody()->getLink(jointIndex).m_jointType, jointIndex, 0),
         mParent(parent),
+        mNeedsSync(SyncOptions::IMPORTED),
         mMultiBody(parent->getMultiBody()),
         mJointIndex(jointIndex),
+        mCollisionGroup(btBroadphaseProxy::DefaultFilter),
+        mCollisionMask(btBroadphaseProxy::AllFilter),
         mFriction(0),
         mScale(1, 1, 1),
         mWorld(nullptr)
@@ -114,6 +123,7 @@ namespace sxr {
                 mScale.y = v.y();
                 mScale.z = v.z();
             }
+            mCollider->setUserPointer(this);
         }
     }
 
@@ -227,6 +237,7 @@ namespace sxr {
             LOGV("BULLET: joint %s mass %3f to %3f",
                  getName(), mMass, mass);
             mMass = mass;
+            mNeedsSync |= SyncOptions::PROPERTIES;
         }
     }
 
@@ -238,6 +249,7 @@ namespace sxr {
     void BulletJoint::setFriction(float friction)
     {
         mFriction = friction;
+        mNeedsSync |= SyncOptions::PROPERTIES;
     }
 
     void BulletJoint::setPivot(const glm::vec3& pivot)
@@ -247,6 +259,7 @@ namespace sxr {
             LOGV("BULLET: joint %s pivot (%3f, %3f, %3f) to  (%3f, %3f, %3f)",
                  getName(), mPivot.x, mPivot.y, mPivot.z, pivot.x, pivot.y, pivot.z);
             mPivot = pivot;
+            mNeedsSync |= SyncOptions::PROPERTIES;
         }
     }
 
@@ -257,6 +270,7 @@ namespace sxr {
             LOGV("BULLET: joint %s axis (%3f, %3f, %3f) to  (%3f, %3f, %3f)",
                  getName(), mAxis.x, mAxis.y, mAxis.z, axis.x, axis.y, axis.z);
             mAxis = axis;
+            mNeedsSync |= SyncOptions::PROPERTIES;
         }
     }
 
@@ -293,7 +307,7 @@ namespace sxr {
 
                 mCollider->m_link = jointIndex;
                 mCollider->m_multiBody = mMultiBody;
-                mCollider->m_link = jointIndex;
+                mCollider->setUserPointer(this);
                 link.m_userPtr = this;
                 link.m_collider = mCollider;
                 link.m_parent = parent->getJointIndex();
@@ -355,7 +369,12 @@ namespace sxr {
             trans->set_position(pos.getX(), pos.getY(), pos.getZ());
             trans->set_rotation(rot.getW(), rot.getX(), rot.getY(), rot.getZ());
         }
-        LOGD("BULLET: JOINT %s %f, %f, %f", owner->name().c_str(), trans->position_x(), trans->position_y(), trans->position_z());
+        mNeedsSync &= ~SyncOptions::IMPORTED;
+        LOGD("BULLET: JOINT %s %3f, %3f, %3f",
+             owner->name().c_str(),
+             trans->position_x(),
+             trans->position_y(),
+             trans->position_z());
     }
 
     void BulletJoint::applyCentralForce(float x, float y, float z)
@@ -393,10 +412,7 @@ namespace sxr {
             LOGV("BULLET: joint %s scale (%3f, %3f, %3f) to (%3f, %3f, %3f)",
                  getName(), mScale.x, mScale.y, mScale.z, s.x, s.y, s.z);
             mScale = s;
-            if (mMultiBody && owner_object())
-            {
-                updateCollider(owner_object(), SyncOptions::PROPERTIES);
-            }
+            mNeedsSync |= SyncOptions::PROPERTIES;
         }
     }
 
@@ -404,20 +420,22 @@ namespace sxr {
     {
         BulletJoint* parent = static_cast<BulletJoint*>(getParent());
         bool creating = (mMultiBody == nullptr);
-
         mMultiBody = parent->getMultiBody();
         btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
 
-        link.m_userPtr = this;
+        options |= mNeedsSync;
+        mNeedsSync = 0;
+        updateCollider(owner_object(), options);
         if (options & SyncOptions::TRANSFORM)
         {
             setPhysicsTransform();
         }
         if (creating)
         {
-            link.m_parent = getJointIndex();
+            link.m_parent = parent->getJointIndex();
             link.m_mass = mMass;
             link.m_jointFriction = mFriction;
+            link.m_userPtr = this;
             switch (mJointType)
             {
                 case JointType::fixedJoint: setupFixed(); break;
@@ -439,7 +457,6 @@ namespace sxr {
                 default: break;
             }
         }
-        updateCollider(owner_object(), options);
     }
 
     void BulletJoint::updateCollider(Node* owner, int options)
@@ -447,8 +464,6 @@ namespace sxr {
         btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
         btCollisionShape* curShape = nullptr;
         btCollisionShape* newShape = nullptr;
-        Transform* trans = owner->transform();
-        btVector3 localInertia;
         Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
         btVector3 scale(mScale.x, mScale.y, mScale.z);
 
@@ -463,8 +478,10 @@ namespace sxr {
             curShape = newShape = convertCollider2CollisionShape(collider);
             mCollider->setCollisionShape(newShape);
             mCollider->m_link = getJointIndex();
+            mCollider->setUserPointer(this);
+            mCollider->setActivationState(ACTIVE_TAG);
             link.m_collider = mCollider;
-            options |= SyncOptions::TRANSFORM | SyncOptions::PROPERTIES;
+            options |= SyncOptions::PROPERTIES;
         }
         else
         {
@@ -472,28 +489,30 @@ namespace sxr {
             if ((options & SyncOptions::COLLISION_SHAPE) != 0)
             {
                 newShape = convertCollider2CollisionShape(collider);
+                options |= SyncOptions::PROPERTIES;
                 if (mWorld)
                 {
-                    btDynamicsWorld* bw = mWorld->getPhysicsWorld();
+                    btDynamicsWorld *bw = mWorld->getPhysicsWorld();
                     bw->removeCollisionObject(mCollider);
                     mCollider->setCollisionShape(newShape);
-                    bw->addCollisionObject(mCollider);
+                    bw->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
                 }
                 else
                 {
                     mCollider->setCollisionShape(newShape);
                 }
-            }
-            if (curShape)
-            {
-                scale = curShape->getLocalScaling();
-                delete curShape;
-                curShape = newShape;
+                if (curShape)
+                {
+                    scale = curShape->getLocalScaling();
+                    delete curShape;
+                    curShape = newShape;
+                }
             }
         }
-        mCollider->setUserPointer(this);
         if (options & SyncOptions::PROPERTIES)
         {
+            btVector3 localInertia;
+
             curShape->setLocalScaling(scale);
             curShape->calculateLocalInertia(getMass(), localInertia);
             link.m_inertiaLocal = localInertia;
@@ -738,5 +757,21 @@ namespace sxr {
         link.m_dVector = -pivotB;
         link.setAxisBottom(0, sliderAxis);
         link.updateCacheMultiDof();
+    }
+
+    void BulletJoint::onDisable(Node* owner)
+    {
+        if (mCollider)
+        {
+            mCollider->setActivationState(ISLAND_SLEEPING);
+        }
+    }
+
+    void BulletJoint::onEnable(Node* owner)
+    {
+        if (mCollider)
+        {
+            mCollider->setActivationState(ACTIVE_TAG);
+        }
     }
 }

@@ -29,6 +29,7 @@ namespace sxr {
             COLLISION_SHAPE = 1,
             TRANSFORM = 2,
             PROPERTIES = 4,
+            IMPORTED = 8,
             ALL = COLLISION_SHAPE | TRANSFORM | PROPERTIES
         };
         PhysicsCollidable(long componentType) : Component(componentType)  { }

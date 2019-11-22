@@ -292,8 +292,9 @@ namespace sxr {
 
     void BulletRootJoint::getPhysicsTransforms()
     {
-        if (mMultiBody)
+        if (mMultiBody && enabled())
         {
+            sync();
             getPhysicsTransform();
             for (int j = 0; j < mNumJoints; ++j)
             {
@@ -301,6 +302,7 @@ namespace sxr {
 
                 if (joint->enabled())
                 {
+                    joint->sync();
                     joint->getPhysicsTransform();
                 }
             }
@@ -309,15 +311,15 @@ namespace sxr {
 
     void BulletRootJoint::setPhysicsTransforms()
     {
-        if (mMultiBody)
+        if (mMultiBody && enabled())
         {
-            setPhysicsTransform();
+            sync(SyncOptions::TRANSFORM);
             for (int j = 0; j < mNumJoints; ++j)
             {
                 BulletJoint* joint = mJoints[j];
                 if (joint->enabled())
                 {
-                    joint->setPhysicsTransform();
+                    joint->sync(SyncOptions::TRANSFORM);
                 }
             }
         }
@@ -377,18 +379,19 @@ namespace sxr {
 
     void BulletRootJoint::sync(int options)
     {
+        options |= mNeedsSync;
+        mNeedsSync = 0;
+        updateCollider(owner_object(), options);
         if (options & SyncOptions::TRANSFORM)
         {
             setPhysicsTransform();
         }
-        updateCollider(owner_object(), options);
     }
 
     void BulletRootJoint::updateCollider(Node* owner, int options)
     {
         btCollisionShape* curShape = nullptr;
         btCollisionShape* newShape = nullptr;
-        btVector3 localInertia;
         Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
         btVector3 scale(mScale.x, mScale.y, mScale.z);
 
@@ -402,8 +405,10 @@ namespace sxr {
             LOGV("BULLET: creating link collider %s", getName());
             curShape = newShape = convertCollider2CollisionShape(collider);
             mCollider->setCollisionShape(newShape);
+            mCollider->setActivationState(ACTIVE_TAG);
             mMultiBody->setBaseCollider(mCollider);
-            options |= SyncOptions::TRANSFORM | SyncOptions::PROPERTIES;
+            mCollider->setUserPointer(this);
+            options |= SyncOptions::PROPERTIES;
         }
         else
         {
@@ -411,29 +416,30 @@ namespace sxr {
             if ((options & SyncOptions::COLLISION_SHAPE) != 0)
             {
                 newShape = convertCollider2CollisionShape(collider);
+                options |= SyncOptions::PROPERTIES;
                 if (mWorld)
                 {
-                    btDynamicsWorld* bw = mWorld->getPhysicsWorld();
+                    btDynamicsWorld *bw = mWorld->getPhysicsWorld();
                     bw->removeCollisionObject(mCollider);
                     mCollider->setCollisionShape(newShape);
-                    bw->addCollisionObject(mCollider);
+                    bw->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
                 }
                 else
                 {
                     mCollider->setCollisionShape(newShape);
                 }
-            }
-            if (curShape)
-            {
-                scale = curShape->getLocalScaling();
-                options |= SyncOptions::TRANSFORM | SyncOptions::PROPERTIES;
-                delete curShape;
-                curShape = newShape;
+                if (curShape)
+                {
+                    scale = curShape->getLocalScaling();
+                    delete curShape;
+                    curShape = newShape;
+                }
             }
         }
-        mCollider->setUserPointer(this);
         if (options & SyncOptions::PROPERTIES)
         {
+            btVector3 localInertia;
+
             mMultiBody->setBaseMass(mMass);
             curShape->setLocalScaling(scale);
             curShape->calculateLocalInertia(getMass(), localInertia);
@@ -444,7 +450,6 @@ namespace sxr {
 
     bool BulletRootJoint::addJointToWorld(PhysicsJoint* joint, PhysicsWorld* world)
     {
-        int linkIndex = joint->getJointIndex();
         int numjoints = mNumJoints + 1;
 
         if (mLinksAdded == numjoints)
@@ -452,24 +457,24 @@ namespace sxr {
             return false;
         }
         BulletJoint* bj = static_cast<BulletJoint*>(joint);
+        int linkIndex = joint->getJointIndex();
 
         LOGD("BULLET: linking joint %s at index %d", joint->getName(), linkIndex);
+        bool initialized = (++mLinksAdded == numjoints);
+
         if (joint != this)
         {
             mJoints[linkIndex] = bj;
         }
-        if (bj->getMultiBody())
+        if (bj->isImported())
         {
             bj->getPhysicsTransform();
-            bj->attachToWorld(world);
-            return ++mLinksAdded == numjoints;
         }
-        if (++mLinksAdded == numjoints)
+        else if (initialized)
         {
             attachToWorld(world);
-            return true;
         }
-        return false;
+        return initialized;
     }
 
     bool BulletRootJoint::removeJointFromWorld(PhysicsJoint* joint, bool deleteCollider)

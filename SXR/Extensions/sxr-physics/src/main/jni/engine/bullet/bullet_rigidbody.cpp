@@ -189,10 +189,6 @@ namespace sxr
         {
             LOGE("PHYSICS: Cannot attach rigid body without collider");
         }
-        if (options & SyncOptions::TRANSFORM)
-        {
-            getWorldTransform(mConstructionInfo.m_startWorldTransform);
-        }
         if (mRigidBody == nullptr)
         {
             mConstructionInfo.m_motionState = this;
@@ -202,6 +198,10 @@ namespace sxr
             options |= SyncOptions::ALL;
         }
         updateCollider(owner, options);
+        if (options & SyncOptions::TRANSFORM)
+        {
+            getWorldTransform(mConstructionInfo.m_startWorldTransform);
+        }
         if (options & SyncOptions::PROPERTIES)
         {
             switch (mSimType)

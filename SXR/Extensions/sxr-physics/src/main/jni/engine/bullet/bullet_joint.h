@@ -79,8 +79,12 @@ class BulletJoint : public PhysicsJoint
 	virtual int   getNumJoints() const;
 	virtual int   addJointToBody(PhysicsJoint* newJoint);
 	virtual void  removeJointFromBody(int jointIndex);
-	void          setCollisionProperties(int collisionGroup, int collidesWith);
+    virtual void  onDisable(Node* owner);
+    virtual void  onEnable(Node* owner);
+
+    void          setCollisionProperties(int collisionGroup, int collidesWith);
     void          update(int jointIndex, BulletJoint* parent);
+    bool 		  isImported() const { return mNeedsSync & SyncOptions::IMPORTED; }
 
     btDynamicsWorld* 	     getPhysicsWorld() { return mWorld ? mWorld->getPhysicsWorld() : nullptr; }
 	btMultiBody*             getMultiBody() const { return mMultiBody; }
@@ -116,11 +120,12 @@ protected:
     glm::vec3                mAxis;
     glm::vec3                mPivot;
 	glm::vec3				 mScale;
-	int                      mJointIndex;
-    float                    mMass;
-    float                    mFriction;
+	short 				     mNeedsSync;
+	short                    mJointIndex;
     int 					 mCollisionGroup;
     int 					 mCollisionMask;
+	float                    mMass;
+	float                    mFriction;
     float 					 mLinearDamping;
     float 					 mAngularDamping;
     float                    mMaxAppliedImpulse;

@@ -582,11 +582,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 }
                 node.detachComponent(SXRCollider.getComponentType());
                 node.attachComponent(collider);
-                if (joint.getOwnerObject() != null)
-                {
-                    joint.sync(SXRPhysicsCollidable.SYNC_ALL);
-                }
-                else
+                if (joint.getOwnerObject() == null)
                 {
                     node.attachComponent(joint);
                 }
@@ -768,12 +764,10 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             joint.setAxis(axisA.x, axisA.y, axisA.z);
             joint.setFriction(friction);
             joint.setScale(scale);
-            joint.sync(SXRPhysicsCollidable.SYNC_ALL);
        }
         else if (jointIndex == mAttachBoneIndex)
         {
             joint.setScale(scale);
-            joint.sync(SXRPhysicsCollidable.SYNC_COLLISION_SHAPE | SXRPhysicsCollidable.SYNC_PROPERTIES);
         }
         mJoints.set(jointIndex, joint);
         return joint;

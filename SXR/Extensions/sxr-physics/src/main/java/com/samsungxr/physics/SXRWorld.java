@@ -223,6 +223,7 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
     public SXRWorld(SXRScene scene, SXRCollisionMatrix collisionMatrix, long interval, boolean isMultiBody)
     {
         super(scene.getRoot(), isMultiBody);
+        mType = getComponentType();
         mListeners = new SXREventReceiver(this);
         mCollisionMatrix = collisionMatrix;
         mWorldTask = new SXRWorldTask(interval);
