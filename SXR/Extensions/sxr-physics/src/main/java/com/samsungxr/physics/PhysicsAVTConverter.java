@@ -571,11 +571,12 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         for (int i = mAttachBoneIndex + 1; i < mSkeleton.getNumBones(); ++i)
         {
             SXRPhysicsJoint joint = mJoints.get(i);
-            SXRNode node = mSkeleton.getBone(i);
 
-            collider = mColliders.get(i);
             if (joint != null)
             {
+                SXRNode node = mSkeleton.getBone(i);
+                collider = mColliders.get(i);
+
                 if (collider == null)
                 {
                     throw new UnsupportedOperationException("Collider missing for joint " + joint.getName());

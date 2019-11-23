@@ -68,10 +68,18 @@ namespace sxr {
       mLinearDamping(0),
       mAngularDamping(0),
       mLocalInertia(0, 0, 0),
-      mCollisionGroup(btBroadphaseProxy::DefaultFilter),
-      mCollisionMask(btBroadphaseProxy::AllFilter),
       mJointType(JointType::sphericalJoint)
     {
+        if (mass != 0)
+        {
+            mCollisionGroup = btBroadphaseProxy::DefaultFilter;
+            mCollisionMask = btBroadphaseProxy::AllFilter;
+        }
+        else
+        {
+            mCollisionGroup = btBroadphaseProxy::StaticFilter;
+            mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
+        }
     }
 
     BulletJoint::BulletJoint(BulletJoint* parent, JointType jointType, int jointIndex, float mass)
@@ -88,12 +96,20 @@ namespace sxr {
       mNeedsSync(SyncOptions::ALL),
       mPivot(0, 0, 0),
       mJointType(jointType),
-      mCollisionGroup(btBroadphaseProxy::DefaultFilter),
-      mCollisionMask(btBroadphaseProxy::AllFilter),
       mLinearDamping(0),
       mAngularDamping(0),
       mWorld(nullptr)
     {
+        if (mass != 0)
+        {
+            mCollisionGroup = btBroadphaseProxy::DefaultFilter;
+            mCollisionMask = btBroadphaseProxy::AllFilter;
+        }
+        else
+        {
+            mCollisionGroup = btBroadphaseProxy::StaticFilter;
+            mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
+        }
     }
 
     BulletJoint::BulletJoint(BulletJoint* parent, int jointIndex)
@@ -102,8 +118,6 @@ namespace sxr {
         mNeedsSync(SyncOptions::IMPORTED),
         mMultiBody(parent->getMultiBody()),
         mJointIndex(jointIndex),
-        mCollisionGroup(btBroadphaseProxy::DefaultFilter),
-        mCollisionMask(btBroadphaseProxy::AllFilter),
         mFriction(0),
         mScale(1, 1, 1),
         mWorld(nullptr)
@@ -116,6 +130,17 @@ namespace sxr {
         mLinearDamping = mMultiBody->getLinearDamping();
         mAngularDamping = mMultiBody->getAngularDamping();
         mLocalInertia = glm::vec3(link.m_inertiaLocal.x(), link.m_inertiaLocal.y(), link.m_inertiaLocal.z());
+        if (mMass != 0)
+        {
+            mCollisionGroup = btBroadphaseProxy::DefaultFilter;
+            mCollisionMask = btBroadphaseProxy::AllFilter;
+        }
+        else
+        {
+            mCollisionGroup = btBroadphaseProxy::StaticFilter;
+            mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
+        }
+
         if (mCollider)
         {
             btCollisionShape* shape = mCollider->getCollisionShape();
@@ -353,13 +378,14 @@ namespace sxr {
         btVector3 pos = t.getOrigin();
         btQuaternion rot = t.getRotation();
         Node* parent = owner->parent();
-        float matrixData[16];
-
-        t.getOpenGLMatrix(matrixData);
-        glm::mat4 worldMatrix(glm::make_mat4(matrixData));
         Transform* trans = owner->transform();
+
         if ((parent != nullptr) && (parent->parent() != nullptr))
         {
+            float matrixData[16];
+
+            t.getOpenGLMatrix(matrixData);
+            glm::mat4 worldMatrix(glm::make_mat4(matrixData));
             glm::mat4 parentWorld(parent->transform()->getModelMatrix(false));
             glm::mat4 parentInverseWorld(glm::inverse(parentWorld));
             glm::mat4 localMatrix;

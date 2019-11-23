@@ -33,17 +33,7 @@ public class SXRPhysicsJointMotor extends SXRConstraint
      */
     public SXRPhysicsJointMotor(SXRContext ctx)
     {
-        this(ctx, Float.MAX_VALUE);
-    }
-
-    /**
-     * Constructs new joint motor.
-     *
-     * @param ctx   the context of the app
-     */
-    public SXRPhysicsJointMotor(SXRContext ctx, float maxImpulse)
-    {
-        super(ctx, NativePhysicsJointMotor.create(maxImpulse));
+        this(ctx, NativePhysicsJointMotor.create(Float.MAX_VALUE));
     }
 
     /** Used only by {@link SXRPhysicsLoader} */
@@ -71,7 +61,6 @@ public class SXRPhysicsJointMotor extends SXRConstraint
     {
         NativePhysicsJointMotor.setPositionTarget4(getNative(), px, py, pz, pw);
     }
-
 
     public void setPositionTarget(int dof, float p)
     {

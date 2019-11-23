@@ -60,6 +60,16 @@ namespace sxr {
         mJointType = JointType::baseJoint;
         mJoints.reserve(mNumJoints);
         mJoints.resize(mNumJoints);
+        if (mass != 0)
+        {
+            mCollisionGroup = btBroadphaseProxy::DefaultFilter;
+            mCollisionMask = btBroadphaseProxy::AllFilter;
+        }
+        else
+        {
+            mCollisionGroup = btBroadphaseProxy::StaticFilter;
+            mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
+        }
     }
 
     BulletRootJoint::BulletRootJoint(btMultiBody* multiBody)
@@ -74,6 +84,7 @@ namespace sxr {
         mCollider = mMultiBody->getBaseCollider();
         mLinearDamping = mMultiBody->getLinearDamping();
         mAngularDamping = mMultiBody->getAngularDamping();
+
         if (mCollider)
         {
             btCollisionShape* shape = mCollider->getCollisionShape();
@@ -539,7 +550,7 @@ namespace sxr {
         }
         bw->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
         mMultiBody->setBaseName(mName.c_str());
-        bw->addMultiBody(mMultiBody, mCollisionGroup, mCollisionMask);
+        bw->addMultiBody(mMultiBody);
         LOGD("BULLET: attaching root joint %s to world", getName());
     }
 
