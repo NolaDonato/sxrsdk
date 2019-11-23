@@ -168,7 +168,7 @@ namespace sxr {
             return;
         }
         setPositionTarget(px, py, pz);
-        btMultiBodyJointMotor* motor = dynamic_cast<btMultiBodyJointMotor*> (mMotors[0]);
+        btMultiBodyJointMotor* motor = dynamic_cast<btMultiBodyJointMotor*> (mMotors[3]);
         mPositionTarget[3] = pw;
         if (motor != nullptr)
         {
@@ -209,7 +209,7 @@ namespace sxr {
             }
             else
             {
-                for (int i = 1; i < mDOFCount; ++i)
+                for (int i = 0; i < mDOFCount; ++i)
                 {
                     mMotors[i] = new btMultiBodyJointMotor(mb, linkIndex,
                                                            i, mVelocityTarget[i], mMaxImpulse);
