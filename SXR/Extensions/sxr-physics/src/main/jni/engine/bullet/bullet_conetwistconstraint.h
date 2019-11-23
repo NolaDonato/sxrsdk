@@ -40,29 +40,20 @@ namespace sxr {
                                            const glm::vec3& coneAxis);
 
         BulletConeTwistConstraint(btConeTwistConstraint *constraint);
-
         virtual ~BulletConeTwistConstraint();
 
-        void setSwingLimit(float limit);
+        virtual void* getUnderlying() { return this->mConeTwistConstraint; }
+        virtual void  setBreakingImpulse(float impulse);
+        virtual float getBreakingImpulse() const;
+        virtual void  sync(PhysicsWorld *world);
+        virtual void  addToWorld(PhysicsWorld*);
+        virtual void  removeFromWorld(PhysicsWorld*);
+        virtual void  setSwingLimit(float limit);
+        virtual float getSwingLimit() const;
+        virtual void  setTwistLimit(float limit);
+        virtual float getTwistLimit() const;
 
-        float getSwingLimit() const;
-
-        void setTwistLimit(float limit);
-
-        float getTwistLimit() const;
-
-        void* getUnderlying()
-        {
-            return this->mConeTwistConstraint;
-        }
-
-        void setBreakingImpulse(float impulse);
-
-        float getBreakingImpulse() const;
-
-        void updateConstructionInfo(PhysicsWorld* world);
     private:
-
         btConeTwistConstraint* mConeTwistConstraint;
         float      mBreakingImpulse;
         glm::vec3  mConeAxis;

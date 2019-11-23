@@ -38,18 +38,20 @@ namespace sxr {
             return COMPONENT_TYPE_PHYSICS_CONSTRAINT;
         }
 
-        virtual int   getConstraintType() const = 0;
-        virtual void* getUnderlying() = 0;
-        virtual void  setBreakingImpulse(float impulse) = 0;
-        virtual float getBreakingImpulse() const = 0;
+        virtual int                getConstraintType() const = 0;
+        virtual void*              getUnderlying() = 0;
+        virtual void               setBreakingImpulse(float impulse) = 0;
+        virtual float              getBreakingImpulse() const = 0;
         virtual PhysicsCollidable* getBodyA() const { return mBodyA; }
-        virtual const glm::vec3& getPivotA() const { return mPivotA; }
-        virtual const glm::vec3& getPivotB() const { return mPivotB; }
-        virtual void setPivotA(const glm::vec3& v) { mPivotA = v; }
-        virtual void setPivotB(const glm::vec3& v) { mPivotB = v; }
-        virtual void  updateConstructionInfo(PhysicsWorld*) = 0;
-        int getNumChildren() { return mConstraints.size(); }
-        PhysicsConstraint* getChildAt(int i) { return mConstraints.at(i); }
+        virtual const glm::vec3&   getPivotA() const { return mPivotA; }
+        virtual const glm::vec3&   getPivotB() const { return mPivotB; }
+        virtual void               setPivotA(const glm::vec3& v) { mPivotA = v; }
+        virtual void               setPivotB(const glm::vec3& v) { mPivotB = v; }
+        virtual void               sync(PhysicsWorld *world) = 0;
+        virtual void               addToWorld(PhysicsWorld* world) = 0;
+        virtual void               removeFromWorld(PhysicsWorld* world) = 0;
+        virtual int                getNumChildren()      { return mConstraints.size(); }
+        PhysicsConstraint*         getChildAt(int i) { return mConstraints.at(i); }
 
         virtual void  addChildComponent(Component* constraint)
         {

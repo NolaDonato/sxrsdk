@@ -120,6 +120,7 @@ protected:
     glm::vec3                mAxis;
     glm::vec3                mPivot;
 	glm::vec3				 mScale;
+	glm::vec3				 mLocalInertia;
 	short 				     mNeedsSync;
 	short                    mJointIndex;
     int 					 mCollisionGroup;

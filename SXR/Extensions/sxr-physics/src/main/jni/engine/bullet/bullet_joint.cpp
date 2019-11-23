@@ -67,6 +67,7 @@ namespace sxr {
       mNeedsSync(SyncOptions::ALL),
       mLinearDamping(0),
       mAngularDamping(0),
+      mLocalInertia(0, 0, 0),
       mCollisionGroup(btBroadphaseProxy::DefaultFilter),
       mCollisionMask(btBroadphaseProxy::AllFilter),
       mJointType(JointType::sphericalJoint)
@@ -79,6 +80,7 @@ namespace sxr {
       mParent(parent),
       mCollider(nullptr),
       mJointIndex(jointIndex - 1),
+      mLocalInertia(0, 0, 0),
       mAxis(1, 0, 0),
       mScale(1, 1, 1),
       mMass(mass),
@@ -113,6 +115,7 @@ namespace sxr {
         mMass = link.m_mass;
         mLinearDamping = mMultiBody->getLinearDamping();
         mAngularDamping = mMultiBody->getAngularDamping();
+        mLocalInertia = glm::vec3(link.m_inertiaLocal.x(), link.m_inertiaLocal.y(), link.m_inertiaLocal.z());
         if (mCollider)
         {
             btCollisionShape* shape = mCollider->getCollisionShape();
@@ -436,6 +439,8 @@ namespace sxr {
             link.m_mass = mMass;
             link.m_jointFriction = mFriction;
             link.m_userPtr = this;
+            link.m_collider = mCollider;
+            link.m_inertiaLocal = btVector3(mLocalInertia.x, mLocalInertia.y, mLocalInertia.z);
             switch (mJointType)
             {
                 case JointType::fixedJoint: setupFixed(); break;
@@ -448,6 +453,8 @@ namespace sxr {
         {
             link.m_mass = mMass;
             link.m_jointFriction = mFriction;
+            link.m_collider = mCollider;
+            link.m_inertiaLocal = btVector3(mLocalInertia.x, mLocalInertia.y, mLocalInertia.z);
             switch (mJointType)
             {
                 case JointType::fixedJoint: updateFixed(); break;
@@ -461,11 +468,9 @@ namespace sxr {
 
     void BulletJoint::updateCollider(Node* owner, int options)
     {
-        btMultibodyLink& link = mMultiBody->getLink(mJointIndex);
         btCollisionShape* curShape = nullptr;
         btCollisionShape* newShape = nullptr;
         Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
-        btVector3 scale(mScale.x, mScale.y, mScale.z);
 
         if (collider == nullptr)
         {
@@ -480,7 +485,6 @@ namespace sxr {
             mCollider->m_link = getJointIndex();
             mCollider->setUserPointer(this);
             mCollider->setActivationState(ACTIVE_TAG);
-            link.m_collider = mCollider;
             options |= SyncOptions::PROPERTIES;
         }
         else
@@ -503,7 +507,6 @@ namespace sxr {
                 }
                 if (curShape)
                 {
-                    scale = curShape->getLocalScaling();
                     delete curShape;
                     curShape = newShape;
                 }
@@ -512,10 +515,13 @@ namespace sxr {
         if (options & SyncOptions::PROPERTIES)
         {
             btVector3 localInertia;
+            btVector3 scale(mScale.x, mScale.y, mScale.z);
 
             curShape->setLocalScaling(scale);
             curShape->calculateLocalInertia(getMass(), localInertia);
-            link.m_inertiaLocal = localInertia;
+            mLocalInertia.x = localInertia.x();
+            mLocalInertia.y = localInertia.y();
+            mLocalInertia.z = localInertia.z();
         }
     }
 

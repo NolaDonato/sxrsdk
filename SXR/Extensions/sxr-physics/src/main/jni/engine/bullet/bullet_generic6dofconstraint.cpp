@@ -19,10 +19,12 @@
 
 #include "bullet_generic6dofconstraint.h"
 #include "bullet_joint.h"
+#include "bullet_world.h"
 #include "bullet_rigidbody.h"
 #include "bullet_sxr_utils.h"
 
 #include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <BulletDynamics/Dynamics/btDynamicsWorld.h>
 #include <BulletDynamics/ConstraintSolver/btGeneric6DofSpringConstraint.h>
 #include <BulletDynamics/ConstraintSolver/btGeneric6DofSpring2Constraint.h>
 #include <glm/glm.hpp>
@@ -249,34 +251,54 @@ namespace sxr {
         }
     }
 
-void BulletGeneric6dofConstraint::updateConstructionInfo(PhysicsWorld* world)
-{
-    if (mConstraint != nullptr)
+    void BulletGeneric6dofConstraint::sync(PhysicsWorld *world)
     {
-        return;
-    }
-    BulletRigidBody* bodyB = ((BulletRigidBody*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
+        if (mConstraint != nullptr)
+        {
+            return;
+        }
+        BulletRigidBody* bodyB = ((BulletRigidBody*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
 
-    if (bodyB)
+        if (bodyB)
+        {
+            btRigidBody* rbB = bodyB->getRigidBody();
+            btRigidBody* rbA = static_cast<BulletRigidBody*>(mBodyA)->getRigidBody();
+            btVector3    pA(mPivotA.x, mPivotA.y, mPivotA.z);
+            btVector3    pB(mPivotB.x, mPivotB.y, mPivotB.z);
+            btTransform  worldFrameA = convertTransform2btTransform(mBodyA->owner_object()->transform());
+            btTransform  worldFrameB = convertTransform2btTransform(owner_object()->transform());
+            btTransform  localFrameA = worldFrameB.inverse() * worldFrameA;
+            btTransform  localFrameB = worldFrameA.inverse() * worldFrameB;
+
+            localFrameA.setOrigin(pA);
+            localFrameB.setOrigin(pB);
+            btGeneric6DofSpringConstraint* constraint = new btGeneric6DofSpringConstraint(*rbA, *rbB, localFrameA, localFrameB, false);
+            constraint->setLinearLowerLimit(Common2Bullet(mLinearLowerLimits));
+            constraint->setLinearUpperLimit(Common2Bullet(mLinearUpperLimits));
+            constraint->setAngularLowerLimit(Common2Bullet(mAngularLowerLimits));
+            constraint->setAngularUpperLimit(Common2Bullet(mAngularUpperLimits));
+            constraint->setBreakingImpulseThreshold(mBreakingImpulse);
+            mConstraint = constraint;
+        }
+    }
+
+    void BulletGeneric6dofConstraint::addToWorld(PhysicsWorld* w)
     {
-        btRigidBody* rbB = bodyB->getRigidBody();
-        btRigidBody* rbA = static_cast<BulletRigidBody*>(mBodyA)->getRigidBody();
-        btVector3    pA(mPivotA.x, mPivotA.y, mPivotA.z);
-        btVector3    pB(mPivotB.x, mPivotB.y, mPivotB.z);
-        btTransform  worldFrameA = convertTransform2btTransform(mBodyA->owner_object()->transform());
-        btTransform  worldFrameB = convertTransform2btTransform(owner_object()->transform());
-        btTransform  localFrameA = worldFrameB.inverse() * worldFrameA;
-        btTransform  localFrameB = worldFrameA.inverse() * worldFrameB;
+        BulletWorld* bw = static_cast<BulletWorld*>(w);
 
-        localFrameA.setOrigin(pA);
-        localFrameB.setOrigin(pB);
-        btGeneric6DofSpringConstraint* constraint = new btGeneric6DofSpringConstraint(*rbA, *rbB, localFrameA, localFrameB, false);
-        constraint->setLinearLowerLimit(Common2Bullet(mLinearLowerLimits));
-        constraint->setLinearUpperLimit(Common2Bullet(mLinearUpperLimits));
-        constraint->setAngularLowerLimit(Common2Bullet(mAngularLowerLimits));
-        constraint->setAngularUpperLimit(Common2Bullet(mAngularUpperLimits));
-        constraint->setBreakingImpulseThreshold(mBreakingImpulse);
-        mConstraint = constraint;
+        if (mConstraint)
+        {
+            bw->getPhysicsWorld()->addConstraint(mConstraint, true);
+        }
     }
-}
+
+    void BulletGeneric6dofConstraint::removeFromWorld(PhysicsWorld* w)
+    {
+        BulletWorld* bw = static_cast<BulletWorld*>(w);
+
+        if (mConstraint)
+        {
+            bw->getPhysicsWorld()->removeConstraint(mConstraint);
+        }
+    }
 }

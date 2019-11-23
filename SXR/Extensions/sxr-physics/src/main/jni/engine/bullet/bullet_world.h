@@ -42,7 +42,8 @@ class BulletJoint;
 class BulletRootJoint;
 
 
-class BulletWorld : public PhysicsWorld {
+class BulletWorld : public PhysicsWorld
+{
  public:
     BulletWorld(bool isMultiBody);
 

@@ -26,7 +26,7 @@ class PhysicsFixedConstraint : public PhysicsConstraint {
  public:
     virtual ~PhysicsFixedConstraint() {}
 
-    virtual int getConstraintType() const { return PhysicsConstraint::fixedConstraint; }
+    virtual int  getConstraintType() const { return PhysicsConstraint::fixedConstraint; }
 };
 
 }

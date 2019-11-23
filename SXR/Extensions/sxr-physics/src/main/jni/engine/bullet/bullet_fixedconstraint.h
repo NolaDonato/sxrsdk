@@ -33,20 +33,16 @@ namespace sxr {
 
     public:
         explicit BulletFixedConstraint(PhysicsCollidable* bodyA);
-
         BulletFixedConstraint(btFixedConstraint* constraint);
-
         BulletFixedConstraint(btMultiBodyFixedConstraint* constraint);
-
         virtual ~BulletFixedConstraint();
 
-        void* getUnderlying() { return mMBConstraint ? reinterpret_cast<void*>(mMBConstraint) : reinterpret_cast<void*>(mConstraint); }
-
-        void setBreakingImpulse(float impulse);
-
-        float getBreakingImpulse() const;
-
-        void updateConstructionInfo(PhysicsWorld* world);
+        virtual void* getUnderlying() { return mMBConstraint ? reinterpret_cast<void*>(mMBConstraint) : reinterpret_cast<void*>(mConstraint); }
+        virtual void  setBreakingImpulse(float impulse);
+        virtual float getBreakingImpulse() const;
+        virtual void  sync(PhysicsWorld *world);
+        virtual void  addToWorld(PhysicsWorld*);
+        virtual void  removeFromWorld(PhysicsWorld*);
 
     private:
         btFixedConstraint* mConstraint;

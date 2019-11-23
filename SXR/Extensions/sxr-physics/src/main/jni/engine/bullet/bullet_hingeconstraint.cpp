@@ -20,8 +20,11 @@
 #include "bullet_hingeconstraint.h"
 #include "bullet_rigidbody.h"
 #include "bullet_joint.h"
+#include "bullet_world.h"
 #include "bullet_sxr_utils.h"
+
 #include <BulletDynamics/ConstraintSolver/btHingeConstraint.h>
+#include <BulletDynamics/Dynamics/btDynamicsWorld.h>
 
 const char tag[] = "BulletHingeConstrN";
 
@@ -116,7 +119,7 @@ namespace sxr {
         }
     }
 
-    void BulletHingeConstraint::updateConstructionInfo(PhysicsWorld* world)
+    void BulletHingeConstraint::sync(PhysicsWorld *world)
     {
         if (mConstraint != nullptr)
         {
@@ -144,6 +147,26 @@ namespace sxr {
             mConstraint = new btHingeConstraint(*rbA, *rbB, pA, pB, axisA, axisB, true);
             mConstraint->setLimit(mTempLower, mTempUpper);
             mConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
+        }
+    }
+
+    void BulletHingeConstraint::addToWorld(PhysicsWorld* w)
+    {
+        BulletWorld* bw = static_cast<BulletWorld*>(w);
+
+        if (mConstraint)
+        {
+            bw->getPhysicsWorld()->addConstraint(mConstraint, true);
+        }
+    }
+
+    void BulletHingeConstraint::removeFromWorld(PhysicsWorld* w)
+    {
+        BulletWorld* bw = static_cast<BulletWorld*>(w);
+
+        if (mConstraint)
+        {
+            bw->getPhysicsWorld()->removeConstraint(mConstraint);
         }
     }
 }

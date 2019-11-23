@@ -39,24 +39,18 @@ namespace sxr {
                 const glm::vec3 axis);
 
         BulletHingeConstraint(btHingeConstraint *constraint);
-
         virtual ~BulletHingeConstraint();
 
-        void setLimits(float lower, float upper);
-
-        float getLowerLimit() const;
-
-        float getUpperLimit() const;
-
-        void* getUnderlying() { return mConstraint; }
-
-        void setBreakingImpulse(float impulse);
-
-        virtual float getBreakingImpulse() const;
-
         virtual const glm::vec3& getHingeAxis() { return mHingeAxis; }
-
-        void updateConstructionInfo(PhysicsWorld* world);
+        virtual float getLowerLimit() const;
+        virtual float getUpperLimit() const;
+        virtual float getBreakingImpulse() const;
+        virtual void* getUnderlying() { return mConstraint; }
+        virtual void  setLimits(float lower, float upper);
+        virtual void  setBreakingImpulse(float impulse);
+        virtual void  sync(PhysicsWorld *world);
+        virtual void  addToWorld(PhysicsWorld*);
+        virtual void  removeFromWorld(PhysicsWorld*);
 
     private:
         btHingeConstraint* mConstraint;

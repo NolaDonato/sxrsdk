@@ -7,6 +7,7 @@
 #include "bullet_sxr_utils.h"
 #include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
 #include <BulletDynamics/Featherstone/btMultiBodyFixedConstraint.h>
+#include <BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h>
 
 static const char tag[] = "PHYSICS";
 
@@ -71,7 +72,7 @@ namespace sxr
         return mBreakingImpulse;
     }
 
-    void BulletFixedConstraint::updateConstructionInfo(PhysicsWorld *world)
+    void BulletFixedConstraint::sync(PhysicsWorld *world)
     {
         if ((mConstraint != nullptr) || (mMBConstraint != nullptr))
         {
@@ -144,4 +145,41 @@ namespace sxr
             }
         }
     }
+
+    void BulletFixedConstraint::addToWorld(PhysicsWorld* w)
+    {
+        BulletWorld* bw = static_cast<BulletWorld*>(w);
+
+        if (w->isMultiBody() && mMBConstraint)
+        {
+            btMultiBodyDynamicsWorld* world = dynamic_cast<btMultiBodyDynamicsWorld*>(bw->getPhysicsWorld());
+            if (world)
+            {
+                world->addMultiBodyConstraint(mMBConstraint);
+            }
+        }
+        else if (mConstraint)
+        {
+            bw->getPhysicsWorld()->addConstraint(mConstraint, true);
+        }
+    }
+
+    void BulletFixedConstraint::removeFromWorld(PhysicsWorld* w)
+    {
+        BulletWorld* bw = static_cast<BulletWorld*>(w);
+
+        if (w->isMultiBody() && mMBConstraint)
+        {
+            btMultiBodyDynamicsWorld* world = dynamic_cast<btMultiBodyDynamicsWorld*>(bw->getPhysicsWorld());
+            if (world)
+            {
+                world->removeMultiBodyConstraint(mMBConstraint);
+            }
+        }
+        else if (mConstraint)
+        {
+            bw->getPhysicsWorld()->removeConstraint(mConstraint);
+        }
+    }
+
 }

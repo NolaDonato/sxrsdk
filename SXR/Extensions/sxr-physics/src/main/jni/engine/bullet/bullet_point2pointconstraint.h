@@ -34,11 +34,8 @@ namespace sxr {
 
     public:
         BulletPoint2PointConstraint(PhysicsCollidable* bodyA, const glm::vec3& pivotA, const glm::vec3& pivotB);
-
         BulletPoint2PointConstraint(btPoint2PointConstraint* constraint);
-
         BulletPoint2PointConstraint(btMultiBodyPoint2Point* constraint);
-
         virtual ~BulletPoint2PointConstraint();
 
         virtual void* getUnderlying()
@@ -46,11 +43,11 @@ namespace sxr {
             return mMBConstraint ? reinterpret_cast<void*>(mMBConstraint) : reinterpret_cast<void*>(mConstraint);
         }
 
-        void setBreakingImpulse(float impulse);
-
-        float getBreakingImpulse() const;
-
-        void updateConstructionInfo(PhysicsWorld* world);
+        virtual void  setBreakingImpulse(float impulse);
+        virtual float getBreakingImpulse() const;
+        virtual void  sync(PhysicsWorld *world);
+        virtual void  addToWorld(PhysicsWorld*);
+        virtual void  removeFromWorld(PhysicsWorld*);
 
     private:
         btPoint2PointConstraint* mConstraint;

@@ -143,46 +143,13 @@ btDynamicsWorld* BulletWorld::getPhysicsWorld() const
 
 void BulletWorld::addConstraint(PhysicsConstraint *constraint)
 {
-    constraint->updateConstructionInfo(this);
-    Node* owner = constraint->owner_object();
-    PhysicsJoint* joint = static_cast<PhysicsJoint*>(owner->getComponent(COMPONENT_TYPE_PHYSICS_JOINT));
-    PhysicsRigidBody* body = static_cast<PhysicsRigidBody*>(owner->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
-    PhysicsCollidable* bodyA = constraint->getBodyA();
-    int type = bodyA ? bodyA->getType() : COMPONENT_TYPE_PHYSICS_JOINT;
-
-    if (mIsMultiBody &&
-        ((joint != nullptr) ||
-         (type == COMPONENT_TYPE_PHYSICS_JOINT)))
-    {
-        btMultiBodyConstraint* constr = static_cast<btMultiBodyConstraint *>(constraint->getUnderlying());
-        btMultiBodyDynamicsWorld* w = dynamic_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld);
-        w->addMultiBodyConstraint(constr);
-        LOGD("BULLET: constraint for joint %s added to world", constraint->owner_object()->name().c_str());
-    }
-    else if (body != nullptr)
-    {
-        btTypedConstraint* constr = static_cast<btTypedConstraint *>(constraint->getUnderlying());
-        mPhysicsWorld->addConstraint(constr, true);
-        LOGD("BULLET: constraint for rigid body %s added to world", body->getName());
-    }
+    constraint->sync(this);
+    constraint->addToWorld(this);
 }
 
 void BulletWorld::removeConstraint(PhysicsConstraint *constraint)
 {
-    Node* owner = constraint->owner_object();
-    PhysicsJoint* joint = static_cast<PhysicsJoint*>(owner->getComponent(COMPONENT_TYPE_PHYSICS_JOINT));
-    PhysicsRigidBody* body = static_cast<PhysicsRigidBody*>(owner->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
-
-    if (body != nullptr)
-    {
-        mPhysicsWorld->removeConstraint(static_cast<btTypedConstraint *>(constraint->getUnderlying()));
-        LOGD("BULLET: constraint for rigid body %s removed from world", body->getName());
-    }
-    else if (mIsMultiBody && (joint != nullptr))
-    {
-        dynamic_cast<btMultiBodyDynamicsWorld*>(mPhysicsWorld)->removeMultiBodyConstraint(static_cast<btMultiBodyConstraint *>(constraint->getUnderlying()));
-        LOGD("BULLET: constraint for joint %s removed from world", joint->getName());
-    }
+    constraint->removeFromWorld(this);
 }
 
 void BulletWorld::startDrag(Node *pivot_obj, PhysicsRigidBody *target,

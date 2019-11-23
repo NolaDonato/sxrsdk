@@ -35,26 +35,19 @@ namespace sxr {
     {
     public:
         BulletUniversalConstraint(PhysicsCollidable* bodyA, const glm::vec3& pivotB, const glm::vec3& axis1, const glm::vec3& axis2);
-
         BulletUniversalConstraint(btUniversalConstraint *constraint);
-
         virtual ~BulletUniversalConstraint();
 
-        virtual void setAngularLowerLimits(float limitX, float limitY, float limitZ);
-
         virtual const glm::vec3& getAngularLowerLimits() const;
-
-        virtual void setAngularUpperLimits(float limitX, float limitY, float limitZ);
-
         virtual const glm::vec3& getAngularUpperLimits() const;
-
-        void* getUnderlying() { return mConstraint;}
-
-        virtual void setBreakingImpulse(float impulse);
-
+        virtual void* getUnderlying() { return mConstraint;}
         virtual float getBreakingImpulse() const;
-
-        virtual void updateConstructionInfo(PhysicsWorld* world);
+        virtual void  setAngularUpperLimits(float limitX, float limitY, float limitZ);
+        virtual void  setAngularLowerLimits(float limitX, float limitY, float limitZ);
+        virtual void  setBreakingImpulse(float impulse);
+        virtual void  sync(PhysicsWorld *world);
+        virtual void  addToWorld(PhysicsWorld*);
+        virtual void  removeFromWorld(PhysicsWorld*);
 
     private:
 

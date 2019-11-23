@@ -39,11 +39,13 @@ public:
     virtual void setPositionTarget(int dof, float p);
     virtual void setPositionTarget(float px, float py, float pz);
     virtual void setPositionTarget(float px, float py, float pz, float pw);
-    virtual void updateConstructionInfo(PhysicsWorld* world);
+    virtual void sync(PhysicsWorld *world);
     virtual int   getConstraintType() const;
     virtual void* getUnderlying();
     virtual void  setBreakingImpulse(float impulse);
     virtual float getBreakingImpulse() const;
+    virtual void  addToWorld(PhysicsWorld*);
+    virtual void  removeFromWorld(PhysicsWorld*);
 
 protected:
     float                   mMaxImpulse;

@@ -46,29 +46,20 @@ namespace sxr {
 
         virtual ~BulletGeneric6dofConstraint();
 
-        virtual void setLinearLowerLimits(float limitX, float limitY, float limitZ);
-
         virtual const glm::vec3& getLinearLowerLimits() const;
-
-        virtual void setLinearUpperLimits(float limitX, float limitY, float limitZ);
-
         virtual const glm::vec3& getLinearUpperLimits() const;
-
-        virtual void setAngularLowerLimits(float limitX, float limitY, float limitZ);
-
-        virtual const glm::vec3& getAngularLowerLimits() const;
-
-        virtual void setAngularUpperLimits(float limitX, float limitY, float limitZ);
-
         virtual const glm::vec3& getAngularUpperLimits() const;
-
-        void* getUnderlying() { return mConstraint;}
-
-        virtual void setBreakingImpulse(float impulse);
-
+        virtual const glm::vec3& getAngularLowerLimits() const;
+        virtual void* getUnderlying() { return mConstraint;}
+        virtual void  setLinearLowerLimits(float limitX, float limitY, float limitZ);
+        virtual void  setLinearUpperLimits(float limitX, float limitY, float limitZ);
+        virtual void  setAngularLowerLimits(float limitX, float limitY, float limitZ);
+        virtual void  setAngularUpperLimits(float limitX, float limitY, float limitZ);
+        virtual void  setBreakingImpulse(float impulse);
         virtual float getBreakingImpulse() const;
-
-        virtual void updateConstructionInfo(PhysicsWorld* world);
+        virtual void  sync(PhysicsWorld *world);
+        virtual void  addToWorld(PhysicsWorld*);
+        virtual void  removeFromWorld(PhysicsWorld*);
 
     private:
 

@@ -19,10 +19,12 @@
 
 #include "bullet_universalconstraint.h"
 #include "bullet_joint.h"
+#include "bullet_world.h"
 #include "bullet_rigidbody.h"
 #include "bullet_sxr_utils.h"
 
 #include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <BulletDynamics/Dynamics/btDynamicsWorld.h>
 #include <BulletDynamics/ConstraintSolver/btUniversalConstraint.h>
 #include <glm/glm.hpp>
 #include <glm/vec3.hpp>
@@ -127,30 +129,51 @@ namespace sxr {
         }
     }
 
-void BulletUniversalConstraint::updateConstructionInfo(PhysicsWorld* world)
-{
-    if (mConstraint != nullptr)
+    void BulletUniversalConstraint::sync(PhysicsWorld *world)
     {
-        return;
-    }
-    BulletRigidBody* bodyB = ((BulletRigidBody*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
+        if (mConstraint != nullptr)
+        {
+            return;
+        }
+        BulletRigidBody *bodyB = ((BulletRigidBody *) owner_object()
+                ->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
 
-    if (bodyB)
+        if (bodyB)
+        {
+            btRigidBody *rbB = bodyB->getRigidBody();
+            BulletRigidBody *bodyA = reinterpret_cast<BulletRigidBody *>(mBodyA);
+            btRigidBody *rbA = bodyA->getRigidBody();
+            float x, y, z;
+            btVector3 p(mPivotB.x, mPivotB.y, mPivotB.z);
+            btVector3 zaxis(mAxis1.x, mAxis1.y, mAxis1.z);
+            btVector3 yaxis(mAxis2.x, mAxis2.y, mAxis2.z);
+
+            //        bodyA->getTranslation(x, y, z);
+            //        p += btVector3(x, y, z);
+            mConstraint = new btUniversalConstraint(*rbA, *rbB, p, zaxis, yaxis);
+            mConstraint->setAngularLowerLimit(Common2Bullet(mAngularLowerLimits));
+            mConstraint->setAngularUpperLimit(Common2Bullet(mAngularUpperLimits));
+            mConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
+        }
+    }
+
+    void BulletUniversalConstraint::addToWorld(PhysicsWorld* w)
     {
-        btRigidBody* rbB = bodyB->getRigidBody();
-        BulletRigidBody* bodyA = reinterpret_cast<BulletRigidBody*>(mBodyA);
-        btRigidBody* rbA = bodyA->getRigidBody();
-        float        x, y, z;
-        btVector3    p(mPivotB.x, mPivotB.y, mPivotB.z);
-        btVector3    zaxis(mAxis1.x, mAxis1.y, mAxis1.z);
-        btVector3    yaxis(mAxis2.x, mAxis2.y, mAxis2.z);
+        BulletWorld* bw = static_cast<BulletWorld*>(w);
 
-//        bodyA->getTranslation(x, y, z);
-//        p += btVector3(x, y, z);
-        mConstraint = new btUniversalConstraint(*rbA, *rbB, p, zaxis, yaxis);
-        mConstraint->setAngularLowerLimit(Common2Bullet(mAngularLowerLimits));
-        mConstraint->setAngularUpperLimit(Common2Bullet(mAngularUpperLimits));
-        mConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
+        if (mConstraint)
+        {
+            bw->getPhysicsWorld()->addConstraint(mConstraint, true);
+        }
     }
-}
+
+    void BulletUniversalConstraint::removeFromWorld(PhysicsWorld* w)
+    {
+        BulletWorld* bw = static_cast<BulletWorld*>(w);
+
+        if (mConstraint)
+        {
+            bw->getPhysicsWorld()->removeConstraint(mConstraint);
+        }
+    }
 }

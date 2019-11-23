@@ -22,6 +22,7 @@
 #include <BulletDynamics/ConstraintSolver/btSliderConstraint.h>
 #include <BulletDynamics/Featherstone/btMultiBodySliderConstraint.h>
 #include <LinearMath/btTransform.h>
+#include <BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h>
 
 #include "bullet_rigidbody.h"
 #include "bullet_joint.h"
@@ -212,88 +213,128 @@ namespace sxr {
         }
     }
 
-void BulletSliderConstraint::updateConstructionInfo(PhysicsWorld* world)
-{
-    if ((mConstraint != nullptr) || (mMBConstraint != nullptr))
+    void BulletSliderConstraint::sync(PhysicsWorld *world)
     {
-        return;
-    }
-    BulletRigidBody* rigidBodyB = static_cast<BulletRigidBody*>(owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
-    btTransform  worldFrameA = convertTransform2btTransform(mBodyA->owner_object()->transform());
-    btTransform  worldFrameB = convertTransform2btTransform(owner_object()->transform());
-    btTransform  localFrameA = worldFrameB.inverse() * worldFrameA;
-    btTransform  localFrameB = worldFrameA.inverse() * worldFrameB;
-    btVector3    pivotA(mPivotA.x, mPivotA.y, mPivotA.z);
-    btVector3    pivotB(mPivotB.x, mPivotB.y, mPivotB.z);
-    btVector3    sliderAxisA = localFrameA.getOrigin();
-    btVector3    sliderAxisB = localFrameB.getOrigin();
-    int          typeA = mBodyA->getType();
+        if ((mConstraint != nullptr) || (mMBConstraint != nullptr))
+        {
+            return;
+        }
+        BulletRigidBody *rigidBodyB = static_cast<BulletRigidBody*>(owner_object()->
+                                      getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
+        btTransform worldFrameA = convertTransform2btTransform(mBodyA->owner_object()->transform());
+        btTransform worldFrameB = convertTransform2btTransform(owner_object()->transform());
+        btTransform localFrameA = worldFrameB.inverse() * worldFrameA;
+        btTransform localFrameB = worldFrameA.inverse() * worldFrameB;
+        btVector3 pivotA(mPivotA.x, mPivotA.y, mPivotA.z);
+        btVector3 pivotB(mPivotB.x, mPivotB.y, mPivotB.z);
+        btVector3 sliderAxisA = localFrameA.getOrigin();
+        btVector3 sliderAxisB = localFrameB.getOrigin();
+        int typeA = mBodyA->getType();
 
-    sliderAxisA.normalize();
-    sliderAxisB.normalize();
-    if (rigidBodyB)
+        sliderAxisA.normalize();
+        sliderAxisB.normalize();
+        if (rigidBodyB)
+        {
+            btRigidBody *rbB = rigidBodyB->getRigidBody();
+
+            if (typeA == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
+            {
+                btRigidBody *rbA = static_cast<BulletRigidBody *>(mBodyA)->getRigidBody();
+                btMatrix3x3 rotX2SliderAxis;
+                btVector3 Xaxis(1, 0, 0);
+                btVector3 negXaxis(-1, 0, 0);
+
+                rotX2SliderAxis = btMatrix3x3(shortestArcQuatNormalize2(Xaxis, sliderAxisA));
+                localFrameA.getBasis() *= rotX2SliderAxis;
+                rotX2SliderAxis = btMatrix3x3(shortestArcQuatNormalize2(negXaxis, sliderAxisB));
+                localFrameB.getBasis() *= rotX2SliderAxis;
+                localFrameA.setOrigin(pivotA);
+                localFrameB.setOrigin(pivotB);
+
+                mConstraint = new btSliderConstraint(*rbA, *rbB, localFrameA, localFrameB, true);
+                mConstraint->setLowerAngLimit(mLowerAngularLimit);
+                mConstraint->setUpperAngLimit(mUpperAngularLimit);
+                mConstraint->setLowerLinLimit(mLowerLinearLimit);
+                mConstraint->setUpperLinLimit(mUpperLinearLimit);
+                mConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
+            }
+            else if (typeA == COMPONENT_TYPE_PHYSICS_JOINT)
+            {
+                BulletJoint *jointA = static_cast<BulletJoint *>(mBodyA);
+                btMultiBody *mbA = jointA->getMultiBody();
+                mMBConstraint = new btMultiBodySliderConstraint(mbA, jointA->getJointIndex(), rbB,
+                                                                pivotA, pivotB,
+                                                                localFrameA.getBasis(),
+                                                                localFrameB.getBasis(),
+                                                                sliderAxisB);
+            }
+            return;
+        }
+
+        BulletJoint *jointB = static_cast<BulletJoint*>(
+                                owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT));
+        if (jointB)
+        {
+            btMultiBody *mbB = jointB->getMultiBody();
+
+            if (typeA == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
+            {
+                BulletRigidBody *rigidBodyA = static_cast<BulletRigidBody *>(mBodyA);
+                btRigidBody *rbA = rigidBodyA->getRigidBody();
+                mMBConstraint = new btMultiBodySliderConstraint(mbB, jointB->getJointIndex(), rbA,
+                                                                pivotB, pivotA,
+                                                                localFrameB.getBasis(),
+                                                                localFrameA.getBasis(),
+                                                                sliderAxisB);
+
+            }
+            else if (typeA == COMPONENT_TYPE_PHYSICS_JOINT)
+            {
+                BulletJoint *jointA = static_cast<BulletJoint *>(mBodyA);
+                btMultiBody *mbA = jointA->getMultiBody();
+                mMBConstraint = new btMultiBodySliderConstraint(mbA, jointA->getJointIndex(),
+                                                                mbB, jointB->getJointIndex(),
+                                                                pivotA, pivotB,
+                                                                localFrameA.getBasis(),
+                                                                localFrameB.getBasis(),
+                                                                sliderAxisA);
+            }
+        }
+    }
+
+    void BulletSliderConstraint::addToWorld(PhysicsWorld* w)
     {
-        btRigidBody *rbB = rigidBodyB->getRigidBody();
+        BulletWorld* bw = static_cast<BulletWorld*>(w);
 
-        if (typeA == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
+        if (w->isMultiBody() && mMBConstraint)
         {
-            btRigidBody* rbA = static_cast<BulletRigidBody*>(mBodyA)->getRigidBody();
-            btMatrix3x3 rotX2SliderAxis;
-            btVector3 Xaxis(1, 0, 0);
-            btVector3 negXaxis(-1, 0, 0);
-
-            rotX2SliderAxis = btMatrix3x3(shortestArcQuatNormalize2(Xaxis, sliderAxisA));
-            localFrameA.getBasis() *= rotX2SliderAxis;
-            rotX2SliderAxis = btMatrix3x3(shortestArcQuatNormalize2(negXaxis, sliderAxisB));
-            localFrameB.getBasis() *= rotX2SliderAxis;
-            localFrameA.setOrigin(pivotA);
-            localFrameB.setOrigin(pivotB);
-
-            mConstraint = new btSliderConstraint(*rbA, *rbB, localFrameA, localFrameB, true);
-            mConstraint->setLowerAngLimit(mLowerAngularLimit);
-            mConstraint->setUpperAngLimit(mUpperAngularLimit);
-            mConstraint->setLowerLinLimit(mLowerLinearLimit);
-            mConstraint->setUpperLinLimit(mUpperLinearLimit);
-            mConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
+            btMultiBodyDynamicsWorld* world = dynamic_cast<btMultiBodyDynamicsWorld*>(bw->getPhysicsWorld());
+            if (world)
+            {
+                world->addMultiBodyConstraint(mMBConstraint);
+            }
         }
-        else if (typeA == COMPONENT_TYPE_PHYSICS_JOINT)
+        else if (mConstraint)
         {
-            BulletJoint* jointA = static_cast<BulletJoint*>(mBodyA);
-            btMultiBody* mbA = jointA->getMultiBody();
-            mMBConstraint = new btMultiBodySliderConstraint(mbA, jointA->getJointIndex(), rbB,
-                                                            pivotA, pivotB,
-                                                            localFrameA.getBasis(), localFrameB.getBasis(),
-                                                            sliderAxisB);
+            bw->getPhysicsWorld()->addConstraint(mConstraint, true);
         }
-        return;
     }
 
-    BulletJoint* jointB = (BulletJoint*) owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT);
-    if (jointB)
+    void BulletSliderConstraint::removeFromWorld(PhysicsWorld* w)
     {
-        btMultiBody* mbB = jointB->getMultiBody();
+        BulletWorld* bw = static_cast<BulletWorld*>(w);
 
-        if (typeA == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
+        if (w->isMultiBody() && mMBConstraint)
         {
-            BulletRigidBody* rigidBodyA = static_cast<BulletRigidBody*>(mBodyA);
-            btRigidBody* rbA = rigidBodyA->getRigidBody();
-            mMBConstraint = new btMultiBodySliderConstraint(mbB, jointB->getJointIndex(), rbA,
-                                                            pivotB, pivotA,
-                                                            localFrameB.getBasis(), localFrameA.getBasis(),
-                                                            sliderAxisB);
-
+            btMultiBodyDynamicsWorld* world = dynamic_cast<btMultiBodyDynamicsWorld*>(bw->getPhysicsWorld());
+            if (world)
+            {
+                world->removeMultiBodyConstraint(mMBConstraint);
+            }
         }
-        else if (typeA == COMPONENT_TYPE_PHYSICS_JOINT)
+        else if (mConstraint)
         {
-            BulletJoint* jointA = static_cast<BulletJoint*>(mBodyA);
-            btMultiBody* mbA = jointA->getMultiBody();
-            mMBConstraint = new btMultiBodySliderConstraint(mbA, jointA->getJointIndex(),
-                                                            mbB, jointB->getJointIndex(),
-                                                            pivotA, pivotB,
-                                                            localFrameA.getBasis(), localFrameB.getBasis(),
-                                                            sliderAxisA);
+            bw->getPhysicsWorld()->removeConstraint(mConstraint);
         }
     }
-}
-
 }
