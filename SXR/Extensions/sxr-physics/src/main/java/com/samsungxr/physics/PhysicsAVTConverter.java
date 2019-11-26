@@ -443,6 +443,10 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             worldMtx.getTranslation(oldpos);
             oldpos.sub(newpos, mWorldOffset);
         }
+        else
+        {
+            mWorldOffset.set(0, 0, 0);
+        }
         for (int i = attachBoneIndex + 1; i < numInputBones; ++i)
         {
             JSONObject bone = (i == 0) ? basebone : bonelist.getJSONObject(i - 1).getJSONObject("value");
@@ -461,7 +465,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         worldPose.sync();
         skel.setPose(worldPose);
         skel.poseToBones();
-
     }
 
     private SXRPhysicsJoint parseMultiBodyPhysics(JSONObject root) throws JSONException
@@ -832,7 +835,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         }
         Log.e(TAG, "creating joint %s parent = %s, mass = %3f",
               link.getString("Name"), parentName, mass);
-        SXRPhysicsJoint joint = new SXRPhysicsJoint(parentJoint, jointType, jointIndex, mass, SXRCollisionMatrix.DEFAULT_GROUP);
+        SXRPhysicsJoint joint = new SXRPhysicsJoint(parentJoint, jointType, jointIndex, mass);
         joint.setBoneIndex(jointIndex);
         joint.setName(link.getString("Target Bone"));
         if (addToBody)

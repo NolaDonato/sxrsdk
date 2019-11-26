@@ -507,59 +507,69 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
          * scene nodes based on name matching. If a collider exists
          * for the joint, attach it to the scene object too.
          */
-        SXRPhysicsJoint[] joints = NativeBulletLoader.getJoints(loader);
-        SXRPhysicsJoint rootJoint = null;
-        for (SXRPhysicsJoint joint : joints)
+        SXRPhysicsJoint[] jointsLoaded = NativeBulletLoader.getJoints(loader);
+        SXRPhysicsJoint[] skelJoints = new SXRPhysicsJoint[jointsLoaded.length];
+        SXRSkeleton skel = null;
+
+        for (SXRPhysicsJoint joint : jointsLoaded)
         {
             String name = joint.getName();
-            SXRNode sceneObject = sceneRoot.getNodeByName(name);
 
-            if (sceneObject == null)
+            if (sceneRoot.getNodeByName(name) == null)
             {
-                sceneObject = new SXRNode(getSXRContext());
-                sceneObject.setName(name);
-                sceneRoot.addChildObject(sceneObject);
                 Log.w("PHYSICS LOADER","Didn't find node for joint " + name);
-             }
-            if (joint.getJointIndex() <= 0)
-            {
-                rootJoint = joint;
             }
-            if (sceneObject.getComponent(SXRCollider.getComponentType()) == null)
-            {
-                SXRCollider collider = NativeBulletLoader.getCollider(loader, name);
-                if (collider == null)
-                {
-                    collider = new SXRMeshCollider(ctx, true);
-                }
-                sceneObject.attachComponent(collider);
-            }
-            sceneObject.attachComponent(joint);
+            skelJoints[joint.getJointIndex()] = joint;
         }
 
-        SXRSkeleton skel = (rootJoint != null) ? rootJoint.getSkeleton() : null;
-
-        if (skel != null)
+        if (skelJoints.length != 0)
         {
-            for (int i = 0; i < skel.getNumBones(); ++i)
+            SXRPhysicsJoint rootJoint = skelJoints[0];
+            skel = (rootJoint != null) ? rootJoint.getSkeleton() : null;
+
+            if (skel != null)
             {
-                String boneName = skel.getBoneName(i);
-                SXRNode bone = sceneRoot.getNodeByName(boneName);
-                int parentIndex = skel.getParentBoneIndex(i);
-
-                if (bone != null)
+                for (int i = 0; i < skel.getNumBones(); ++i)
                 {
-                    skel.setBone(i, bone);
-                    if (parentIndex >= 0)
-                    {
-                        SXRNode parentBone = skel.getBone(parentIndex);
+                    String boneName = skel.getBoneName(i);
+                    SXRNode bone = sceneRoot.getNodeByName(boneName);
+                    int parentIndex = skel.getParentBoneIndex(i);
+                    SXRCollider collider = null;
+                    SXRPhysicsJoint joint = skelJoints[i];
 
-                        if (parentBone != null)
+                    if (bone == null)
+                    {
+                        bone = new SXRNode(getSXRContext());
+                        bone.setName(boneName);
+                        skel.setBone(i, bone);
+                        if (parentIndex >= 0)
                         {
-                            sceneRoot.removeChildObject(bone);
-                            parentBone.addChildObject(bone);
+                            SXRNode parentBone = skel.getBone(parentIndex);
+
+                            if (parentBone != null)
+                            {
+                                parentBone.addChildObject(bone);
+                            }
+                            else
+                            {
+                                skel.getBone(0).addChildObject(bone);
+                            }
+                        }
+                        else
+                        {
+                            sceneRoot.addChildObject(bone);
                         }
                     }
+                    if (bone.getComponent(SXRCollider.getComponentType()) == null)
+                    {
+                        collider = NativeBulletLoader.getCollider(loader, boneName);
+                    }
+                    if (collider == null)
+                    {
+                        collider = new SXRMeshCollider(ctx, true);
+                    }
+                    bone.attachComponent(collider);
+                    bone.attachComponent(joint);
                 }
             }
         }
