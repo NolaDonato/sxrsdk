@@ -140,7 +140,6 @@ namespace sxr {
             mCollisionGroup = btBroadphaseProxy::StaticFilter;
             mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
         }
-
         if (mCollider)
         {
             btCollisionShape* shape = mCollider->getCollisionShape();
@@ -398,7 +397,7 @@ namespace sxr {
             trans->set_position(pos.getX(), pos.getY(), pos.getZ());
             trans->set_rotation(rot.getW(), rot.getX(), rot.getY(), rot.getZ());
         }
-        mNeedsSync &= ~SyncOptions::IMPORTED;
+        mNeedsSync = 0;
         LOGD("BULLET: JOINT %s %3f, %3f, %3f",
              owner->name().c_str(),
              trans->position_x(),
@@ -606,7 +605,7 @@ namespace sxr {
     {
         BulletJoint*       jointA = static_cast<BulletJoint*>(getParent());
         btVector3          pivotB(mPivot.x, mPivot.y, mPivot.z);
-        btTransform        worldA;  jointA->getWorldTransform(worldA);
+        btTransform        worldA; jointA->getWorldTransform(worldA);
         btTransform        worldB; getWorldTransform(worldB);
         btQuaternion       rotA(worldA.getRotation());
         btVector3          bodyACOM(worldA.getOrigin());

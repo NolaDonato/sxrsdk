@@ -77,6 +77,7 @@ namespace sxr {
       mLinksAdded(0),
       mNumJoints(multiBody->getNumLinks())
     {
+        mNeedsSync |= SyncOptions::IMPORTED;
         mMultiBody = multiBody;
         mJoints.reserve(mNumJoints);
         mJoints.resize(mNumJoints);
@@ -84,7 +85,7 @@ namespace sxr {
         mCollider = mMultiBody->getBaseCollider();
         mLinearDamping = mMultiBody->getLinearDamping();
         mAngularDamping = mMultiBody->getAngularDamping();
-
+        mCollider = multiBody->getBaseCollider();
         if (mCollider)
         {
             btCollisionShape* shape = mCollider->getCollisionShape();
@@ -127,13 +128,18 @@ namespace sxr {
 
     Skeleton* BulletRootJoint::getSkeleton() const
     {
-        Skeleton* skel = static_cast<Skeleton*>(owner_object()->getComponent(COMPONENT_TYPE_SKELETON));
-        if (skel == nullptr)
+        Node* owner = owner_object();
+
+        if (owner != nullptr)
         {
-            skel = createSkeleton();
-            owner_object()->attachComponent(skel);
+            Skeleton* skel = static_cast<Skeleton *>(owner_object()->getComponent(COMPONENT_TYPE_SKELETON));
+            if (skel == nullptr)
+            {
+                skel = createSkeleton();
+                owner->attachComponent(skel);
+            }
         }
-        return skel;
+        return createSkeleton();
     }
 
     int BulletRootJoint::getNumJoints() const { return mNumJoints + 1; }
@@ -347,7 +353,7 @@ namespace sxr {
         for (int i = 0; i < mNumJoints; ++i)
         {
             BulletJoint* j = mJoints[i];
-            *(++curParent) = j->getParent()->getJointIndex();
+            *(++curParent) = j->getParent()->getJointIndex() + 1;
         }
         skel = new Skeleton(boneParents, numbones);
         delete [] boneParents;
@@ -473,16 +479,20 @@ namespace sxr {
         LOGD("BULLET: linking joint %s at index %d", joint->getName(), linkIndex);
         bool initialized = (++mLinksAdded == numjoints);
 
-        if (joint != this)
-        {
-            mJoints[linkIndex] = bj;
-        }
         if (bj->isImported())
         {
             bj->getPhysicsTransform();
+            if (joint != this)
+            {
+                bj->attachToWorld(world);
+            }
         }
         else if (initialized)
         {
+            if (joint != this)
+            {
+                mJoints[linkIndex] = bj;
+            }
             attachToWorld(world);
         }
         return initialized;
@@ -499,7 +509,8 @@ namespace sxr {
         {
             static_cast<BulletJoint*>(joint)->detachFromWorld(deleteCollider);
         }
-        if (--mLinksAdded == 0)
+        --mLinksAdded;
+        if (mWorld)
         {
             detachFromWorld(deleteCollider);
             return true;
