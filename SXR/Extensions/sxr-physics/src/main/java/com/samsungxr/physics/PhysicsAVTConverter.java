@@ -336,6 +336,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             SXRNode parentNode  = null;
             int parentIndex = -1;
 
+            boneparents[numInputBones] = -1;
             if (parent != null)
             {
                 parentName = parent.getString("Target Bone");
@@ -380,7 +381,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 }
             }
             node = new SXRNode(ctx);
-            boneparents[numInputBones] = -1;
             bonenames[numInputBones] = targetBone;
             boneNodes[numInputBones] = node;
             node.setName(bonenames[numInputBones]);
