@@ -597,6 +597,7 @@ namespace sxr {
         link->m_linkName = mName.c_str();
         link->m_jointName = mName.c_str();
         mWorld = bw;
+        mCollider->setActivationState(enabled() ? ACTIVE_TAG : ISLAND_SLEEPING);
         bw->getPhysicsWorld()->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
         LOGD("BULLET: attaching joint %s to world", getName());
     }
@@ -659,7 +660,7 @@ namespace sxr {
                                    jointA->getJointIndex(),
                                    rotA,
                                    diffCOM,
-                                   -pivotB, true);
+                                   -pivotB, false);
     }
 
     void BulletJoint::updateSpherical()
@@ -720,7 +721,7 @@ namespace sxr {
                           rotA,
                           hingeAxis.normalized(),
                           diffCOM,
-                          -pivotB, true);
+                          -pivotB, false);
     }
 
     void BulletJoint::updateHinge()
@@ -766,7 +767,7 @@ namespace sxr {
                                   sliderAxis.normalized(),
                                   diffCOM,
                                   -pivotB,
-                                  true);
+                                  false);
     }
 
     void BulletJoint::updateSlider()

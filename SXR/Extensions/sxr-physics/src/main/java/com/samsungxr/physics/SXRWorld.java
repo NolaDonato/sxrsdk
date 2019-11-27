@@ -573,7 +573,7 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
                 {
                     if (!contains(bodyB) || ((bodyA != null) && !contains(bodyA)))
                     {
-                        throw new UnsupportedOperationException("Rigid body used by constraint is not found in the physics world.");
+                        throw new UnsupportedOperationException("Rigid body used " + bodyB.getName() + " by constraint is not found in the physics world.");
                     }
                 }
                 NativePhysics3DWorld.addConstraint(getNative(), constraint.getNative());

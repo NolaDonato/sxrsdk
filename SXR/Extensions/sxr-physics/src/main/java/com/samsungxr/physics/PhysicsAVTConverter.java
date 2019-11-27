@@ -275,20 +275,25 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         }
         SXRNode root = mSkeleton.getBone(mAttachBoneIndex);
         SXRCollider collider = mColliders.get(mAttachBoneIndex);
+        SXRRigidBody body = (SXRRigidBody) root.getComponent(SXRRigidBody.getComponentType());
 
-        if (collider != null)
+        if (body == null)
         {
-            root.detachComponent(SXRCollider.getComponentType());
-            root.attachComponent(collider);
+            body = mBodies.get(mAttachBoneIndex);
+            if (collider != null)
+            {
+                root.detachComponent(SXRCollider.getComponentType());
+                root.attachComponent(collider);
+            }
+            root.attachComponent(body);
         }
-        root.attachComponent(mBodies.get(mAttachBoneIndex));
         for (int i = mAttachBoneIndex + 1; i < mSkeleton.getNumBones(); ++i)
         {
-            SXRRigidBody body = mBodies.get(i);
-            SXRPhysicsJoint joint = mJoints.get(i);
-            SXRConstraint constraint = mConstraints.get(i);
             SXRNode node = mSkeleton.getBone(i);
+            SXRPhysicsJoint joint = (SXRPhysicsJoint) node.getComponent(SXRPhysicsJoint.getComponentType());
+            SXRConstraint constraint = mConstraints.get(i);
 
+            body = mBodies.get(i);
             collider = mColliders.get(i);
             if (body != null)
             {
@@ -297,18 +302,23 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                     node.detachComponent(SXRCollider.getComponentType());
                     node.attachComponent(collider);
                 }
-                if (joint != null)
+                if ((joint != null) && joint.getOwnerObject() != null)
                 {
-                    if (joint.getOwnerObject() != null)
-                    {
-                        joint.removeJointAt(joint.getJointIndex());
-                    }
+                    joint.removeJointAt(joint.getJointIndex());
                 }
                 node.attachComponent(body);
-                if (constraint != null)
+            }
+            else
+            {
+                body = (SXRRigidBody) node.getComponent(SXRRigidBody.getComponentType());
+                if (body == null)
                 {
-                    node.attachComponent(constraint);
+                    continue;
                 }
+            }
+            if (constraint != null)
+            {
+                node.attachComponent(constraint);
             }
         }
     }
@@ -316,13 +326,20 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
     private SXRSkeleton parseSkeleton(JSONObject basebone, JSONArray bonelist) throws JSONException
     {
         int maxInputBones = bonelist.length() + 1;
+        int numInputBones = 0;
+        int nextBoneIndex = 0;
+        int firstAddedBone = 0;
+        int attachBone = -1;
+        int totalBones = maxInputBones;
+        SXRContext ctx = getSXRContext();
         String bonenames[] = new String[maxInputBones];
         int boneparents[] = new int[maxInputBones];
         SXRNode boneNodes[] = new SXRNode[maxInputBones];
-        int numInputBones = 0;
-        int attachBone = -1;
-        SXRContext ctx = getSXRContext();
 
+        if (mSkeleton != null)
+        {
+            attachBone = mSkeleton.getBoneIndex(mAttachBoneName);
+        }
         boneparents[0] = -1;
         mTargetBones.clear();
 
@@ -336,7 +353,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             SXRNode parentNode  = null;
             int parentIndex = -1;
 
-            boneparents[numInputBones] = -1;
             if (parent != null)
             {
                 parentName = parent.getString("Target Bone");
@@ -350,58 +366,54 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 if (parentIndex >= 0)
                 {
                     parentNode = boneNodes[parentIndex];
-                    boneparents[numInputBones] = parentIndex;
-
-                    if (parentNode == null)
-                    {
-                        parentNode = mSkeleton.getBone(parentIndex);
-                    }
                 }
             }
+            bonenames[i] = targetBone;
+            boneparents[i] = parentIndex;
             mTargetBones.put(bone.getString("Name"), bone);
-            /*
-             * Skip all bones which are parents of the attachment point.
-             * These will presumably be in the skeleton we attach to.
-             */
-            if (targetBone.equals(mAttachBoneName))
-            {
-                bonenames[numInputBones] = targetBone;
-            }
-            else if ((mAttachBoneName != null) && (numInputBones == 0))
-            {
-                continue;
-            }
             if (mSkeleton != null)
             {
                 int boneIndex = mSkeleton.getBoneIndex(targetBone);
-                if (mSkeleton.getBone(boneIndex) != null)
+
+                if (parentNode == null)
                 {
-                    ++numInputBones;
-                    continue;
+                    int pi = mSkeleton.getBoneIndex(parentName);
+                    parentNode = mSkeleton.getBone(pi);
+                }
+                if (boneIndex >= 0)
+                {
+                    if (targetBone.equals(mAttachBoneName))
+                    {
+                        nextBoneIndex = firstAddedBone = mSkeleton.getNumBones();
+                        attachBone = i;
+                        if (parentIndex <= attachBone)
+                        {
+                            boneparents[i] = -1;
+                        }
+                        boneNodes[i] = mSkeleton.getBone(boneIndex);
+                        ++numInputBones;
+                    }
+                    if (boneIndex <= attachBone)
+                    {
+                        continue;
+                    }
                 }
             }
             node = new SXRNode(ctx);
-            bonenames[numInputBones] = targetBone;
-            boneNodes[numInputBones] = node;
-            node.setName(bonenames[numInputBones]);
-            if (attachBone < 0)
-            {
-                attachBone = i;
-            }
+            boneNodes[i] = node;
+            node.setName(targetBone);
             if (parentNode != null)
             {
-                parentNode.addChildObject(boneNodes[numInputBones]);
+                parentNode.addChildObject(node);
             }
             ++numInputBones;
+            ++nextBoneIndex;
         }
-        if (attachBone >= 0)
+        if (numInputBones > 0)
         {
-            if (numInputBones < maxInputBones)
-            {
-                bonenames = Arrays.copyOfRange(bonenames, 0, numInputBones);
-                boneNodes = Arrays.copyOfRange(boneNodes, 0, numInputBones);
-                boneparents = Arrays.copyOfRange(boneparents, 0, numInputBones);
-            }
+            bonenames = Arrays.copyOfRange(bonenames, 0, numInputBones);
+            boneNodes = Arrays.copyOfRange(boneNodes, 0, numInputBones);
+            boneparents = Arrays.copyOfRange(boneparents, 0, numInputBones);
             SXRSkeleton skel = new SXRSkeleton(ctx, boneparents);
 
             for (int i = 0; i < numInputBones; ++i)
@@ -409,7 +421,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 skel.setBoneName(i, bonenames[i]);
                 skel.setBone(i, boneNodes[i]);
             }
-            updateSkeletonPose(skel, numInputBones, basebone, bonelist, attachBone);
             if (mSkeleton == null)
             {
                 mSkeleton = skel;
@@ -420,18 +431,20 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             {
                 mSkeleton.merge(skel, mAttachBoneName);
             }
+            updateSkeletonPose(mSkeleton, firstAddedBone, basebone, bonelist, attachBone);
         }
         else
         {
-            updateSkeletonPose(mSkeleton, numInputBones, basebone, bonelist, 0);
+            updateSkeletonPose(mSkeleton, 0, basebone, bonelist, 0);
         }
         return mSkeleton;
     }
 
-    private void updateSkeletonPose(SXRSkeleton skel, int numInputBones, JSONObject basebone, JSONArray bonelist, int attachBoneIndex) throws JSONException
+    private void updateSkeletonPose(SXRSkeleton skel, int firstBoneAdded, JSONObject basebone, JSONArray bonelist, int attachBoneIndex) throws JSONException
     {
         SXRPose worldPose = new SXRPose(skel);
         Matrix4f worldMtx = new Matrix4f();
+        int numInputBones = skel.getNumBones() - firstBoneAdded;
 
         if (attachBoneIndex > 0)
         {
@@ -447,7 +460,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         {
             mWorldOffset.set(0, 0, 0);
         }
-        for (int i = attachBoneIndex + 1; i < numInputBones; ++i)
+        for (int i = 0; i < numInputBones; ++i)
         {
             JSONObject bone = (i == 0) ? basebone : bonelist.getJSONObject(i - 1).getJSONObject("value");
             JSONObject xform = bone.getJSONObject("Transform");
@@ -460,7 +473,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                                        (float) orientation.getDouble("Y"),
                                        (float) orientation.getDouble("Z"),
                                        (float) orientation.getDouble("W"));
-            worldPose.setWorldMatrix(i, worldMtx);
+            worldPose.setWorldMatrix(firstBoneAdded + i, worldMtx);
         }
         worldPose.sync();
         skel.setPose(worldPose);
@@ -700,12 +713,14 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         {
             parentName = parent.getString("Target Bone");
             int boneIndex = mSkeleton.getBoneIndex(parentName);
-            SXRRigidBody body = mBodies.get(boneIndex);
+            SXRNode node = mSkeleton.getBone(boneIndex);
+            SXRRigidBody body = (SXRRigidBody) node.getComponent(SXRRigidBody.getComponentType());
 
             if (body != null)
             {
                 return body;
             }
+            return mBodies.get(boneIndex);
         }
         Log.e(TAG, "Cannot find bone %s referenced by AVT file", parentName);
         return null;
@@ -994,10 +1009,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         else
         {
             throw new JSONException(type + " is an unknown constraint type");
-        }
-        if (link.has("Breaking Reaction Impulse"))
-        {
-            constraint.setBreakingImpulse((float) link.getDouble("Breaking Reaction Impulse"));
         }
         Log.e(TAG, "%s constraint between %s pivotA(%3f, %3f, %3f) and %s pivotB(%3f, %3f, %3f)",
               type, parentName,

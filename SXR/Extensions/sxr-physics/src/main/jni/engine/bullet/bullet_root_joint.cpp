@@ -422,7 +422,6 @@ namespace sxr {
             LOGV("BULLET: creating link collider %s", getName());
             curShape = newShape = convertCollider2CollisionShape(collider);
             mCollider->setCollisionShape(newShape);
-            mCollider->setActivationState(ACTIVE_TAG);
             mMultiBody->setBaseCollider(mCollider);
             mCollider->setUserPointer(this);
             options |= SyncOptions::PROPERTIES;
@@ -562,6 +561,7 @@ namespace sxr {
         {
             mName = owner->name();
         }
+        mCollider->setActivationState(enabled() ? ACTIVE_TAG : ISLAND_SLEEPING);
         bw->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
         mMultiBody->setBaseName(mName.c_str());
         bw->addMultiBody(mMultiBody);
