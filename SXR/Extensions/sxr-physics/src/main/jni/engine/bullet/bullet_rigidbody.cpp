@@ -283,9 +283,8 @@ namespace sxr
         }
     }
 
-    void BulletRigidBody::addToWorld(PhysicsWorld* world, int collisionGroup, int collidesWith)
+    void BulletRigidBody::addToWorld(PhysicsWorld* world, int collidesWith)
     {
-        mCollisionGroup = collisionGroup;
         mCollisionMask = collidesWith;
         if (mNeedsSync & SyncOptions::IMPORTED)
         {
@@ -295,7 +294,7 @@ namespace sxr
         {
             sync(SyncOptions::TRANSFORM);
             mWorld = static_cast<BulletWorld*>(world);
-            mWorld->getPhysicsWorld()->addRigidBody(mRigidBody, collisionGroup, collidesWith);
+            mWorld->getPhysicsWorld()->addRigidBody(mRigidBody, mCollisionGroup, mCollisionMask);
             LOGD("BULLET: rigid body %s added to world", getName());
         }
     }

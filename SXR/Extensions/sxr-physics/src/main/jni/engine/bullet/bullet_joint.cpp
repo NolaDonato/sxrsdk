@@ -550,13 +550,12 @@ namespace sxr {
         }
     }
 
-    void BulletJoint::setCollisionProperties(int collisionGroup, int collidesWith)
+    void BulletJoint::setCollisionMask(int collidesWith)
     {
-        mCollisionGroup = collisionGroup;
         mCollisionMask = collidesWith;
         if (mCollider)
         {
-            mCollider->getBroadphaseHandle()->m_collisionFilterGroup = collisionGroup;
+            mCollider->getBroadphaseHandle()->m_collisionFilterGroup = mCollisionGroup;
             mCollider->getBroadphaseHandle()->m_collisionFilterMask = collidesWith;
         }
     }
@@ -660,7 +659,7 @@ namespace sxr {
                                    jointA->getJointIndex(),
                                    rotA,
                                    diffCOM,
-                                   -pivotB, false);
+                                   -pivotB, true);
     }
 
     void BulletJoint::updateSpherical()

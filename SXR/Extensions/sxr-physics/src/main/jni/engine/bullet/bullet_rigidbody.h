@@ -78,7 +78,7 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
     float   getContactProcessingThreshold() const;
     float   getCcdSweptSphereRadius() const;
     void    addToWorld(PhysicsWorld* world);
-    void    addToWorld(PhysicsWorld* world, int collisionGroup, int collidesWith);
+    void    addToWorld(PhysicsWorld* world, int collidesWith);
 
     btRigidBody* getRigidBody() const
     {

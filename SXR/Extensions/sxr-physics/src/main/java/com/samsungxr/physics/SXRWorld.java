@@ -450,7 +450,6 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
                 else
                 {
                     NativePhysics3DWorld.addRigidBodyWithMask(getNative(), body.getNative(),
-                            mCollisionMatrix.getCollisionFilterGroup(body.getCollisionGroup()),
                             mCollisionMatrix.getCollisionFilterMask(body.getCollisionGroup()));
                 }
                 mPhysicsObject.put(body.getNative(), body);
@@ -486,7 +485,6 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
                 else
                 {
                     NativePhysics3DWorld.addJointWithMask(getNative(), joint.getNative(),
-                            mCollisionMatrix.getCollisionFilterGroup(joint.getCollisionGroup()),
                             mCollisionMatrix.getCollisionFilterMask(joint.getCollisionGroup()));
                 }
                 mPhysicsObject.put(joint.getNative(), joint);
@@ -842,13 +840,13 @@ class NativePhysics3DWorld {
 
     static native void addJoint(long jphysics_world, long jjoint);
 
-    static native void addJointWithMask(long jphysics_world, long jjoint, long collisionType, long collidesWith);
+    static native void addJointWithMask(long jphysics_world, long jjoint, long collidesWith);
 
     static native void removeJoint(long jphysics_world, long jjoint);
 
     static native void addRigidBody(long jphysics_world, long jrigid_body);
 
-    static native void addRigidBodyWithMask(long jphysics_world, long jrigid_body, long collisionGroup, long collidesWith);
+    static native void addRigidBodyWithMask(long jphysics_world, long jrigid_body, long collidesWith);
 
     static native void removeRigidBody(long jphysics_world, long jrigid_body);
 

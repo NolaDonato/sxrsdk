@@ -83,12 +83,11 @@ namespace sxr
     Java_com_samsungxr_physics_NativePhysics3DWorld_addJointWithMask(JNIEnv *env, jclass obj,
                                                              jlong jworld,
                                                              jlong jmulti_body,
-                                                             jlong collisionType,
                                                              jlong collidesWith)
     {
         PhysicsWorld *world = reinterpret_cast<PhysicsWorld *>(jworld);
         PhysicsJoint *body = reinterpret_cast<PhysicsJoint *>(jmulti_body);
-        world->addJointWithMask(body, collisionType, collidesWith);
+        world->addJointWithMask(body, collidesWith);
     }
 
     JNIEXPORT void JNICALL
@@ -137,13 +136,12 @@ namespace sxr
     Java_com_samsungxr_physics_NativePhysics3DWorld_addRigidBodyWithMask(JNIEnv *env, jclass obj,
                                                                          jlong jworld,
                                                                          jlong jrigid_body,
-                                                                         jlong collisionType,
                                                                          jlong collidesWith)
     {
         PhysicsWorld *world = reinterpret_cast<PhysicsWorld *>(jworld);
         PhysicsRigidBody *rigid_body = reinterpret_cast<PhysicsRigidBody *>(jrigid_body);
 
-        world->addRigidBody(rigid_body, collisionType, collidesWith);
+        world->addRigidBody(rigid_body, collidesWith);
     }
 
     JNIEXPORT void JNICALL

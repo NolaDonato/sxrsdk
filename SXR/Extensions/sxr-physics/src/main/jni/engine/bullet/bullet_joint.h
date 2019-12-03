@@ -82,7 +82,7 @@ class BulletJoint : public PhysicsJoint
     virtual void  onDisable(Node* owner);
     virtual void  onEnable(Node* owner);
 
-    void          setCollisionProperties(int collisionGroup, int collidesWith);
+    void          setCollisionMask(int collidesWith);
     void          update(int jointIndex, BulletJoint* parent);
     bool 		  isImported() const { return mNeedsSync & SyncOptions::IMPORTED; }
 

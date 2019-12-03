@@ -62,13 +62,13 @@ class BulletWorld : public PhysicsWorld
 
     void addRigidBody(PhysicsRigidBody *body);
 
-    void addRigidBody(PhysicsRigidBody *body, int collisiontype, int collidesWith);
+    void addRigidBody(PhysicsRigidBody *body, int collidesWith);
 
     void removeRigidBody(PhysicsRigidBody *body);
 
     void addJoint(PhysicsJoint *joint);
 
-    void addJointWithMask(PhysicsJoint *body, int collisiontype, int collidesWith);
+    void addJointWithMask(PhysicsJoint *body, int collidesWith);
 
     void removeJoint(PhysicsJoint *body);
 

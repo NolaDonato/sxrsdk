@@ -214,7 +214,6 @@ public class SXRPoseMapper extends SXRAnimation
                 if ((sourceIndex >= 0) && (destIndex >= 0))
                 {
                     mBoneMap[sourceIndex] = destIndex;
-                    mDestSkeleton.setBoneOptions(destIndex, mDestSkeleton.getBoneOptions(destIndex) | SXRSkeleton.BONE_ANIMATE);
                     Log.w("BONE", "%s %d -> %s %d", words[0], sourceIndex, words[1], destIndex);
                 }
                 else
@@ -253,7 +252,7 @@ public class SXRPoseMapper extends SXRAnimation
             bonemap[i] = boneindex;
             if (boneindex >= 0)
             {
-                dstskel.setBoneOptions(boneindex, dstskel.getBoneOptions(boneindex) | SXRSkeleton.BONE_ANIMATE);
+                dstskel.setBoneOptions(boneindex, dstskel.getBoneOptions(boneindex) | mBoneOptions);
                 Log.w("BONE", "%s\n%d: %s\n%d: %s",
                         bonename, i, srcPose.getBone(i).toString(),
                         boneindex, dstPose.getBone(boneindex).toString());
@@ -335,8 +334,14 @@ public class SXRPoseMapper extends SXRAnimation
 
                 if (boneindex >= 0)
                 {
-                    srcpose.getLocalRotation(i, q);
-                    mDestPose.setLocalRotation(boneindex, q.x, q.y, q.z, q.w);
+                    int boneoptions = srcskel.getBoneOptions(i) & (SXRSkeleton.BONE_ANIMATE | SXRSkeleton.BONE_PHYSICS);
+                    boolean animatable = (boneoptions == 0) || (boneoptions == mBoneOptions);
+
+                    if (animatable)
+                    {
+                        srcpose.getLocalRotation(i, q);
+                        mDestPose.setLocalRotation(boneindex, q.x, q.y, q.z, q.w);
+                    }
                 }
             }
         }
