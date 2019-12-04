@@ -1062,9 +1062,11 @@ public class SXRSkeleton extends SXRComponent implements PrettyPrint
                 {
                     int m = numBones + i;
                     int pid = parentBoneIds[i];
+                    int boneoptions = newSkel.getBoneOptions(i);
                     SXRNode newBone = bones.get(i);
                     parentIds[m] = pid;
                     boneNames[m] = newBoneNames.get(i);
+                    boneOptions[m] = boneoptions;
                     setBone(m, newBone);
                 }
                 mBoneOptions = boneOptions;

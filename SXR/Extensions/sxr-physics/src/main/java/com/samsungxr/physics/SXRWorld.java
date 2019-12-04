@@ -800,13 +800,16 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
         }
     }
 
-    public SXRNode setupDebugDraw()
+    public SXRNode setupDebugDraw(int maxverts)
     {
         SXRContext ctx = getSXRContext();
         SXRShaderId debugShader = ctx.getShaderManager().getShaderType(PhysicsDebugShader.class);
         SXRMaterial mtl = new SXRMaterial(ctx, debugShader);
         SXRRenderData rd = new SXRRenderData(ctx, mtl);
-        SXRMesh mesh = new SXRMesh(new SXRVertexBuffer(ctx, "float3 a_position float3 a_color", 5000), null);
+        SXRMesh mesh = new SXRMesh(new SXRVertexBuffer(ctx,
+                                                       "float3 a_position float3 a_color",
+                                                       (maxverts > 0) ? maxverts : 10000),
+                                                       null);
         SXRNode debugDrawNode = new SXRNode(ctx);
 
         mtl.setFloat("line_width", 5.0f);

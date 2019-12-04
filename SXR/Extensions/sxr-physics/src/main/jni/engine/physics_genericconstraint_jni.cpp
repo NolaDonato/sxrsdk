@@ -29,14 +29,124 @@ namespace sxr {
     extern "C" {
 
     JNIEXPORT jlong JNICALL
-    Java_com_samsungxr_physics_Native3DGenericConstraint_ctor(JNIEnv *env, jclass obj, jlong jbodyA,
+    Java_com_samsungxr_physics_Native3DGenericConstraint_ctor(JNIEnv* env, jclass obj, jlong jbodyA,
                                                               jfloat pivotAx, jfloat pivotAy, jfloat pivotAz,
                                                               jfloat pivotBx, jfloat pivotBy, jfloat pivotBz)
     {
-        PhysicsRigidBody *bodyA = reinterpret_cast<PhysicsRigidBody *>(jbodyA);
+        PhysicsRigidBody *bodyA = reinterpret_cast<PhysicsRigidBody*>(jbodyA);
         glm::vec3 pivotA(pivotAx, pivotAy, pivotAz);
         glm::vec3 pivotB(pivotBx, pivotBy, pivotBz);
         return reinterpret_cast<jlong>(new BulletGeneric6dofConstraint(bodyA, pivotA, pivotB));
+    }
+
+    JNIEXPORT jfloatArray JNICALL
+    Java_com_samsungxr_physics_Native3DGenericConstraint_getLinearStiffness(JNIEnv* env, jclass obj, jlong jconstr)
+    {
+        const glm::vec3& v = reinterpret_cast<PhysicsGenericConstraint*>(jconstr)
+                ->getLinearStiffness();
+        jfloatArray result = env->NewFloatArray(3);
+        env->SetFloatArrayRegion(result, 0, 3, glm::value_ptr(v));
+        return result;
+    }
+
+    JNIEXPORT jfloatArray JNICALL
+    Java_com_samsungxr_physics_Native3DGenericConstraint_getLinearDamping(JNIEnv* env, jclass obj, jlong jconstr)
+    {
+        const glm::vec3& v = reinterpret_cast<PhysicsGenericConstraint*>(jconstr)
+                ->getLinearDamping();
+        jfloatArray result = env->NewFloatArray(3);
+        env->SetFloatArrayRegion(result, 0, 3, glm::value_ptr(v));
+        return result;
+    }
+
+    JNIEXPORT jfloatArray JNICALL
+    Java_com_samsungxr_physics_Native3DGenericConstraint_getAngularDamping(JNIEnv* env, jclass obj,jlong jconstr)
+    {
+        const glm::vec3& v = reinterpret_cast<PhysicsGenericConstraint*>(jconstr)
+                ->getAngularDamping();
+        jfloatArray result = env->NewFloatArray(3);
+        env->SetFloatArrayRegion(result, 0, 3, glm::value_ptr(v));
+        return result;
+    }
+
+    JNIEXPORT jfloatArray JNICALL
+    Java_com_samsungxr_physics_Native3DGenericConstraint_getAngularStiffness(JNIEnv* env, jclass obj, jlong jconstr)
+    {
+        const glm::vec3& v = reinterpret_cast<PhysicsGenericConstraint*>(jconstr)
+                ->getAngularStiffness();
+        jfloatArray result = env->NewFloatArray(3);
+        env->SetFloatArrayRegion(result, 0, 3, glm::value_ptr(v));
+        return result;
+    }
+
+    JNIEXPORT void JNICALL
+    Java_com_samsungxr_physics_Native3DGenericConstraint_setSpringStiffness(JNIEnv *env,
+                                                                            jclass obj,
+                                                                            jlong jconstr,
+                                                                            jint dof,
+                                                                            jfloat stiffness)
+    {
+        reinterpret_cast<PhysicsGenericConstraint *>(jconstr)
+                ->setSpringStiffness(dof, stiffness);
+    }
+
+    JNIEXPORT void JNICALL
+    Java_com_samsungxr_physics_Native3DGenericConstraint_setSpringDamping(JNIEnv *env,
+                                                                            jclass obj,
+                                                                            jlong jconstr,
+                                                                            jint dof,
+                                                                            jfloat damping)
+    {
+        reinterpret_cast<PhysicsGenericConstraint *>(jconstr)
+                ->setSpringDamping(dof, damping);
+    }
+
+    JNIEXPORT void JNICALL
+    Java_com_samsungxr_physics_Native3DGenericConstraint_setLinearStiffness(JNIEnv *env,
+                                                                            jclass obj,
+                                                                            jlong jconstr,
+                                                                            jfloat s0,
+                                                                            jfloat s1,
+                                                                            jfloat s2)
+    {
+        reinterpret_cast<PhysicsGenericConstraint *>(jconstr)
+                ->setLinearStiffness(glm::vec3(s0, s1, s2));
+    }
+
+    JNIEXPORT void JNICALL
+    Java_com_samsungxr_physics_Native3DGenericConstraint_setLinearDamping(JNIEnv *env,
+                                                                           jclass obj,
+                                                                           jlong jconstr,
+                                                                           jfloat d0,
+                                                                           jfloat d1,
+                                                                           jfloat d2)
+    {
+        reinterpret_cast<PhysicsGenericConstraint *>(jconstr)
+                ->setLinearDamping(glm::vec3(d0, d1, d2));
+    }
+
+    JNIEXPORT void JNICALL
+    Java_com_samsungxr_physics_Native3DGenericConstraint_setAngularDamping(JNIEnv *env,
+                                                                             jclass obj,
+                                                                             jlong jconstr,
+                                                                             jfloat d0,
+                                                                             jfloat d1,
+                                                                             jfloat d2)
+    {
+        reinterpret_cast<PhysicsGenericConstraint *>(jconstr)
+                ->setAngularDamping(glm::vec3(d0, d1, d2));
+    }
+
+    JNIEXPORT void JNICALL
+    Java_com_samsungxr_physics_Native3DGenericConstraint_setAngularStiffness(JNIEnv *env,
+                                                                            jclass obj,
+                                                                            jlong jconstr,
+                                                                            jfloat s0,
+                                                                            jfloat s1,
+                                                                            jfloat s2)
+    {
+        reinterpret_cast<PhysicsGenericConstraint *>(jconstr)
+                ->setAngularStiffness(glm::vec3(s0, s1, s2));
     }
 
     JNIEXPORT void JNICALL

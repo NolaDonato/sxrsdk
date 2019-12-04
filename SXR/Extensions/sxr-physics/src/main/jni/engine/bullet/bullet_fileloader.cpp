@@ -26,6 +26,7 @@
 #include <BulletDynamics/ConstraintSolver/btConeTwistConstraint.h>
 #include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
 #include <BulletDynamics/ConstraintSolver/btGeneric6DofConstraint.h>
+#include <BulletDynamics/ConstraintSolver/btGeneric6DofSpringConstraint.h>
 #include <BulletDynamics/ConstraintSolver/btHingeConstraint.h>
 #include <BulletDynamics/ConstraintSolver/btPoint2PointConstraint.h>
 #include <BulletDynamics/ConstraintSolver/btSliderConstraint.h>
@@ -662,6 +663,29 @@ namespace sxr
 
 /*
  * Create a Java SXRGenericConstraint and the C++ PhysicsConstraint
+ * based on the input btGeneric6DofConstraint
+ */
+jobject BulletFileLoader::createGenericConstraint(JNIEnv &env, btGeneric6DofSpringConstraint *gen,
+                                                  PhysicsConstraint *&constraint)
+{
+    if (mNeedRotate)
+    {
+        btTransform tA = gen->getFrameOffsetA();
+        btTransform tB = gen->getFrameOffsetB();
+
+        tA = mTransformCoords * tA;
+        tB = mTransformCoords * tB;
+        gen->setFrames(tA, tB);
+    }
+    BulletGeneric6dofConstraint *bg = new BulletGeneric6dofConstraint(gen);
+    constraint = bg;
+    return CreateInstance(env, "com/samsungxr/physics/SXRGenericConstraint",
+                          "(Lcom/samsungxr/SXRContext;J)V",
+                          mContext.getObject(), reinterpret_cast<jlong>(bg));
+}
+
+/*
+ * Create a Java SXRGenericConstraint and the C++ PhysicsConstraint
  * based on the input btGeneric6DofSpring2Constraint
  */
     jobject
@@ -862,13 +886,20 @@ namespace sxr
                                                        dynamic_cast<btConeTwistConstraint *>(constraint),
                                                        physCon);
         }
-        else if (constraint->getConstraintType() == btTypedConstraintType::D6_CONSTRAINT_TYPE ||
-                 constraint->getConstraintType() ==
-                 btTypedConstraintType::D6_SPRING_CONSTRAINT_TYPE)
+        else if (constraint->getConstraintType() ==
+                 btTypedConstraintType::D6_CONSTRAINT_TYPE)
         {
             // Blender exports generic constraint as generic spring constraint
             javaConstraint = createGenericConstraint(env,
                                                      dynamic_cast<btGeneric6DofConstraint *>(constraint),
+                                                     physCon);
+        }
+        else if (constraint->getConstraintType() ==
+                 btTypedConstraintType::D6_SPRING_CONSTRAINT_TYPE)
+        {
+            // Blender exports generic constraint as generic spring constraint
+            javaConstraint = createGenericConstraint(env,
+                                                     dynamic_cast<btGeneric6DofSpringConstraint *>(constraint),
                                                      physCon);
         }
         else if (constraint->getConstraintType() ==

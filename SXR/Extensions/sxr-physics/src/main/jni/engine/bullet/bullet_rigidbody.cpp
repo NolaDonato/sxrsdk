@@ -263,7 +263,7 @@ namespace sxr
                 mRigidBody->setCollisionFlags(
                         (collisionFlags | btCollisionObject::CollisionFlags::CF_STATIC_OBJECT) &
                         ~btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT);
-                mRigidBody->setActivationState(ISLAND_SLEEPING);
+                mRigidBody->setActivationState(enabled() ? ISLAND_SLEEPING : DISABLE_SIMULATION);
                 break;
 
                 case SimulationType::KINEMATIC:
@@ -273,7 +273,7 @@ namespace sxr
                 mRigidBody->setCollisionFlags(
                         (collisionFlags | btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT) &
                         ~btCollisionObject::CollisionFlags::CF_STATIC_OBJECT);
-                mRigidBody->setActivationState(ISLAND_SLEEPING);
+                mRigidBody->setActivationState(enabled() ?  DISABLE_DEACTIVATION : DISABLE_SIMULATION);
                 break;
             }
             if (mWorld)

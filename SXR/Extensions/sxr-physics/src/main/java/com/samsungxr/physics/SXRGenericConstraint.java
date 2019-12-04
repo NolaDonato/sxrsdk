@@ -205,6 +205,118 @@ public class SXRGenericConstraint extends SXRConstraint
     {
         return Native3DGenericConstraint.getAngularUpperLimits(getNative());
     }
+
+    /**
+     * Set the spring stiffness for one degree of freedom of the spring constraint.
+     * @param dof       degree of freedom (0 - 5)
+     *                  0 - 2 is linear stiffness
+     *                  3 - 5 is angular stiffness
+     * @param stiffness stiffness value (0 to 1)
+     */
+    public void setSpringStiffness(int dof, float stiffness)
+    {
+        Native3DGenericConstraint.setSpringStiffness(getNative(), dof, stiffness);
+    }
+
+    /**
+     * Set the spring damping for one degree of freedom of the spring constraint.
+     * @param dof     degree of freedom (0 - 5)
+     *                  0 - 2 is linear damping
+     *                  3 - 5 is angular damping
+     * @param damping damping value
+     */
+    public void setSpringDamping(int dof, float damping)
+    {
+        Native3DGenericConstraint.setSpringStiffness(getNative(), dof, damping);
+    }
+
+    /**
+     * Sets the linear spring stiffness of the spring constraint.
+     * The stiffness for degrees of freedom 0 thru 2 are affected.
+     * @param s0 spring stiffness for linear degree of freedom 0
+     * @param s1 spring stiffness for linear degree of freedom 1
+     * @param s2 spring stiffness for linear degree of freedom 2
+     */
+    public void setLinearStiffness(float s0, float s1, float s2)
+    {
+        Native3DGenericConstraint.setLinearStiffness(getNative(), s0, s1, s2);
+    }
+
+    /**
+     * Sets the linear spring damping of the spring constraint.
+     * The damping for degrees of freedom 0 thru 2 are affected.
+     * @param d0 spring damping for angular degree of freedom 0
+     * @param d1 spring damping for angular degree of freedom 1
+     * @param d2 spring damping for angular degree of freedom 2
+     */
+    public void setLinearDamping(float d0, float d1, float d2)
+    {
+        Native3DGenericConstraint.setLinearDamping(getNative(), d0, d1, d2);
+    }
+
+    /**
+     * Sets the angular spring stiffness of the spring constraint.
+     * The stiffness for degrees of freedom 3 thru 5 are affected.
+     * @param s0 spring stiffness for angular degree of freedom 3
+     * @param s1 spring stiffness for angular degree of freedom 4
+     * @param s2 spring stiffness for angular degree of freedom 5
+     */
+    public void setAngularStiffness(float s0, float s1, float s2)
+    {
+        Native3DGenericConstraint.setLinearStiffness(getNative(), s0, s1, s2);
+    }
+
+    /**
+     * Sets the angular spring damping of the spring constraint.
+     * The damping for degrees of freedom 3 thru 5 are affected.
+     * @param d0 spring damping for angular degree of freedom 3
+     * @param d1 spring damping for angular degree of freedom 4
+     * @param d2 spring damping for angular degree of freedom 5
+     */
+    public void setAngularDamping(float d0, float d1, float d2)
+    {
+        Native3DGenericConstraint.setLinearDamping(getNative(), d0, d1, d2);
+    }
+
+    /**
+     * Return the spring stiffness for the 3 linear degrees of freedom
+     * (dof 0 thru 2).
+     * @return array with linear spring stiffness for dof 0 - 2
+     */
+    public float[] getLinearStiffness()
+    {
+        return Native3DGenericConstraint.getLinearStiffness(getNative());
+    }
+
+    /**
+     * Return the spring stiffness for the 3 angular degrees of freedom
+     * (dof 3 thru 5).
+     * @return array with angular spring stiffness for dof 3 - 5
+     */
+    public float[] getAngularStiffness()
+    {
+        return Native3DGenericConstraint.getAngularStiffness(getNative());
+    }
+
+    /**
+     * Return the spring damping for the 3 linear degrees of freedom
+     * (dof 0 thru 2).
+     * @return array with linear spring damping for dof 0 - 2
+     */
+    public float[] getLinearDamping()
+    {
+        return Native3DGenericConstraint.getLinearDamping(getNative());
+    }
+
+    /**
+     * Return the spring damping for the 3 angular degrees of freedom
+     * (dof 3 thru 5).
+     * @return array with angular spring damping for dof 3 - 5
+     */
+    public float[] getAngularDamping()
+    {
+        return Native3DGenericConstraint.getAngularDamping(getNative());
+    }
 }
 
 class Native3DGenericConstraint
@@ -213,20 +325,23 @@ class Native3DGenericConstraint
                             float pivotAx, float pivotAy, float pivotAz,
                             float pivotBx, float pivotBy, float pivotBz);
 
-    static native void setLinearLowerLimits(long jconstr, float limX, float limY, float limZ);
-
     static native float[] getLinearLowerLimits(long jconstr);
-
-    static native void setLinearUpperLimits(long jconstr, float limX, float limY, float limZ);
-
     static native float[] getLinearUpperLimits(long jconstr);
-
-    static native void setAngularLowerLimits(long jconstr, float limX, float limY, float limZ);
-
     static native float[] getAngularLowerLimits(long jconstr);
-
-    static native void setAngularUpperLimits(long jconstr, float limX, float limY, float limZ);
-
     static native float[] getAngularUpperLimits(long jconstr);
+    static native float[] getLinearStiffness(long jconstr);
+    static native float[] getAngularStiffness(long jconstr);
+    static native float[] getLinearDamping(long jconstr);
+    static native float[] getAngularDamping(long jconstr);
 
+    static native void setLinearLowerLimits(long jconstr, float limX, float limY, float limZ);
+    static native void setLinearUpperLimits(long jconstr, float limX, float limY, float limZ);
+    static native void setAngularLowerLimits(long jconstr, float limX, float limY, float limZ);
+    static native void setAngularUpperLimits(long jconstr, float limX, float limY, float limZ);
+    static native void setSpringStiffness(long jconstr, int dof, float stiffness);
+    static native void setSpringDamping(long jconstr, int dof, float damping);
+    static native void setLinearStiffness(long jconstr, float s0, float s1, float s2);
+    static native void setAngularStiffness(long jconstr, float s0, float s1, float s2);
+    static native void setAngularDamping(long jconstr, float d0, float d1, float d2);
+    static native void setLinearDamping(long jconstr, float d0, float d1, float d2);
 }

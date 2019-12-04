@@ -428,17 +428,11 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
 
             for (int i = 0; i < numInputBones; ++i)
             {
-                int boneoptions =  (mSimType == SXRRigidBody.DYNAMIC) ? SXRSkeleton.BONE_PHYSICS : SXRSkeleton.BONE_ANIMATE;
-                int boneIndex;
-
                 skel.setBoneName(i, bonenames[i]);
                 skel.setBone(i, boneNodes[i]);
-                boneIndex = skel.getBoneIndex(bonenames[i]);
+                int boneoptions = (mSimType == SXRRigidBody.DYNAMIC) ? SXRSkeleton.BONE_PHYSICS : SXRSkeleton.BONE_ANIMATE;
 
-                if (boneIndex >= firstNewBone)
-                {
-                    skel.setBoneOptions(i, boneoptions);
-                }
+                skel.setBoneOptions(i, boneoptions);
             }
             if (mSkeleton == null)
             {
@@ -767,8 +761,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         float[] pivotB = new float[] { 0, 0, 0 };
         JSONObject piv = link.optJSONObject("Pivot Pos.");
         SXRPhysicsJoint joint = (SXRPhysicsJoint) node.getComponent(SXRPhysicsJoint.getComponentType());
-//        float friction = (float) link.getJSONObject("Physic Material").getDouble("Friction");
-        float friction = 0.5f;
+        float friction = (float) link.getJSONObject("Physic Material").getDouble("Friction");
         Vector3f scale = new Vector3f(1, 1, 1);
         SXRPhysicsJoint parentJoint = getParentJoint(link);
         Vector3f worldPos = getPosition(link);
@@ -898,14 +891,13 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         }
 
         SXRContext ctx = getSXRContext();
-        float mass = (float) link.getDouble("Mass");
+        float mass = (mSimType == SXRRigidBody.DYNAMIC) ? (float) link.getDouble("Mass") : 0;
         SXRRigidBody parentBody = findParentBody(link.optString("Parent", null));
         SXRRigidBody body = new SXRRigidBody(ctx, mass, mCollisionGroup);
         JSONObject props = link.getJSONObject("Physic Material");
 
         body.setSimulationType(mSimType);
         body.setFriction((float) props.getDouble("Friction"));
-        body.setFriction(0.5f);
         body.setDamping(mLinearDamping, mAngularDamping);
         Log.e(TAG, "creating rigid body %s, mass = %3f", link.getString("Name"), mass);
 
@@ -967,10 +959,19 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 Vector2f limits0 = getLimits(dof0, (float) Math.PI);
                 Vector2f limits1 = getLimits(dof1, PIover2);
                 Vector2f limits2 = getLimits(dof2, (float) Math.PI);
+                Vector3f stiffness = new Vector3f((float) dof0.optDouble("springStiffness", 0),
+                                                  (float) dof1.optDouble("springStiffness", 0),
+                                                  (float) dof2.optDouble("springStiffness", 0));
+                Vector3f damping = new Vector3f((float) dof0.optDouble("springDamping", 0),
+                                                (float) dof1.optDouble("springDamping", 0),
+                                                (float) dof2.optDouble("springDamping", 0));
+
                 ball.setAngularLowerLimits(limits0.x, limits1.x, limits2.x);
                 ball.setAngularUpperLimits(limits0.y, limits1.y, limits2.y);
                 ball.setLinearLowerLimits(0, 0, 0);
                 ball.setLinearUpperLimits(0, 0, 0);
+                ball.setAngularStiffness(stiffness.x, stiffness.y, stiffness.z);
+                ball.setAngularDamping(damping.x, damping.y, damping.z);
                 constraint = ball;
             }
             else

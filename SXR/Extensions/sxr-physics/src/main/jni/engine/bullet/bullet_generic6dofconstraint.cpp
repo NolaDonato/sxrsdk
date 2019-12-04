@@ -36,34 +36,272 @@ static const char tag[] = "PHYSICS";
 namespace sxr {
 
     BulletGeneric6dofConstraint::BulletGeneric6dofConstraint(PhysicsCollidable* bodyA, const glm::vec3& pivotA, const glm::vec3& pivotB)
+    : mConstraint(nullptr),
+      mBreakingImpulse(SIMD_INFINITY)
     {
-        mConstraint = 0;
-
         mBodyA = bodyA;
-        mBreakingImpulse = SIMD_INFINITY;
         mPivotA = pivotA;
         mPivotB = pivotB;
+        for (int dof = 0; dof < 6; ++dof)
+        {
+            mSpringStiffness[dof] = 0;
+            mSpringDamping[dof] = 0;
+        }
     }
 
     BulletGeneric6dofConstraint::BulletGeneric6dofConstraint(btGeneric6DofConstraint *constraint)
+    : mConstraint(constraint),
+      mBreakingImpulse(SIMD_INFINITY)
     {
         mConstraint = constraint;
         mBodyA = static_cast<BulletRigidBody*>(constraint->getRigidBodyA().getUserPointer());
+        for (int dof = 0; dof < 6; ++dof)
+        {
+            mSpringStiffness[dof] = 0;
+            mSpringDamping[dof] = 0;
+        }
         constraint->setUserConstraintPtr(this);
     }
 
     BulletGeneric6dofConstraint::BulletGeneric6dofConstraint(btGeneric6DofSpring2Constraint* constraint)
+    : mConstraint(constraint),
+      mBreakingImpulse(SIMD_INFINITY)
     {
-        mConstraint = constraint;
+        btTranslationalLimitMotor2* transMotor = constraint->getTranslationalLimitMotor();
+
         mBodyA = static_cast<BulletRigidBody*>(constraint->getRigidBodyA().getUserPointer());
-        constraint->setUserConstraintPtr(this);
+        mSpringStiffness[0] = transMotor->m_springStiffness.x();
+        mSpringStiffness[1] = transMotor->m_springStiffness.y();
+        mSpringStiffness[2] = transMotor->m_springStiffness.z();
+        mSpringStiffness[3] = constraint->getRotationalLimitMotor(0)->m_springStiffness;
+        mSpringStiffness[4] = constraint->getRotationalLimitMotor(1)->m_springStiffness;
+        mSpringStiffness[5] = constraint->getRotationalLimitMotor(2)->m_springStiffness;
+        mSpringDamping[0] = transMotor->m_springDamping.x();
+        mSpringDamping[1] = transMotor->m_springDamping.y();
+        mSpringDamping[2] = transMotor->m_springDamping.z();
+        mSpringDamping[3] = constraint->getRotationalLimitMotor(0)->m_springDamping;
+        mSpringDamping[4] = constraint->getRotationalLimitMotor(1)->m_springDamping;
+        mSpringDamping[5] = constraint->getRotationalLimitMotor(2)->m_springDamping;
     }
 
+    BulletGeneric6dofConstraint::BulletGeneric6dofConstraint(btGeneric6DofSpringConstraint* constraint)
+    : mConstraint(constraint),
+      mBreakingImpulse(SIMD_INFINITY)
+    {
+        mBodyA = static_cast<BulletRigidBody*>(constraint->getRigidBodyA().getUserPointer());
+        for (int dof = 0; dof < 6; ++dof)
+        {
+            mSpringStiffness[dof] = constraint->getStiffness(dof);
+            mSpringDamping[dof] = constraint->getDamping(dof);
+        }
+    }
+    
     BulletGeneric6dofConstraint::~BulletGeneric6dofConstraint()
     {
         if (mConstraint)
         {
             delete mConstraint;
+        }
+    }
+
+    glm::vec3 BulletGeneric6dofConstraint::getLinearStiffness() const
+    {
+        glm::vec3 v(mSpringStiffness[0], mSpringStiffness[1], mSpringStiffness[2]);
+        return v;
+    }
+
+    glm::vec3 BulletGeneric6dofConstraint::getLinearDamping() const
+    {
+        glm::vec3 v(mSpringDamping[0], mSpringDamping[1], mSpringDamping[2]);
+        return v;
+    }
+
+    glm::vec3 BulletGeneric6dofConstraint::getAngularStiffness() const
+    {
+        glm::vec3 v(mSpringStiffness[3], mSpringStiffness[4], mSpringStiffness[5]);
+        return v;
+    }
+
+    glm::vec3 BulletGeneric6dofConstraint::getAngularDamping() const
+    {
+        glm::vec3 v(mSpringDamping[3], mSpringDamping[4], mSpringDamping[5]);
+        return v;
+    }
+
+
+    float BulletGeneric6dofConstraint::getSpringStiffness(int dof) const
+    {
+        if ((dof >= 0) && (dof <= 6))
+        {
+            return mSpringStiffness[dof];
+        }
+    }
+
+    float BulletGeneric6dofConstraint::getSpringDamping(int dof) const
+    {
+        if ((dof >= 0) && (dof <= 6))
+        {
+            return mSpringDamping[dof];
+        }
+    }
+
+    void BulletGeneric6dofConstraint::setLinearStiffness(const glm::vec3& v)
+    {
+        btGeneric6DofSpringConstraint* c = dynamic_cast<btGeneric6DofSpringConstraint*>(mConstraint);
+        btGeneric6DofSpring2Constraint* sc = dynamic_cast<btGeneric6DofSpring2Constraint*>(mConstraint);
+
+        mSpringStiffness[0] = v.x;
+        mSpringStiffness[1] = v.y;
+        mSpringStiffness[2] = v.z;
+        if (c)
+        {
+            c->setStiffness(0, v.x);
+            c->setStiffness(1, v.y);
+            c->setStiffness(2, v.z);
+            c->enableSpring(0, (v.x != 0) || (mSpringDamping[0] != 0));
+            c->enableSpring(1, (v.y != 0) || (mSpringDamping[1] != 0));
+            c->enableSpring(2, (v.z != 0) || (mSpringDamping[2] != 0));
+        }
+        else if (sc)
+        {
+            sc->setStiffness(0, v.x);
+            sc->setStiffness(1, v.y);
+            sc->setStiffness(2, v.z);
+            sc->enableSpring(0, (v.x != 0) || (mSpringDamping[0] != 0));
+            sc->enableSpring(1, (v.y != 0) || (mSpringDamping[1] != 0));
+            sc->enableSpring(2, (v.z != 0) || (mSpringDamping[2] != 0));
+        }
+    }
+
+    void BulletGeneric6dofConstraint::setAngularStiffness(const glm::vec3& v)
+    {
+        btGeneric6DofSpringConstraint* c = dynamic_cast<btGeneric6DofSpringConstraint*>(mConstraint);
+        btGeneric6DofSpring2Constraint* sc = dynamic_cast<btGeneric6DofSpring2Constraint*>(mConstraint);
+
+        mSpringStiffness[3] = v.x;
+        mSpringStiffness[4] = v.y;
+        mSpringStiffness[5] = v.z;
+        if (c)
+        {
+            c->setStiffness(3, v.x);
+            c->setStiffness(4, v.y);
+            c->setStiffness(5, v.z);
+            c->enableSpring(3, (v.x != 0) || (mSpringDamping[3] != 0));
+            c->enableSpring(4, (v.y != 0) || (mSpringDamping[4] != 0));
+            c->enableSpring(5, (v.z != 0) || (mSpringDamping[5] != 0));
+        }
+        else if (sc)
+        {
+            sc->setStiffness(3, v.x);
+            sc->setStiffness(4, v.y);
+            sc->setStiffness(5, v.z);
+            sc->enableSpring(3, (v.x != 0) || (mSpringDamping[3] != 0));
+            sc->enableSpring(4, (v.y != 0) || (mSpringDamping[4] != 0));
+            sc->enableSpring(5, (v.z != 0) || (mSpringDamping[5] != 0));
+        }
+    }
+
+    void BulletGeneric6dofConstraint::setLinearDamping(const glm::vec3& v)
+    {
+        btGeneric6DofSpringConstraint* c = dynamic_cast<btGeneric6DofSpringConstraint*>(mConstraint);
+        btGeneric6DofSpring2Constraint* sc = dynamic_cast<btGeneric6DofSpring2Constraint*>(mConstraint);
+
+        mSpringDamping[0] = v.x;
+        mSpringDamping[1] = v.y;
+        mSpringDamping[2] = v.z;
+        if (c)
+        {
+            c->setDamping(0, v.x);
+            c->setDamping(1, v.y);
+            c->setDamping(2, v.z);
+            c->enableSpring(0, (v.x != 0) || (mSpringStiffness[0] == 0));
+            c->enableSpring(1, (v.y != 0) || (mSpringStiffness[1] == 0));
+            c->enableSpring(2, (v.z != 0) || (mSpringStiffness[2] == 0));
+        }
+        else if (sc)
+        {
+            sc->setDamping(0, v.x);
+            sc->setDamping(1, v.y);
+            sc->setDamping(2, v.z);
+            sc->enableSpring(0, (v.x != 0) || (mSpringStiffness[0] == 0));
+            sc->enableSpring(1, (v.y != 0) || (mSpringStiffness[1] == 0));
+            sc->enableSpring(2, (v.z != 0) || (mSpringStiffness[2] == 0));
+        }
+    }
+
+    void BulletGeneric6dofConstraint::setAngularDamping(const glm::vec3& v)
+    {
+        btGeneric6DofSpringConstraint* c = dynamic_cast<btGeneric6DofSpringConstraint*>(mConstraint);
+        btGeneric6DofSpring2Constraint* sc = dynamic_cast<btGeneric6DofSpring2Constraint*>(mConstraint);
+
+        mSpringDamping[3] = v.x;
+        mSpringDamping[4] = v.y;
+        mSpringDamping[5] = v.z;
+        if (c)
+        {
+            c->setDamping(3, v.x);
+            c->setDamping(4, v.y);
+            c->setDamping(5, v.z);
+            c->enableSpring(3, (v.x != 0) || (mSpringStiffness[3] == 0));
+            c->enableSpring(4, (v.y != 0) || (mSpringStiffness[4] == 0));
+            c->enableSpring(5, (v.z != 0) || (mSpringStiffness[5] == 0));
+        }
+        else if (sc)
+        {
+            sc->setDamping(3, v.x);
+            sc->setDamping(4, v.y);
+            sc->setDamping(5, v.z);
+            sc->enableSpring(3, (v.x != 0) || (mSpringStiffness[3] == 0));
+            sc->enableSpring(4, (v.y != 0) || (mSpringStiffness[4] == 0));
+            sc->enableSpring(5, (v.z != 0) || (mSpringStiffness[5] == 0));
+        }
+    }
+    
+    void BulletGeneric6dofConstraint::setSpringStiffness(int dof, float v)
+    {
+        btGeneric6DofSpringConstraint* c = dynamic_cast<btGeneric6DofSpringConstraint*>(mConstraint);
+        btGeneric6DofSpring2Constraint* sc = dynamic_cast<btGeneric6DofSpring2Constraint*>(mConstraint);
+        bool enableSpring = (v != 0) && (mSpringDamping[dof] != 0);
+
+        if ((dof > 6) || (dof < 0) ||
+            (mSpringStiffness[dof] == v))
+        {
+            return;
+        }
+        mSpringStiffness[dof] = v;
+        if (c)
+        {
+            c->setStiffness(dof, v);
+            c->enableSpring(dof, enableSpring);
+        }
+        else if (sc)
+        {
+            sc->setStiffness(dof, v);
+            sc->enableSpring(dof, enableSpring);
+        }
+    }
+
+    void BulletGeneric6dofConstraint::setSpringDamping(int dof, float v)
+    {
+        btGeneric6DofSpringConstraint* c = dynamic_cast<btGeneric6DofSpringConstraint*>(mConstraint);
+        btGeneric6DofSpring2Constraint* sc = dynamic_cast<btGeneric6DofSpring2Constraint*>(mConstraint);
+        bool enableSpring = (v != 0) && (mSpringStiffness[dof] != 0);
+
+        if ((dof > 6) || (dof < 0) ||
+            (mSpringDamping[dof] == v))
+        {
+            return;
+        }
+        mSpringDamping[dof] = v;
+        if (c)
+        {
+            c->setDamping(dof, v);
+            c->enableSpring(dof, enableSpring);
+        }
+        else if (sc)
+        {
+            sc->setDamping(dof, v);
+            sc->enableSpring(dof, enableSpring);
         }
     }
 

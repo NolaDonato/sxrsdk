@@ -154,8 +154,8 @@ public class SXRPoseMapper extends SXRAnimation
      */
     public void	setBoneMap(int[] bonemap)
     {
-        SXRSkeleton	dstskel = mDestSkeleton;
-        int			numbones;
+        SXRSkeleton dstskel = mDestSkeleton;
+        int numbones;
 
         if (bonemap == null)
         {
@@ -171,6 +171,15 @@ public class SXRPoseMapper extends SXRAnimation
             return;
         }
         mBoneMap = bonemap;
+        for (int i = 0; i < bonemap.length; ++i)
+        {
+            int boneindex = mBoneMap[i];
+
+            if (boneindex >= 0)
+            {
+                mDestSkeleton.setBoneOptions(boneindex, mBoneOptions);
+            }
+        }
     }
 
     /**
@@ -214,6 +223,7 @@ public class SXRPoseMapper extends SXRAnimation
                 if ((sourceIndex >= 0) && (destIndex >= 0))
                 {
                     mBoneMap[sourceIndex] = destIndex;
+                    mDestSkeleton.setBoneOptions(destIndex, mBoneOptions);
                     Log.w("BONE", "%s %d -> %s %d", words[0], sourceIndex, words[1], destIndex);
                 }
                 else
@@ -252,7 +262,7 @@ public class SXRPoseMapper extends SXRAnimation
             bonemap[i] = boneindex;
             if (boneindex >= 0)
             {
-                dstskel.setBoneOptions(boneindex, dstskel.getBoneOptions(boneindex) | mBoneOptions);
+                dstskel.setBoneOptions(boneindex, mBoneOptions);
                 Log.w("BONE", "%s\n%d: %s\n%d: %s",
                         bonename, i, srcPose.getBone(i).toString(),
                         boneindex, dstPose.getBone(boneindex).toString());

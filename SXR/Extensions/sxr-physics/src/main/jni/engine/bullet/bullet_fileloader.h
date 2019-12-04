@@ -34,6 +34,7 @@ class btCollisionShape;
 class btMultiBodyFixedConstraint;
 class btGeneric6DofConstraint;
 class btGeneric6DofSpring2Constraint;
+class btGeneric6DofSpringConstraint;
 class btPoint2PointConstraint;
 class btMultiBodyPoint2Point;
 class btMultiBodySliderConstraint;
@@ -134,6 +135,7 @@ private:
     jobject     createSliderConstraint(JNIEnv& env, btSliderConstraint* sld, PhysicsConstraint*& constraint);
     jobject     createSliderConstraint(JNIEnv& env, btMultiBodySliderConstraint* sld, PhysicsConstraint*& constraint);
     jobject     createGenericConstraint(JNIEnv& env, btGeneric6DofConstraint* gen, PhysicsConstraint*& constraint);
+    jobject     createGenericConstraint(JNIEnv& env, btGeneric6DofSpringConstraint* gen, PhysicsConstraint*& constraint);
     jobject     createSpringConstraint(JNIEnv& env, btGeneric6DofSpring2Constraint* gen, PhysicsConstraint*& constraint);
     void        createRigidBodies(btBulletWorldImporter&);
     void        createRigidBodies(btDynamicsWorld&);
