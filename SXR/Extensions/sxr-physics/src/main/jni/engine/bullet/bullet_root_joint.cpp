@@ -52,28 +52,28 @@
 
 namespace sxr {
 
-    BulletRootJoint::BulletRootJoint(float mass, int numJoints)
-    : BulletJoint(mass, numJoints),
+    BulletRootJoint::BulletRootJoint(float mass, int numJoints, int collisionGroup)
+    : BulletJoint(mass, numJoints, collisionGroup),
       mNumJoints(numJoints - 1),
       mLinksAdded(0)
     {
         mJointType = JointType::baseJoint;
         mJoints.reserve(mNumJoints);
         mJoints.resize(mNumJoints);
+        mCollisionGroup = collisionGroup;
         if (mass != 0)
         {
-            mCollisionGroup = btBroadphaseProxy::DefaultFilter;
             mCollisionMask = btBroadphaseProxy::AllFilter;
         }
         else
         {
-            mCollisionGroup = btBroadphaseProxy::StaticFilter;
             mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
         }
     }
 
     BulletRootJoint::BulletRootJoint(btMultiBody* multiBody)
-    : BulletJoint(multiBody->getNumLinks(), multiBody->getBaseMass()),
+    : BulletJoint(multiBody->getNumLinks(), multiBody->getBaseMass(),
+                  btBroadphaseProxy::DefaultFilter),
       mLinksAdded(0),
       mNumJoints(multiBody->getNumLinks())
     {
@@ -97,17 +97,25 @@ namespace sxr {
                 mScale.z = scale.z();
             }
             mCollider->setUserPointer(this);
+            mCollisionGroup = mCollider->getBroadphaseHandle()->m_collisionFilterGroup;
         }
         for (int i = 0; i < mNumJoints; ++i)
         {
             btMultibodyLink& link = mMultiBody->getLink(i);
             BulletJoint* parent = (link.m_parent >= 0) ? mJoints[link.m_parent] : this;
-            mJoints[i] = new BulletJoint(parent, i);
-            link.m_userPtr = mJoints[i];
+            int collisionGroup = btBroadphaseProxy::DefaultFilter;
+
             if (link.m_collider)
             {
+                collisionGroup = link.m_collider->getBroadphaseHandle()->m_collisionFilterGroup;
+                mJoints[i] = new BulletJoint(parent, i, collisionGroup);
                 link.m_collider->setUserPointer(mJoints[i]);
             }
+            else
+            {
+                mJoints[i] = new BulletJoint(parent, i, collisionGroup);
+            }
+            link.m_userPtr = mJoints[i];
         }
     }
 

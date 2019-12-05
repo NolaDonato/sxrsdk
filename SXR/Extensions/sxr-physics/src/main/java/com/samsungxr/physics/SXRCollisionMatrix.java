@@ -24,7 +24,7 @@ public class SXRCollisionMatrix
     /*
      * Enable collision with kinematic bodies.
      */
-    public static final int KINEMATIC_GBROUP = 2;
+    public static final int KINEMATIC_GROUP = 2;
 
     /*
      * Enable collision with debris.
@@ -55,7 +55,7 @@ public class SXRCollisionMatrix
     {
             1 << DEFAULT_GROUP,
             1 << STATIC_GROUP,
-            1 << KINEMATIC_GBROUP,
+            1 << KINEMATIC_GROUP,
             1 << DEBRIS_GROUP,
             1 << SENSOR_TRIGGER,
             1 << CHARACTER_GROUP,

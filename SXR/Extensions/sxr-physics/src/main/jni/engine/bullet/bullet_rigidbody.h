@@ -31,7 +31,7 @@ class BulletWorld;
 class BulletRigidBody : public PhysicsRigidBody, btMotionState
 {
  public:
-    BulletRigidBody(float mass);
+    BulletRigidBody(float mass, int collisionGroup);
     BulletRigidBody(btRigidBody *rigidBody);
     virtual ~BulletRigidBody();
 
@@ -46,6 +46,7 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
     virtual void setScale(const glm::vec3& v);
     virtual const glm::vec3& getScale() const { return mScale; }
     virtual const char* getName() const;
+    virtual int getCollisionGroup() const { return mCollisionGroup; }
 
     void    applyCentralForce(float x, float y, float z);
 	void    applyForce(float force_x, float force_y, float force_z,

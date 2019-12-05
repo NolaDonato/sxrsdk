@@ -68,6 +68,9 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
     private ArrayList<SXRConstraint> mConstraints = new ArrayList<>();
     private Vector3f mWorldOffset = new Vector3f();
     private int mSimType = SXRRigidBody.DYNAMIC;
+    private Vector3f mAngularLimits = new Vector3f((float) Math.PI, (float) Math.PI / 2, (float) Math.PI);
+    private Vector3f mAngularSpringStiffness = new Vector3f(0, 0, 0);
+    private Vector3f mAngularSpringDamping = new Vector3f(0, 0, 0);
     private int mCollisionGroup = SXRCollisionMatrix.DEFAULT_GROUP;
 
     public PhysicsAVTConverter(SXRContext ctx)
@@ -78,14 +81,33 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         mWorld = null;
     }
 
+    public void setCollisionGroup(int group)
+    {
+        mCollisionGroup = group;
+    }
+
     public void setDefaultSimType(int simtype)
     {
         mSimType = simtype;
+        if (simtype == SXRRigidBody.STATIC)
+        {
+            mCollisionGroup = SXRCollisionMatrix.STATIC_GROUP;
+        }
     }
 
-    public void setCollisionGroup(int cg)
+    public void setAngularLimits(float l1, float l2, float l3)
     {
-        mCollisionGroup = cg;
+        mAngularLimits.set(l1, l2, l3);
+    }
+
+    public void setAngularSpringStiffness(float s1, float s2, float s3)
+    {
+        mAngularSpringStiffness.set(s1, s2, s3);
+    }
+
+    public void setAngularSpringDamping(float d1, float d2, float d3)
+    {
+        mAngularSpringDamping.set(d1, d2, d3);
     }
 
     public SXRPhysicsContent loadPhysics(SXRScene scene, SXRAndroidResource resource, boolean ignoreUpAxis)
@@ -956,15 +978,21 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 JSONObject dof0 = dofdata.getJSONObject(0);
                 JSONObject dof1 = dofdata.getJSONObject(1);
                 JSONObject dof2 = dofdata.getJSONObject(2);
-                Vector2f limits0 = getLimits(dof0, (float) Math.PI);
-                Vector2f limits1 = getLimits(dof1, PIover2);
-                Vector2f limits2 = getLimits(dof2, (float) Math.PI);
-                Vector3f stiffness = new Vector3f((float) dof0.optDouble("springStiffness", 0),
-                                                  (float) dof1.optDouble("springStiffness", 0),
-                                                  (float) dof2.optDouble("springStiffness", 0));
-                Vector3f damping = new Vector3f((float) dof0.optDouble("springDamping", 0),
-                                                (float) dof1.optDouble("springDamping", 0),
-                                                (float) dof2.optDouble("springDamping", 0));
+                Vector2f limits0 = getLimits(dof0, mAngularLimits.x);
+                Vector2f limits1 = getLimits(dof1, mAngularLimits.y);
+                Vector2f limits2 = getLimits(dof2, mAngularLimits.z);
+                Vector3f stiffness = new Vector3f((float) dof0.optDouble("springStiffness",
+                                                                          mAngularSpringStiffness.x),
+                                                  (float) dof1.optDouble("springStiffness",
+                                                                          mAngularSpringStiffness.y),
+                                                  (float) dof2.optDouble("springStiffness",
+                                                                          mAngularSpringStiffness.z));
+                Vector3f damping = new Vector3f((float) dof0.optDouble("springDamping",
+                                                                        mAngularSpringDamping.x),
+                                                (float) dof1.optDouble("springDamping",
+                                                                        mAngularSpringDamping.y),
+                                                (float) dof2.optDouble("springDamping",
+                                                                        mAngularSpringDamping.z));
 
                 ball.setAngularLowerLimits(limits0.x, limits1.x, limits2.x);
                 ball.setAngularUpperLimits(limits0.y, limits1.y, limits2.y);
@@ -1004,8 +1032,8 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             SXRUniversalConstraint ball = new SXRUniversalConstraint(getSXRContext(), parentBody, pivotB, axisA, axisB);
             JSONObject dof0 = dofdata.getJSONObject(0);
             JSONObject dof1 = dofdata.getJSONObject(1);
-            Vector2f limits0 = getLimits(dof0, PIover2);
-            Vector2f limits1 = getLimits(dof1, PIover2);
+            Vector2f limits0 = getLimits(dof0, mAngularLimits.y);
+            Vector2f limits1 = getLimits(dof1, mAngularLimits.z);
             ball.setAngularLowerLimits(0, limits0.x, limits1.x);
             ball.setAngularUpperLimits(0, limits0.y, limits1.y);;
             constraint = ball;

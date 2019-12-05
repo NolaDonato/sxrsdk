@@ -35,23 +35,17 @@ namespace sxr {
         PhysicsCollidable(long componentType) : Component(componentType)  { }
 
         virtual const char* getName() const = 0;
-
-        virtual void setName(const char*) = 0;
-
-        virtual void setMass(float mass) = 0;
-
         virtual float getMass() const = 0;
-
-        virtual void setFriction(float n)  = 0;
-
         virtual float getFriction() const = 0;
-
+        virtual int   getCollisionGroup() const = 0;
         virtual const glm::vec3& getScale() const = 0;
 
+        virtual void setName(const char*) = 0;
+        virtual void setMass(float mass) = 0;
+        virtual void setFriction(float n)  = 0;
         virtual void setScale(const glm::vec3& v) = 0;
 
         virtual void applyTorque(float x, float y, float z) = 0;
-
         virtual void sync(int options = 0) = 0;
     };
 

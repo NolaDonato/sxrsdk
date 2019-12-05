@@ -135,6 +135,7 @@ namespace sxr {
         {
             return mSpringStiffness[dof];
         }
+        return 0;
     }
 
     float BulletGeneric6dofConstraint::getSpringDamping(int dof) const
@@ -143,6 +144,7 @@ namespace sxr {
         {
             return mSpringDamping[dof];
         }
+        return 0;
     }
 
     void BulletGeneric6dofConstraint::setLinearStiffness(const glm::vec3& v)

@@ -52,7 +52,7 @@
 
 namespace sxr {
 
-    BulletJoint::BulletJoint(float mass, int numJoints)
+    BulletJoint::BulletJoint(float mass, int numJoints, int collisionGroup)
     : PhysicsJoint(mass, numJoints),
       mMultiBody(nullptr),
       mCollider(nullptr),
@@ -70,19 +70,18 @@ namespace sxr {
       mLocalInertia(0, 0, 0),
       mJointType(JointType::sphericalJoint)
     {
+        mCollisionGroup = collisionGroup;
         if (mass != 0)
         {
-            mCollisionGroup = btBroadphaseProxy::DefaultFilter;
             mCollisionMask = btBroadphaseProxy::AllFilter;
         }
         else
         {
-            mCollisionGroup = btBroadphaseProxy::StaticFilter;
             mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
         }
     }
 
-    BulletJoint::BulletJoint(BulletJoint* parent, JointType jointType, int jointIndex, float mass)
+    BulletJoint::BulletJoint(BulletJoint* parent, JointType jointType, int jointIndex, float mass, int collisionGroup)
     : PhysicsJoint(parent, jointType, jointIndex, mass),
       mMultiBody(nullptr),
       mParent(parent),
@@ -100,19 +99,18 @@ namespace sxr {
       mAngularDamping(0),
       mWorld(nullptr)
     {
+        mCollisionGroup = collisionGroup;
         if (mass != 0)
         {
-            mCollisionGroup = btBroadphaseProxy::DefaultFilter;
             mCollisionMask = btBroadphaseProxy::AllFilter;
         }
         else
         {
-            mCollisionGroup = btBroadphaseProxy::StaticFilter;
             mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
         }
     }
 
-    BulletJoint::BulletJoint(BulletJoint* parent, int jointIndex)
+    BulletJoint::BulletJoint(BulletJoint* parent, int jointIndex, int collisionGroup)
     :   PhysicsJoint(parent, (JointType) parent->getMultiBody()->getLink(jointIndex).m_jointType, jointIndex, 0),
         mParent(parent),
         mNeedsSync(SyncOptions::IMPORTED),
@@ -130,14 +128,13 @@ namespace sxr {
         mLinearDamping = mMultiBody->getLinearDamping();
         mAngularDamping = mMultiBody->getAngularDamping();
         mLocalInertia = glm::vec3(link.m_inertiaLocal.x(), link.m_inertiaLocal.y(), link.m_inertiaLocal.z());
+        mCollisionGroup = collisionGroup;
         if (mMass != 0)
         {
-            mCollisionGroup = btBroadphaseProxy::DefaultFilter;
             mCollisionMask = btBroadphaseProxy::AllFilter;
         }
         else
         {
-            mCollisionGroup = btBroadphaseProxy::StaticFilter;
             mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
         }
         if (mCollider)

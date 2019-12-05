@@ -34,8 +34,8 @@ class PhysicsRigidBody : public PhysicsCollidable
 	enum SimulationType
 	{
 		DYNAMIC = 0,
-		KINEMATIC = 1,
-		STATIC = 2
+		STATIC = 1,
+		KINEMATIC = 2
 	};
 
 	PhysicsRigidBody() : PhysicsCollidable(PhysicsRigidBody::getComponentType()) {}

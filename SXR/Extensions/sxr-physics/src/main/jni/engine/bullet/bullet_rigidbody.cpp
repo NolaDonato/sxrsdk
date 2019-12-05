@@ -36,9 +36,10 @@
 namespace sxr
 {
 
-    BulletRigidBody::BulletRigidBody(float mass)
+    BulletRigidBody::BulletRigidBody(float mass, int collisionGroup)
     :   mConstructionInfo(mass, nullptr, nullptr),
         mRigidBody(nullptr),
+        mCollisionGroup(collisionGroup),
         mNeedsSync(SyncOptions::ALL),
         mScale(1, 1, 1)
     {
@@ -60,13 +61,11 @@ namespace sxr
         if (mass != 0)
         {
             mSimType = DYNAMIC;
-            mCollisionGroup = btBroadphaseProxy::DefaultFilter;
             mCollisionMask = btBroadphaseProxy::AllFilter;
         }
         else
         {
             mSimType = STATIC;
-            mCollisionGroup = btBroadphaseProxy::StaticFilter;
             mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
         }
     }
@@ -168,9 +167,9 @@ namespace sxr
         if (type != mSimType)
         {
             mSimType = type;
+            mNeedsSync |= SyncOptions::PROPERTIES;
             if (mRigidBody)
             {
-                mNeedsSync |= SyncOptions::PROPERTIES;
                 sync();
             }
         }
@@ -181,9 +180,9 @@ namespace sxr
         if (s != mScale)
         {
             mScale = s;
+            mNeedsSync |= SyncOptions::PROPERTIES;
             if (mRigidBody)
             {
-                mNeedsSync |= SyncOptions::PROPERTIES;
                 sync();
             }
         }
@@ -203,7 +202,7 @@ namespace sxr
     {
         if (mRigidBody)
         {
-            mRigidBody->setActivationState(ISLAND_SLEEPING);
+            mRigidBody->activate((mSimType == SimulationType::DYNAMIC) ? WANTS_DEACTIVATION : ACTIVE_TAG);
         }
     }
 
@@ -211,7 +210,7 @@ namespace sxr
     {
         if (mRigidBody)
         {
-            mRigidBody->activate(ACTIVE_TAG);
+            mRigidBody->activate((mSimType == SimulationType::DYNAMIC) ? ACTIVE_TAG : WANTS_DEACTIVATION);
         }
     }
 
@@ -253,7 +252,7 @@ namespace sxr
                 mRigidBody->setCollisionFlags(collisionFlags &
                                           ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
                                             btCollisionObject::CollisionFlags::CF_STATIC_OBJECT));
-                mRigidBody->setActivationState(enabled() ? ACTIVE_TAG : ISLAND_SLEEPING);
+                mRigidBody->setActivationState(enabled() ? ACTIVE_TAG : WANTS_DEACTIVATION);
                 break;
 
                 case SimulationType::STATIC:
@@ -263,7 +262,7 @@ namespace sxr
                 mRigidBody->setCollisionFlags(
                         (collisionFlags | btCollisionObject::CollisionFlags::CF_STATIC_OBJECT) &
                         ~btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT);
-                mRigidBody->setActivationState(enabled() ? ISLAND_SLEEPING : DISABLE_SIMULATION);
+                mRigidBody->setActivationState(enabled() ? ACTIVE_TAG : WANTS_DEACTIVATION);
                 break;
 
                 case SimulationType::KINEMATIC:
@@ -273,7 +272,14 @@ namespace sxr
                 mRigidBody->setCollisionFlags(
                         (collisionFlags | btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT) &
                         ~btCollisionObject::CollisionFlags::CF_STATIC_OBJECT);
-                mRigidBody->setActivationState(enabled() ?  DISABLE_DEACTIVATION : DISABLE_SIMULATION);
+                if (enabled())
+                {
+                    mRigidBody->setActivationState(DISABLE_DEACTIVATION);
+                }
+                else
+                {
+                    mRigidBody->forceActivationState(WANTS_DEACTIVATION);
+                }
                 break;
             }
             if (mWorld)
@@ -369,6 +375,10 @@ namespace sxr
         Transform* trans = owner_object()->transform();
 
         centerOfMassWorldTrans = convertTransform2btTransform(trans);
+/*        LOGV("BULLET: rigid body getPosition %s pos = %f, %f, %f", owner_object()->name().c_str(),
+             trans->position_x(),
+             trans->position_y(),
+             trans->position_z());*/
     }
 
     void BulletRigidBody::setWorldTransform(const btTransform &centerOfMassWorldTrans)
@@ -402,7 +412,7 @@ namespace sxr
             trans->set_rotation(rot.getW(), rot.getX(), rot.getY(), rot.getZ());
         }
         mNeedsSync &= ~SyncOptions::IMPORTED;
-        LOGD("BULLET: rigid body %s pos = %f, %f, %f", owner->name().c_str(),
+        LOGV("BULLET: rigid body %s setPosition = %f, %f, %f", owner->name().c_str(),
                 trans->position_x(),
                 trans->position_y(),
                 trans->position_z());

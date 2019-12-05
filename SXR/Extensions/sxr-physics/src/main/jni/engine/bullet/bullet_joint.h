@@ -43,9 +43,8 @@ class BulletRootJoint;
 class BulletJoint : public PhysicsJoint
 {
  public:
-    BulletJoint(BulletJoint* parent, JointType type, int jointIndex, float mass);
-
-	BulletJoint(BulletJoint* parent, int jointIndex);
+    BulletJoint(BulletJoint* parent, JointType type, int jointIndex, float mass, int collisionGroup);
+	BulletJoint(BulletJoint* parent, int jointIndex, int collisionGroup);
     virtual ~BulletJoint() { }
 
 	virtual const BulletRootJoint* findRoot() const;
@@ -56,6 +55,7 @@ class BulletJoint : public PhysicsJoint
 	virtual float 			 getAngularDamping() const { return mAngularDamping; }
 	virtual float            getMaxAppliedImpulse() const { return mMaxAppliedImpulse; }
 	virtual float            getMaxCoordVelocity() const { return mMaxCoordVelocity; }
+	virtual int              getCollisionGroup() const { return mCollisionGroup; }
 	virtual const glm::vec3& getScale() const { return mScale; }
 
 	virtual void  setName(const char*);
@@ -99,7 +99,7 @@ class BulletJoint : public PhysicsJoint
     virtual void             setAxis(const glm::vec3& axis);
 
 protected:
-    BulletJoint(float mass, int numBones);
+    BulletJoint(float mass, int numBones, int collisionGroup);
     virtual void updateCollider(Node* owner, int options);
     void setupSpherical();
     void setupHinge();
@@ -136,7 +136,7 @@ protected:
 class BulletRootJoint : public BulletJoint
 {
 public:
-    BulletRootJoint(float mass, int numBones);
+    BulletRootJoint(float mass, int numBones, int collisionGroup);
     BulletRootJoint(btMultiBody* multibody);
     virtual ~BulletRootJoint();
 

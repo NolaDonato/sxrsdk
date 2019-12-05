@@ -66,7 +66,6 @@ import java.util.List;
 public class SXRPhysicsJoint extends SXRPhysicsCollidable
 {
     protected SXRSkeleton             mSkeleton = null;
-    protected final int               mCollisionGroup;
     protected int                     mBoneIndex = -1;
 
     /**
@@ -113,8 +112,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
      */
     public SXRPhysicsJoint(SXRContext ctx, float mass, int numJoints, int collisionGroup)
     {
-        super(ctx, NativePhysicsJoint.ctorRoot(mass, numJoints));
-        mCollisionGroup = collisionGroup;
+        super(ctx, NativePhysicsJoint.ctorRoot(mass, numJoints, collisionGroup));
         mType = getComponentType();
     }
 
@@ -129,9 +127,8 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
      */
     public SXRPhysicsJoint(SXRSkeleton skel, float mass, int numJoints, int collisionGroup)
     {
-        super(skel.getSXRContext(), NativePhysicsJoint.ctorRoot(mass, numJoints));
+        super(skel.getSXRContext(), NativePhysicsJoint.ctorRoot(mass, numJoints, collisionGroup));
         mSkeleton = skel;
-        mCollisionGroup = collisionGroup;
         mType = getComponentType();
     }
 
@@ -167,7 +164,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     {
         super(parent.getSXRContext(),
               NativePhysicsJoint.ctorLink(parent.getNative(),
-                                          jointType, jointIndex, mass));
+                                          jointType, jointIndex, mass, collisionGroup));
         if (jointIndex < 1)
         {
             throw new IllegalArgumentException("Joint index must be greater than zero");
@@ -175,7 +172,6 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
         mType = getComponentType();
         mSkeleton = parent.mSkeleton;
         mBoneIndex = parent.mBoneIndex + 1;
-        mCollisionGroup = collisionGroup;
     }
 
     /** Used only by {@link SXRPhysicsLoader} */
@@ -183,7 +179,6 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     {
         super(ctx, nativeJoint);
         mType = getComponentType();
-        mCollisionGroup = -1;
         mBoneIndex = 0;
     }
 
@@ -284,7 +279,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     @Override
     public int getCollisionGroup()
     {
-        return mCollisionGroup;
+        return NativePhysicsJoint.getCollisionGroup(getNative());
     }
 
     /**
@@ -701,8 +696,8 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
 
 class NativePhysicsJoint
 {
-    static native long ctorRoot(float mass, int numBones);
-    static native long ctorLink(long parent_joint, int jointType, int boneid, float mass);
+    static native long ctorRoot(float mass, int numBones, int collisionGroup);
+    static native long ctorLink(long parent_joint, int jointType, int boneid, float mass, int collisionGroup);
     static native long getComponentType();
 
     static native float   getMass(long joint);
@@ -716,6 +711,7 @@ class NativePhysicsJoint
     static native String  getName(long joint);
     static native float[] getScale(long joint);
     static native int     getNumJoints(long joint);
+    static native int     getCollisionGroup(long joint);
 
     static native void setFriction(long joint, float friction);
     static native void setAxis(long joint, float x, float y, float z);

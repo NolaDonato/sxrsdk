@@ -20,24 +20,32 @@ namespace sxr {
 extern "C"
 {
 JNIEXPORT jlong JNICALL
-Java_com_samsungxr_physics_NativePhysicsJoint_ctorRoot(JNIEnv *env, jclass obj, jfloat mass, jint numBones)
+Java_com_samsungxr_physics_NativePhysicsJoint_ctorRoot(JNIEnv *env, jclass obj, jfloat mass, jint numBones, jint collisionGroup)
 {
-    return reinterpret_cast<jlong>(new BulletRootJoint(mass, numBones));
+    return reinterpret_cast<jlong>(new BulletRootJoint(mass, numBones, collisionGroup));
 }
 
 JNIEXPORT jlong JNICALL
 Java_com_samsungxr_physics_NativePhysicsJoint_ctorLink(JNIEnv *env, jclass obj, jlong jparent,
-                                                       jint jointType, jint jointIndex, jfloat mass)
+                                                       jint jointType, jint jointIndex,
+                                                       jfloat mass, jint collisionGroup)
 {
     BulletJoint *parent = reinterpret_cast<BulletJoint *>(jparent);
     return reinterpret_cast<jlong>(new BulletJoint(parent, PhysicsJoint::JointType(jointType),
-                                                   jointIndex, mass));
+                                                   jointIndex, mass, collisionGroup));
 }
 
 JNIEXPORT jlong JNICALL
 Java_com_samsungxr_physics_NativePhysicsJoint_getComponentType(JNIEnv *env, jclass obj)
 {
     return PhysicsJoint::getComponentType();
+}
+
+JNIEXPORT jint JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_getCollisionGroup(JNIEnv *env, jclass obj, jlong jjoint)
+{
+    PhysicsJoint *mb = reinterpret_cast<PhysicsJoint *>(jjoint);
+    return mb->getCollisionGroup();
 }
 
 JNIEXPORT jfloat JNICALL

@@ -24,6 +24,8 @@ import com.samsungxr.animation.SXRSkeleton;
 
 import org.joml.Vector3f;
 
+import java.lang.annotation.Native;
+
 /**
  * Represents a rigid body with physical properties that can
  * collide with other objects.
@@ -60,7 +62,6 @@ public class SXRRigidBody extends SXRPhysicsCollidable
         System.loadLibrary("sxr-physics");
     }
 
-    private final int mCollisionGroup;
     private final SXRPhysicsContext mPhysicsContext;
 
     /**
@@ -89,9 +90,9 @@ public class SXRRigidBody extends SXRPhysicsCollidable
      */
     public SXRRigidBody(SXRContext ctx, float mass)
     {
-        super(ctx, NativeRigidBody.ctor(mass));
+        super(ctx, NativeRigidBody.ctor(mass,
+                (mass > 0) ? SXRCollisionMatrix.DEFAULT_GROUP : SXRCollisionMatrix.STATIC_GROUP));
         mType = getComponentType();
-        mCollisionGroup = (mass > 0) ? SXRCollisionMatrix.DEFAULT_GROUP : SXRCollisionMatrix.STATIC_GROUP;
         mPhysicsContext = SXRPhysicsContext.getInstance();
     }
 
@@ -115,9 +116,8 @@ public class SXRRigidBody extends SXRPhysicsCollidable
      */
     public SXRRigidBody(SXRContext ctx, float mass, int collisionGroup)
     {
-        super(ctx, NativeRigidBody.ctor(mass));
+        super(ctx, NativeRigidBody.ctor(mass, collisionGroup));
         mType = getComponentType();
-        mCollisionGroup = collisionGroup;
         mPhysicsContext = SXRPhysicsContext.getInstance();
     }
 
@@ -126,7 +126,6 @@ public class SXRRigidBody extends SXRPhysicsCollidable
     {
         super(ctx, nativeRigidBody);
         mType = getComponentType();
-        mCollisionGroup = (getMass() > 0) ? SXRCollisionMatrix.DEFAULT_GROUP : SXRCollisionMatrix.STATIC_GROUP;
         mPhysicsContext = SXRPhysicsContext.getInstance();
     }
 
@@ -602,10 +601,10 @@ public class SXRRigidBody extends SXRPhysicsCollidable
      * @return The collision group id as an int between 9 and 15.
      */
     @Override
-    public int getCollisionGroup() {
-        return mCollisionGroup;
+    public int getCollisionGroup()
+    {
+        return NativeRigidBody.getCollisionGroup(getNative());
     }
-
 
     @Override
     public void sync(int options)
@@ -645,7 +644,7 @@ public class SXRRigidBody extends SXRPhysicsCollidable
 
 class NativeRigidBody
 {
-    static native long ctor(float mass);
+    static native long ctor(float mass, int collisionGroup);
     static native long getComponentType();
 
     static native float   getMass(long jrigid_body);
@@ -662,7 +661,8 @@ class NativeRigidBody
     static native float   getCcdSweptSphereRadius(long jrigid_body);
     static native float   getContactProcessingThreshold(long jrigid_body);
     static native int     getSimulationType(long jrigid_body);
-    static native float[] getScale(long joint);
+    static native float[] getScale(long jrigid_body);
+    static native int     getCollisionGroup(long jrigid_body);
 
     static native void setGravity(long jrigid_body, float x, float y, float z);
     static native void setDamping(long jrigid_body, float linear, float angular);
