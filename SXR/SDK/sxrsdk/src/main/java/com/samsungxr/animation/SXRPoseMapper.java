@@ -330,11 +330,8 @@ public class SXRPoseMapper extends SXRAnimation
 
             if (mDestPose.getNumBones() != dstskel.getNumBones())
             {
-                mDestPose = new SXRPose(dstskel);
-            }
-            else
-            {
-                mDestPose.clearRotations();
+                mDestPose = new SXRPose(dstskel.getPose());
+                mDestPose.sync();
             }
             srcskel.getPosition(v);
             v.mul(mScale);
@@ -345,7 +342,7 @@ public class SXRPoseMapper extends SXRAnimation
                 if (boneindex >= 0)
                 {
                     int boneoptions = srcskel.getBoneOptions(i) & (SXRSkeleton.BONE_ANIMATE | SXRSkeleton.BONE_PHYSICS);
-                    boolean animatable = (boneoptions == 0) || (boneoptions == mBoneOptions);
+                    boolean animatable = (mBoneOptions == 0) || (boneoptions == 0) || (boneoptions == mBoneOptions);
 
                     if (animatable)
                     {

@@ -646,6 +646,7 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
                                 new SXRPoseMapper(mSkeleton, skel, skelAnim.getDuration());
                             retargeter.setBoneOptions(SXRSkeleton.BONE_ANIMATE);
                             retargeter.setBoneMap(boneMap);
+                            retargeter.setName(filePath + ".retargeter");
                             animator.addAnimation(retargeter);
                         }
                         else
