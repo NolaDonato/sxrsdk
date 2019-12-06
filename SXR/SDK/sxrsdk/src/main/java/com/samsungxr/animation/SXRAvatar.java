@@ -15,6 +15,7 @@ import com.samsungxr.SXRResourceVolume;
 import com.samsungxr.SXRTexture;
 import com.samsungxr.animation.keyframe.BVHImporter;
 import com.samsungxr.animation.keyframe.SXRSkeletonAnimation;
+import com.samsungxr.utility.FileNameUtils;
 import com.samsungxr.utility.Log;
 import com.samsungxr.utility.Threads;
 
@@ -513,16 +514,16 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
      * The first model loaded is the avatar body. Subsequent models
      * are attachments.
      * @return true if model was actually removed, else false
-     * @param modelName  name of model to remove.
+     * @param modelType  name of model to remove.
      * @see #loadModel(SXRAndroidResource)
      */
-    public boolean removeModel(String modelName)
+    public boolean removeModel(String modelType)
     {
-        Attachment a = mAttachments.get(modelName);
+        Attachment a = mAttachments.get(modelType);
         if (a != null)
         {
             SXRNode root = a.getModelRoot();
-            mAttachments.remove(modelName);
+            mAttachments.remove(modelType);
             if (root != null)
             {
                 a.hide();
@@ -545,7 +546,7 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
         return null;
     }
 
-    public String findModelName(SXRNode modelRoot)
+    public String findModelType(SXRNode modelRoot)
     {
         if (modelRoot == null)
         {
@@ -560,6 +561,17 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
             }
         }
         return null;
+    }
+
+    public boolean hasModelType(String modelType)
+    {
+        return mAttachments.containsKey(modelType);
+    }
+
+    public String getModelProperty(String modelType, String propName)
+    {
+        Attachment a = mAttachments.get(modelType);
+        return a.getProperty(propName);
     }
 
     public void setProperty(String propName, String val)
@@ -623,6 +635,7 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
         final SXRContext ctx = getSXRContext();
         SXRResourceVolume volume = new SXRResourceVolume(ctx, animResource);
 
+        setProperty("bonemap", boneMap);
         if (filePath.endsWith(".bvh"))
         {
             Threads.spawn(new Runnable()
@@ -630,48 +643,33 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
                 public void run()
                 {
                     SXRAnimator animator = new SXRAnimator(ctx);
+                    String errors = null;
+
                     animator.setName(filePath);
                     try
                     {
                         BVHImporter importer = new BVHImporter(ctx);
-                        SXRSkeletonAnimation skelAnim;
-
-                        if (boneMap != null)
-                        {
-                            SXRSkeleton skel = importer.importSkeleton(animResource);
-                            skelAnim = importer.readMotion(skel);
-                            animator.addAnimation(skelAnim);
-
-                            SXRPoseMapper retargeter =
-                                new SXRPoseMapper(mSkeleton, skel, skelAnim.getDuration());
-                            retargeter.setBoneOptions(SXRSkeleton.BONE_ANIMATE);
-                            retargeter.setBoneMap(boneMap);
-                            animator.addAnimation(retargeter);
-                        }
-                        else
-                        {
-                            skelAnim = importer.importAnimation(animResource, mSkeleton);
-                            animator.addAnimation(skelAnim);
-                        }
-                        addAnimation(animator);
-                        ctx.getEventManager().sendEvent(SXRAvatar.this,
-                                                        IAvatarEvents.class,
-                                                        "onAnimationLoaded",
-                                                        SXRAvatar.this,
-                                                        animator,
-                                                        filePath,
-                                                        null);
+                        SXRSkeleton skel = importer.importSkeleton(animResource);
+                        SXRSkeletonAnimation skelAnim  = importer.readMotion(skel);
+                        animator.addAnimation(skelAnim);
+                        errors = SXRAvatar.this.onLoadAnimation(animator, animResource.getResourceFilename());
                     }
                     catch (IOException ex)
                     {
-                        ctx.getEventManager().sendEvent(SXRAvatar.this,
-                                                        IAvatarEvents.class,
-                                                        "onAnimationLoaded",
-                                                        SXRAvatar.this,
-                                                        null,
-                                                        filePath,
-                                                        ex.getMessage());
+                        errors = ex.getMessage();
                     }
+                    if (errors != null)
+                    {
+                        animator = null;
+                        Log.e(TAG, errors);
+                    }
+                    ctx.getEventManager().sendEvent(SXRAvatar.this,
+                                                    IAvatarEvents.class,
+                                                    "onAnimationLoaded",
+                                                    SXRAvatar.this,
+                                                    animator,
+                                                    filePath,
+                                                    errors);
                 }
             });
         }
@@ -976,6 +974,9 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
                     {
                         SXRPoseMapper poseMapper = new SXRPoseMapper(mSkeleton, skel, skelAnim.getDuration());
 
+                        poseMapper.setName(FileNameUtils.getBaseName(filePath) + ".retargeter");
+                        poseMapper.setBoneOptions(SXRSkeleton.BONE_ANIMATE);
+                        poseMapper.setBoneMap(getProperty("bonemap"));
                         animator.addAnimation(poseMapper);
                     }
                 }
@@ -1099,20 +1100,12 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
             SXRAnimator animator = (SXRAnimator) animRoot.getComponent(SXRAnimator.getComponentType());
             if (animator == null)
             {
-                if (errors == null)
-                {
-                    errors = "No animations found in " + filePath;
-                }
-                context.getEventManager().sendEvent(SXRAvatar.this,
-                        IAvatarEvents.class,
-                        "onAnimationLoaded",
-                        SXRAvatar.this,
-                        null,
-                        filePath,
-                        errors);
-                return;
+                errors = "No animations found in " + filePath;
             }
-            errors = onLoadAnimation(animator, filePath);
+            else
+            {
+                errors = onLoadAnimation(animator, filePath);
+            }
             if (errors != null)
             {
                 animator = null;

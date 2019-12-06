@@ -194,7 +194,11 @@ public class SXRPoseMapper extends SXRAnimation
      */
     public void setBoneMap(String bonemap)
     {
-        if ((bonemap == null) || bonemap.isEmpty())
+        if (bonemap == null)
+        {
+            mBoneMap = null;
+        }
+        if (bonemap.isEmpty())
         {
             throw new IllegalArgumentException("BoneMap cannot be empty");
         }
@@ -345,7 +349,7 @@ public class SXRPoseMapper extends SXRAnimation
                 if (boneindex >= 0)
                 {
                     int boneoptions = srcskel.getBoneOptions(i) & (SXRSkeleton.BONE_ANIMATE | SXRSkeleton.BONE_PHYSICS);
-                    boolean animatable = (boneoptions == 0) || (boneoptions == mBoneOptions);
+                    boolean animatable = (mBoneOptions == 0) || (boneoptions == 0) || (boneoptions == mBoneOptions);
 
                     if (animatable)
                     {

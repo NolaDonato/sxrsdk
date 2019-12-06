@@ -68,9 +68,9 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
     private ArrayList<SXRConstraint> mConstraints = new ArrayList<>();
     private Vector3f mWorldOffset = new Vector3f();
     private int mSimType = SXRRigidBody.DYNAMIC;
-    private Vector3f mAngularLimits = new Vector3f((float) Math.PI, (float) Math.PI / 2, (float) Math.PI);
-    private Vector3f mAngularSpringStiffness = new Vector3f(0, 0, 0);
-    private Vector3f mAngularSpringDamping = new Vector3f(0, 0, 0);
+    private Vector3f mAngularLimits;
+    private Vector3f mAngularSpringStiffness;
+    private Vector3f mAngularSpringDamping;
     private int mCollisionGroup = SXRCollisionMatrix.DEFAULT_GROUP;
 
     public PhysicsAVTConverter(SXRContext ctx)
@@ -110,12 +110,63 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         mAngularSpringDamping.set(d1, d2, d3);
     }
 
-    public SXRPhysicsContent loadPhysics(SXRScene scene, SXRAndroidResource resource, boolean ignoreUpAxis)
+    protected void applyLoaderProperties(Map<String, Object> loaderProperties)
+    {
+        Vector3f angularSpringDamping = (Vector3f) loaderProperties.get("AngularSpringDamping");
+
+        mAttachBoneName = (String) loaderProperties.get("AttachBone");
+        if (angularSpringDamping != null)
+        {
+            mAngularSpringDamping = angularSpringDamping;
+        }
+        else
+        {
+            mAngularSpringDamping = new Vector3f(0, 0, 0);
+        }
+        Vector3f angularSpringStiffness = (Vector3f) loaderProperties.get("AngularSpringStiffness");
+        if (angularSpringStiffness != null)
+        {
+            mAngularSpringStiffness = angularSpringStiffness;
+        }
+        else
+        {
+            mAngularSpringStiffness = new Vector3f(0, 0, 0);
+        }
+        Vector3f angularLimits = (Vector3f) loaderProperties.get("AngularLimits");
+        if (angularLimits != null)
+        {
+            mAngularLimits = angularLimits;
+        }
+        else
+        {
+            mAngularLimits = new Vector3f((float) Math.PI, (float) Math.PI / 2, (float) Math.PI);
+        }
+        int collisionGroup = (int) loaderProperties.get("CollisionGroup");
+        if (collisionGroup != 0)
+        {
+            mCollisionGroup = collisionGroup;
+        }
+        else
+        {
+            mCollisionGroup = SXRCollisionMatrix.DEFAULT_GROUP;
+        }
+        int simulationType = (int) loaderProperties.get("SimulationType");
+        if (simulationType != 0)
+        {
+            mSimType = simulationType;
+        }
+        else
+        {
+            mSimType = SXRRigidBody.DYNAMIC;
+        }
+    }
+
+    public SXRPhysicsContent loadPhysics(SXRScene scene, SXRAndroidResource resource, Map<String, Object> loaderProperties)
     {
         mFileName = resource.getResourceFilename().toLowerCase();
         if (!mFileName.endsWith(".avt"))
         {
-            return super.loadPhysics(scene, resource, ignoreUpAxis);
+            return super.loadPhysics(scene, resource, loaderProperties);
         }
 
         String inputData = toString(resource);
@@ -123,6 +174,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         {
             mRoot = scene.getRoot();
             mWorld = (SXRWorld) mRoot.getComponent(SXRWorld.getComponentType());
+            applyLoaderProperties(loaderProperties);
             SXRPhysicsContent world = parse(inputData);
             mAttachBoneName = null;
             SXRSkeleton skel = mSkeleton;
@@ -143,13 +195,13 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         return null;
     }
 
-    public void loadPhysics(SXRWorld world, SXRAndroidResource resource, boolean ignoreUpAxis)
+    public void loadPhysics(SXRWorld world, SXRAndroidResource resource, Map<String, Object> loaderProperties)
     {
         mRoot = world.getOwnerObject();
         mFileName = resource.getResourceFilename().toLowerCase();
         if (!mFileName.endsWith(".avt"))
         {
-            super.loadPhysics(world, resource, ignoreUpAxis);
+            super.loadPhysics(world, resource, loaderProperties);
             return;
         }
         String inputData = toString(resource);
@@ -163,10 +215,11 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 mRoot.attachComponent(world);
             }
             mWorld = world;
+            applyLoaderProperties(loaderProperties);
             SXRPhysicsContent content = parse(inputData);
             SXRSkeleton skel = mSkeleton;
-            mSkeleton = null;
-            mAttachBoneName = null;
+            mSkeleton = (SXRSkeleton) loaderProperties.get("Skeleton");
+            mAttachBoneName = (String) loaderProperties.get("AttachBone");
             if (content != null)
             {
                 getSXRContext().getEventManager().sendEvent(this,
@@ -182,52 +235,10 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                                                     "Cannot open physics file");
     }
 
-
-    /**
-     * Loads physics components from a JSON file describing the avatar and associates
-     * them to the skeleton provided
-     * <p>
-     * Avatar files describe physics for articulated bodies.
-     * Each file has a skeleton and joints with collision geometries.
-     * The contents of the AVT is not added to the current scene.
-     * Instead it is imported and contained in a {@link SXRPhysicsContent}
-     * object (like a physics world but it cannot simulate, just a container).
-     * @param skel        {@link SXRSkeleton} to use
-     * @param attachBone  name of bone in skeleton to associate with the root joint in physics.
-     * @param resource    source of physics content to import
-     */
-    public SXRPhysicsContent loadPhysics(SXRAndroidResource resource, SXRSkeleton skel, String attachBone)
-    {
-        mSkeleton = skel;
-        mAttachBoneName = attachBone;
-        return loadPhysics(resource, false);
-    }
-
-    /**
-     * Loads physics components from a JSON file describing the avatar and associates
-     * them to the skeleton provided
-     * <p>
-     * Avatar files describe physics for articulated bodies.
-     * Each file has a skeleton and joints with collision geometries.
-     * The contents of the AVT is not added to the current scene.
-     * Instead it is imported and contained in a {@link SXRPhysicsContent}
-     * object (like a physics world but it cannot simulate, just a container).
-     * @param skel        {@link SXRSkeleton} to use
-     * @param attachBone  name of bone in skeleton to associate with the root joint in physics.
-     * @param resource    source of physics content to import
-     */
-    public SXRPhysicsContent loadPhysics(SXRWorld world, SXRAndroidResource resource, SXRSkeleton skel, String attachBone)
-    {
-        mSkeleton = skel;
-        mAttachBoneName = attachBone;
-        loadPhysics(world, resource, false);
-        return world;
-    }
-
     public boolean convertToBullet(String infile, String outfile, boolean isMultibody)
     {
         SXRAndroidResource resource = toAndroidResource(getSXRContext(), infile);
-        SXRPhysicsContent content = loadPhysics(resource, false);
+        SXRPhysicsContent content = loadPhysics(resource, null);
         if (content == null)
         {
             return false;

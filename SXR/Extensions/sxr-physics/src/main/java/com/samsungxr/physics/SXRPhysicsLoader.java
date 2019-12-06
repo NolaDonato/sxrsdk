@@ -31,18 +31,21 @@ import com.samsungxr.SXRNode;
 import com.samsungxr.animation.SXRSkeleton;
 import com.samsungxr.utility.Log;
 
+import org.joml.Vector3f;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 {
-    static private final String TAG = SXRPhysicsLoader.class.getSimpleName();
+    static protected final String TAG = SXRPhysicsLoader.class.getSimpleName();
     protected boolean mIsMultiBody = false;
     protected String mErrors = "";
-    private SXREventReceiver mListeners;
+    protected SXREventReceiver mListeners;
+    protected Map<String, Object> mDefaultProperties = new HashMap<String, Object>();
 
     static
     {
@@ -56,6 +59,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
          * Called after a physics file is loaded.
          * @param  world    {@link }SXRPhysicsContent} containing the physics objects loaded.
          *                  May be null if the load failed.
+         * @param skel      {@link SXRSkeleton} created from physics, may be null.
          * @param filename  Name of file or resource loaded.
          */
         public void onPhysicsLoaded(SXRPhysicsContent world, SXRSkeleton skel, String filename);
@@ -105,7 +109,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
      */
     public void loadPhysics(SXRScene scene, String fileName)
     {
-        loadPhysics(scene, fileName, false);
+        loadPhysics(scene, fileName, new HashMap<String, Object>());
     }
 
     /**
@@ -119,14 +123,20 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
      * components are added to the nodes with the same
      * name in the scene provided.
      *
-     * @param fileName Name of file containing physics content.
-     * @param scene    The scene containing the objects to attach physics components.
-     * @param ignoreUpAxis Assume Y axis is up if true, down if false.
+     * @param fileName         Name of file containing physics content.
+     * @param scene            The scene containing the objects to attach physics components.
+     * @param loaderProperties Default values for physics properties:
+     *                         ignoreupaxis:           assume Y axis is up if true, else set from physics content
+     *                         attachbone:             name of skeleton bone to attach new physics to
+     *                         CollisionGroup:         integer collision group for new bodies / joints
+     *                         AngularLimits:          angular limits in radians for generic constraints
+     *                         AngularSpringStiffness: angular spring stiffness for generic constraints
+     *                         AngularSpringDamping:   angular spring damping for generic constraints
      */
-    public void loadPhysics(SXRScene scene, String fileName, boolean ignoreUpAxis)
+    public void loadPhysics(SXRScene scene, String fileName, Map<String, Object> loaderProperties)
     {
         SXRAndroidResource resource = toAndroidResource(scene.getSXRContext(), fileName);
-        loadPhysics(scene, resource, ignoreUpAxis);
+        loadPhysics(scene, resource, loaderProperties);
     }
 
     /**
@@ -142,9 +152,15 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
      *
      * @param resource {@link SXRAndroidResource} referencing the file containing physics content.
      * @param scene    The scene containing the objects to attach physics components.
-     * @param ignoreUpAxis Assume Y axis is up if true, down if false.
+     * @param loaderProperties Default values for physics properties:
+     *                         ignoreupaxis:           assume Y axis is up if true, else set from physics content
+     *                         attachbone:             name of skeleton bone to attach new physics to
+     *                         CollisionGroup:         integer collision group for new bodies / joints
+     *                         AngularLimits:          angular limits in radians for generic constraints
+     *                         AngularSpringStiffness: angular spring stiffness for generic constraints
+     *                         AngularSpringDamping:   angular spring damping for generic constraints
      */
-    public SXRPhysicsContent loadPhysics(SXRScene scene, SXRAndroidResource resource, boolean ignoreUpAxis)
+    public SXRPhysicsContent loadPhysics(SXRScene scene, SXRAndroidResource resource, Map<String, Object> loaderProperties)
     {
         String fname = resource.getResourceFilename().toLowerCase();
         SXRWorld world = (SXRWorld) scene.getRoot().getComponent(SXRWorld.getComponentType());
@@ -159,7 +175,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         }
         if (fname.endsWith(".urdf"))
         {
-            loadPhysics(world, resource, ignoreUpAxis);
+            loadPhysics(world, resource, loaderProperties);
             return world;
         }
         else if (fname.endsWith(".bullet"))
@@ -174,7 +190,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                                                             "Cannot open physics file");
                 return null;
             }
-            loadBulletFile(inputData, scene.getRoot(), ignoreUpAxis);
+            loadBulletFile(inputData, scene.getRoot(), loaderProperties);
             return world;
         }
         else
@@ -209,9 +225,15 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
      * @param world    The physics world to attach physics components.
      *                 This world should be attached to the root of the
      *                 node hierarchy to attach physics to.
-     * @param ignoreUpAxis Assume Y axis is up if true, down if false.
+     * @param loaderProperties Default values for physics properties:
+     *                         ignoreupaxis:           assume Y axis is up if true, else set from physics content
+     *                         attachbone:             name of skeleton bone to attach new physics to
+     *                         CollisionGroup:         integer collision group for new bodies / joints
+     *                         AngularLimits:          angular limits in radians for generic constraints
+     *                         AngularSpringStiffness: angular spring stiffness for generic constraints
+     *                         AngularSpringDamping:   angular spring damping for generic constraints
      */
-    public void loadPhysics(SXRWorld world, SXRAndroidResource resource, boolean ignoreUpAxis)
+    public void loadPhysics(SXRWorld world, SXRAndroidResource resource, Map<String, Object> loaderProperties)
     {
         SXRNode root = world.getOwnerObject();
         String fname = resource.getResourceFilename().toLowerCase();
@@ -233,7 +255,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                                                             "Cannot parse URDF file");
                 return;
             }
-            loadURDFFile(world, urdfXML, ignoreUpAxis);
+            loadURDFFile(world, urdfXML, loaderProperties);
         }
         else if (fname.endsWith(".bullet"))
         {
@@ -247,7 +269,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                                                             "Cannot open physics file");
                 return;
             }
-            loadBulletFile(world, inputData, root, ignoreUpAxis);
+            loadBulletFile(world, inputData, root, loaderProperties);
         }
         else
         {
@@ -276,15 +298,21 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
      * hierarchy of {@SXRNode} objects is also constructed and attached
      * to the owner of the root joint.
      * @param resource {@link SXRAndroidResource} referencing the file containing physics content.
-     * @param ignoreUpAxis Assume Y axis is up if true, down if false.
+     * @param loaderProperties Default values for physics properties:
+     *                         ignoreupaxis:           assume Y axis is up if true, else set from physics content
+     *                         attachbone:             name of skeleton bone to attach new physics to
+     *                         CollisionGroup:         integer collision group for new bodies / joints
+     *                         AngularLimits:          angular limits in radians for generic constraints
+     *                         AngularSpringStiffness: angular spring stiffness for generic constraints
+     *                         AngularSpringDamping:   angular spring damping for generic constraints
      */
-    public SXRPhysicsContent loadPhysics(SXRAndroidResource resource, boolean ignoreUpAxis)
+    public SXRPhysicsContent loadPhysics(SXRAndroidResource resource, Map<String, Object> loaderProperties)
     {
         SXRNode root = new SXRNode(getSXRContext());
         SXRWorld world = new SXRWorld(root, mIsMultiBody);
 
         root.setName(resource.getResourceFilename());
-        loadPhysics(world, resource, ignoreUpAxis);
+        loadPhysics(world, resource, loaderProperties);
         return world;
     }
 
@@ -299,7 +327,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         return NativeBulletLoader.exportBullet(getNative(), world.getNative(), fileName);
     }
 
-    private void loadBulletFile(byte[] inputData, SXRNode sceneRoot, boolean ignoreUpAxis)
+    private void loadBulletFile(byte[] inputData, SXRNode sceneRoot, Map<String, Object> loaderProperties)
     {
         /*
          * Import the Bullet binary file and construct the Java physics objects.
@@ -308,7 +336,12 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         long loader = getNative();
         boolean result;
         SXRWorld world = (SXRWorld) sceneRoot.getComponent(SXRWorld.getComponentType());
+        boolean ignoreUpAxis = false;
 
+        if ((loaderProperties != null) && loaderProperties.containsKey("IgnoreUpAxis"))
+        {
+            ignoreUpAxis = (boolean) loaderProperties.get("IgnoreUpAxis");
+        }
         if (mIsMultiBody)
         {
             if (!world.isMultiBody())
@@ -333,7 +366,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         /*
          * attach physics components to scene objects.
          */
-        SXRSkeleton skel = attachPhysics(sceneRoot);
+        SXRSkeleton skel = attachPhysics(sceneRoot, loaderProperties);
         NativeBulletLoader.clear(loader);
         if (!mErrors.isEmpty())
         {
@@ -349,7 +382,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         }
     }
 
-    private void loadBulletFile(final SXRWorld world, byte[] inputData, final SXRNode sceneRoot, boolean ignoreUpAxis)
+    private void loadBulletFile(final SXRWorld world, byte[] inputData, final SXRNode sceneRoot, final Map<String, Object> loaderProperties)
     {
         /*
          * Import the Bullet binary file and construct the Java physics objects.
@@ -358,7 +391,12 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         final long loader = getNative();
         final SXRContext ctx = getSXRContext();
         boolean result;
+        boolean ignoreUpAxis = false;
 
+        if ((loaderProperties != null) && loaderProperties.containsKey("IgnoreUpAxis"))
+        {
+            ignoreUpAxis = (boolean) loaderProperties.get("IgnoreUpAxis");
+        }
         if (mIsMultiBody)
         {
             if (!world.isMultiBody())
@@ -387,7 +425,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         {
             public void run()
             {
-                SXRSkeleton skel = attachPhysics(sceneRoot);
+                SXRSkeleton skel = attachPhysics(sceneRoot, loaderProperties);
                 NativeBulletLoader.clear(loader);
                 if (!mErrors.isEmpty())
                 {
@@ -407,7 +445,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         });
     }
 
-    void loadURDFFile(final SXRWorld world, String xmlData, boolean ignoreUpAxis)
+    void loadURDFFile(final SXRWorld world, String xmlData, final Map<String, Object> loaderProperties)
     {
         /*
          * Import the Bullet binary file and construct the Java physics objects.
@@ -416,6 +454,13 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         final long loader = getNative();
         final SXRContext ctx = getSXRContext();
         final SXRNode sceneRoot = world.getOwnerObject();
+        boolean ignoreUpAxis = false;
+
+        if ((loaderProperties != null) && loaderProperties.containsKey("IgnoreUpAxis"))
+        {
+            ignoreUpAxis = (boolean) loaderProperties.get("IgnoreUpAxis");
+        }
+
         boolean result = NativeBulletLoader.parseURDF(loader, world.getNative(), xmlData, ignoreUpAxis, mIsMultiBody);
 
         if (!result)
@@ -434,7 +479,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         {
             public void run()
             {
-                SXRSkeleton skel = attachPhysics(sceneRoot);
+                SXRSkeleton skel = attachPhysics(sceneRoot, loaderProperties);
                 NativeBulletLoader.clear(loader);
                 if (!mErrors.isEmpty())
                 {
@@ -459,7 +504,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
      * nodes based on name matching.
      * @param sceneRoot root of scene hierarchy to add physics to
      */
-    private SXRSkeleton attachPhysics(SXRNode sceneRoot)
+    private SXRSkeleton attachPhysics(SXRNode sceneRoot, Map<String, Object> loaderProperties)
     {
         SXRContext ctx = sceneRoot.getSXRContext();
         long loader = getNative();
@@ -499,6 +544,14 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                 }
                 sceneObject.attachComponent(collider);
             }
+            if (loaderProperties != null)
+            {
+                int collisionGroup = (int) loaderProperties.get("CollisionGroup");
+                if (collisionGroup != 0)
+                {
+//                body.setCollisionGroup(collisionGroup);
+                }
+            }
             sceneObject.attachComponent(body);
         }
 
@@ -519,6 +572,14 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
             {
                 Log.w("PHYSICS LOADER","Didn't find node for joint " + name);
             }
+            if (loaderProperties != null)
+            {
+                int collisionGroup = (int) loaderProperties.get("CollisionGroup");
+                if (collisionGroup != 0)
+                {
+//                joint.setCollisionGroup(collisionGroup);
+                }
+            }
             skelJoints[joint.getJointIndex()] = joint;
         }
 
@@ -529,48 +590,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 
             if (skel != null)
             {
-                for (int i = 0; i < skel.getNumBones(); ++i)
-                {
-                    String boneName = skel.getBoneName(i);
-                    SXRNode bone = sceneRoot.getNodeByName(boneName);
-                    int parentIndex = skel.getParentBoneIndex(i);
-                    SXRCollider collider = null;
-                    SXRPhysicsJoint joint = skelJoints[i];
-
-                    if (bone == null)
-                    {
-                        bone = new SXRNode(getSXRContext());
-                        bone.setName(boneName);
-                        skel.setBone(i, bone);
-                        if (parentIndex >= 0)
-                        {
-                            SXRNode parentBone = skel.getBone(parentIndex);
-
-                            if (parentBone != null)
-                            {
-                                parentBone.addChildObject(bone);
-                            }
-                            else
-                            {
-                                skel.getBone(0).addChildObject(bone);
-                            }
-                        }
-                        else
-                        {
-                            sceneRoot.addChildObject(bone);
-                        }
-                    }
-                    if (bone.getComponent(SXRCollider.getComponentType()) == null)
-                    {
-                        collider = NativeBulletLoader.getCollider(loader, boneName);
-                    }
-                    if (collider == null)
-                    {
-                        collider = new SXRMeshCollider(ctx, true);
-                    }
-                    bone.attachComponent(collider);
-                    bone.attachComponent(joint);
-                }
+                addJointsToSkeleton(skelJoints, skel, sceneRoot);
             }
         }
         /*
@@ -590,7 +610,83 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                 mErrors += "Didn't find node for constraint '" + name + "'\n";
                 continue;
             }
+            if (loaderProperties != null)
+            {
+                float f = (float) loaderProperties.get("BreakingImpulse");
+
+                if (f != 0)
+                {
+                    constraint.setBreakingImpulse(f);
+                }
+                if (constraint instanceof SXRGenericConstraint)
+                {
+                    SXRGenericConstraint gc = (SXRGenericConstraint) constraint;
+                    Vector3f v = (Vector3f) loaderProperties.get("AngularLimits");
+                    if (v != null)
+                    {
+                        gc.setAngularLowerLimits(-v.x, -v.y, -v.z);
+                        gc.setAngularUpperLimits(v.x, v.y, v.z);
+                    }
+                    v = (Vector3f) loaderProperties.get("AngularSpringStiffness");
+                    if (v != null)
+                    {
+                        gc.setAngularStiffness(v.x, v.y, v.z);
+                    }
+                    v = (Vector3f) loaderProperties.get("AngularSpringDamping");
+                    if (v != null)
+                    {
+                        gc.setAngularDamping(v.x, v.y, v.z);
+                    }
+                }
+            }
             sceneObject.attachComponent(constraint);
+        }
+        return skel;
+    }
+
+    protected SXRSkeleton addJointsToSkeleton(SXRPhysicsJoint[] skelJoints, SXRSkeleton skel, SXRNode root)
+    {
+        for (int i = 0; i < skel.getNumBones(); ++i)
+        {
+            String boneName = skel.getBoneName(i);
+            SXRNode bone = root.getNodeByName(boneName);
+            int parentIndex = skel.getParentBoneIndex(i);
+            SXRCollider collider = null;
+            SXRPhysicsJoint joint = skelJoints[i];
+
+            if (bone == null)
+            {
+                bone = new SXRNode(getSXRContext());
+                bone.setName(boneName);
+                skel.setBone(i, bone);
+                if (parentIndex >= 0)
+                {
+                    SXRNode parentBone = skel.getBone(parentIndex);
+
+                    if (parentBone != null)
+                    {
+                        parentBone.addChildObject(bone);
+                    }
+                    else
+                    {
+                        skel.getBone(0).addChildObject(bone);
+                    }
+                }
+                else
+                {
+                    root.addChildObject(bone);
+                }
+            }
+            if (bone.getComponent(SXRCollider.getComponentType()) == null)
+            {
+                collider = NativeBulletLoader.getCollider(getNative(), boneName);
+            }
+            if (collider == null)
+            {
+                collider = new SXRMeshCollider(getSXRContext(), true);
+            }
+            bone.attachComponent(collider);
+            bone.attachComponent(joint);
         }
         return skel;
     }
