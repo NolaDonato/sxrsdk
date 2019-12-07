@@ -171,15 +171,6 @@ public class SXRPoseMapper extends SXRAnimation
             return;
         }
         mBoneMap = bonemap;
-        for (int i = 0; i < bonemap.length; ++i)
-        {
-            int boneindex = mBoneMap[i];
-
-            if (boneindex >= 0)
-            {
-                mDestSkeleton.setBoneOptions(boneindex, mBoneOptions);
-            }
-        }
     }
 
     /**
@@ -227,7 +218,6 @@ public class SXRPoseMapper extends SXRAnimation
                 if ((sourceIndex >= 0) && (destIndex >= 0))
                 {
                     mBoneMap[sourceIndex] = destIndex;
-                    mDestSkeleton.setBoneOptions(destIndex, mBoneOptions);
                     Log.w("BONE", "%s %d -> %s %d", words[0], sourceIndex, words[1], destIndex);
                 }
                 else
@@ -266,7 +256,6 @@ public class SXRPoseMapper extends SXRAnimation
             bonemap[i] = boneindex;
             if (boneindex >= 0)
             {
-                dstskel.setBoneOptions(boneindex, mBoneOptions);
                 Log.w("BONE", "%s\n%d: %s\n%d: %s",
                         bonename, i, srcPose.getBone(i).toString(),
                         boneindex, dstPose.getBone(boneindex).toString());
@@ -332,14 +321,8 @@ public class SXRPoseMapper extends SXRAnimation
             Quaternionf q = new Quaternionf();
             int numsrcbones = srcskel.getNumBones();
 
-            if (mDestPose.getNumBones() != dstskel.getNumBones())
-            {
-                mDestPose = new SXRPose(dstskel);
-            }
-            else
-            {
-                mDestPose.clearRotations();
-            }
+            mDestPose = new SXRPose(dstskel.getPose());
+            mDestPose.sync();
             srcskel.getPosition(v);
             v.mul(mScale);
             for (int i = 0; i < numsrcbones; ++i)

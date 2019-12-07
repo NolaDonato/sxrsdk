@@ -64,14 +64,20 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
 
     public void setPhysicsProperties(String filename, Map<String, Object> properties)
     {
+        String fname = FileNameUtils.getFilename(filename).toLowerCase();
         if (properties == null)
         {
-            mPhysicsProperties.remove(filename);
+            mPhysicsProperties.remove(fname);
         }
         else
         {
-            mPhysicsProperties.put(filename, properties);
+            mPhysicsProperties.put(fname, properties);
         }
+    }
+
+    public Map<String, Object> getPhysicsProperties(String filename)
+    {
+        return mPhysicsProperties.get(FileNameUtils.getFilename(filename).toLowerCase());
     }
 
     public void start()
@@ -81,8 +87,9 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
             mPhysicsToAvatar = new SXRPoseMapper(mAvatar.getSkeleton(), mPhysicsSkel, 100000);
             mPhysicsToAvatar.setName("PhysicsToAvatar");
             mPhysicsSkel.enable();
-            SXRAnimationEngine.getInstance(mAvatar.getSXRContext()).start(mPhysicsToAvatar);
+            mAvatar.getSkeleton().enable();
         }
+        SXRAnimationEngine.getInstance(mAvatar.getSXRContext()).start(mPhysicsToAvatar);
         mPhysicsWorld.enable();
     }
 
@@ -95,12 +102,13 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
     @Override
     public void onPhysicsLoaded(SXRPhysicsContent world, SXRSkeleton skel, String filename)
     {
-        Map<String, Object> loaderProps = mPhysicsProperties.get(filename.toLowerCase());
+        Map<String, Object> loaderProps = getPhysicsProperties(filename);
         String attachBone = (String) loaderProps.get("AttachBone");
+
+        setPhysicsProperties(filename, null);
         if (mPhysicsSkel == null)
         {
             mPhysicsRoot = world.getOwnerObject();
-            mPhysicsProperties.remove(filename);
             if ((mPhysicsRoot != null) && (mAvatar.getSkeleton() != null) && (skel != null))
             {
                 mPhysicsSkel = skel;
@@ -124,7 +132,6 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
             SXRPhysicsJoint attachJoint2 = (SXRPhysicsJoint) ((attachNode2 != null) ?
                 attachNode2.getComponent(SXRPhysicsJoint.getComponentType()) : null);
 
-            mPhysicsProperties.remove(filename);
             if (mPhysicsWorld != world)
             {
                 if ((attachJoint1 != null) && (attachJoint2 != null))
@@ -169,7 +176,7 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
         {
             if (skel != null)
             {
-                mPhysicsSkel.merge(skel, null);
+                mPhysicsSkel.merge(skel, attachBone);
             }
             mPhysicsWorld.merge(world);
         }
@@ -185,6 +192,7 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
         physicsfile = (physicsfile != null) ? physicsfile : avatar.getProperty("bullet");
         physicsfile = (physicsfile != null) ? physicsfile : avatar.getProperty("avt");
 
+        avatar.getSkeleton().disable();
         if (physicsfile != null)
         {
             SXRAndroidResource res;
@@ -199,7 +207,8 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
                 {
                     res = new SXRAndroidResource(mAvatar.getSXRContext(), physicsfile);
                 }
-                mPhysicsLoader.loadPhysics(res, null);
+                Map<String, Object> loaderProps = getPhysicsProperties(physicsfile);
+                mPhysicsLoader.loadPhysics(mPhysicsWorld, res, loaderProps);
             }
             catch (IOException ex)
             {
@@ -278,9 +287,11 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
                 int simulationType = Integer.parseInt(s);
                 loaderProps.put("SimulationType", simulationType);
             }
-            mPhysicsProperties.put(FileNameUtils.getBaseName(physicsfile).toLowerCase(), loaderProps);
-
-//            mPhysicsLoader.loadPhysics(res, loaderProps);
+            setPhysicsProperties(physicsfile, loaderProps);
+            synchronized (mPhysicsSkel)
+            {
+                mPhysicsLoader.loadPhysics(mPhysicsWorld, res, loaderProps);
+            }
         }
         catch (IOException ex) { }
     }
