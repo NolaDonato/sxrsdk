@@ -334,11 +334,8 @@ public class SXRPoseMapper extends SXRAnimation
 
             if (mDestPose.getNumBones() != dstskel.getNumBones())
             {
-                mDestPose = new SXRPose(dstskel);
-            }
-            else
-            {
-                mDestPose.clearRotations();
+                mDestPose = new SXRPose(dstskel.getPose());
+                mDestPose.sync();
             }
             srcskel.getPosition(v);
             v.mul(mScale);

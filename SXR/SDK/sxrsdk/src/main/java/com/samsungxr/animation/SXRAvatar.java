@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -168,11 +169,15 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
 
         protected void parseModelDescription(JSONObject root) throws JSONException
         {
-            for (String propName : new String[] { "name", "type", "attachbone", "model", "bonemap", "source", "avt" })
+            Iterator<String> iter = root.keys();
+            while (iter.hasNext())
             {
-                if (root.has(propName))
+                String propName = iter.next();
+                Object o = root.get(propName);
+
+                if (o != null)
                 {
-                    setProperty(propName, root.getString(propName));
+                    setProperty(propName, o.toString());
                 }
             }
             if (root.has("hideparts"))

@@ -112,53 +112,29 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
 
     protected void applyLoaderProperties(Map<String, Object> loaderProperties)
     {
-        Vector3f angularSpringDamping = (Vector3f) loaderProperties.get("AngularSpringDamping");
+        Object o = loaderProperties.get("AngularSpringDamping");
 
         mAttachBoneName = (String) loaderProperties.get("AttachBone");
-        if (angularSpringDamping != null)
-        {
-            mAngularSpringDamping = angularSpringDamping;
-        }
-        else
-        {
-            mAngularSpringDamping = new Vector3f(0, 0, 0);
-        }
-        Vector3f angularSpringStiffness = (Vector3f) loaderProperties.get("AngularSpringStiffness");
-        if (angularSpringStiffness != null)
-        {
-            mAngularSpringStiffness = angularSpringStiffness;
-        }
-        else
-        {
-            mAngularSpringStiffness = new Vector3f(0, 0, 0);
-        }
-        Vector3f angularLimits = (Vector3f) loaderProperties.get("AngularLimits");
-        if (angularLimits != null)
-        {
-            mAngularLimits = angularLimits;
-        }
-        else
-        {
-            mAngularLimits = new Vector3f((float) Math.PI, (float) Math.PI / 2, (float) Math.PI);
-        }
-        int collisionGroup = (int) loaderProperties.get("CollisionGroup");
-        if (collisionGroup != 0)
-        {
-            mCollisionGroup = collisionGroup;
-        }
-        else
-        {
-            mCollisionGroup = SXRCollisionMatrix.DEFAULT_GROUP;
-        }
-        int simulationType = (int) loaderProperties.get("SimulationType");
-        if (simulationType != 0)
-        {
-            mSimType = simulationType;
-        }
-        else
-        {
-            mSimType = SXRRigidBody.DYNAMIC;
-        }
+        mSkeleton = (SXRSkeleton) loaderProperties.get("Skeleton");
+
+        mAngularSpringDamping = (o != null) ? (Vector3f) o :
+                                 new Vector3f(0, 0, 0);
+
+        o = loaderProperties.get("AngularSpringStiffness");
+        mAngularSpringStiffness = (o != null) ? (Vector3f) o :
+                                   new Vector3f(0, 0, 0);
+
+        o = loaderProperties.get("AngularLimits");
+        mAngularLimits = (o != null) ? (Vector3f) o :
+                          new Vector3f((float) Math.PI,
+                                    (float) Math.PI / 2,
+                                     (float) Math.PI);
+
+        o = loaderProperties.get("CollisionGroup");
+        mCollisionGroup = (o != null) ? (int) o : SXRCollisionMatrix.DEFAULT_GROUP;
+
+        o = loaderProperties.get("SimulationType");
+        mSimType = (o != null) ? (int) o : SXRRigidBody.DYNAMIC;
     }
 
     public SXRPhysicsContent loadPhysics(SXRScene scene, SXRAndroidResource resource, Map<String, Object> loaderProperties)
@@ -218,8 +194,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             applyLoaderProperties(loaderProperties);
             SXRPhysicsContent content = parse(inputData);
             SXRSkeleton skel = mSkeleton;
-            mSkeleton = (SXRSkeleton) loaderProperties.get("Skeleton");
-            mAttachBoneName = (String) loaderProperties.get("AttachBone");
             if (content != null)
             {
                 getSXRContext().getEventManager().sendEvent(this,
