@@ -475,19 +475,19 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
      * the avatar and all of its attachments.
      * @param modelResource    resource with avatar file.
      * @param modelDesc        model descriptor (for subclasses, unused in SXRAvatar).
-     * @param modelName        name of model (used to refer to it later)
+     * @param modelType        name of model (used to refer to it later)
      * @see #removeModel(String)
      */
-    public void loadModel(SXRAndroidResource modelResource, String modelDesc, String modelName)
+    public void loadModel(SXRAndroidResource modelResource, String modelDesc, String modelType)
     {
         SXRContext ctx = getSXRContext();
         SXRResourceVolume volume = new SXRResourceVolume(ctx, modelResource);
         SXRNode modelRoot = new SXRNode(ctx);
         Attachment modelInfo;
-        if (modelName != null)
+        if (modelType != null)
         {
-            removeModel(modelName);
-            modelInfo = addAttachment(modelName);
+            removeModel(modelType);
+            modelInfo = addAttachment(modelType);
          }
         else
         {

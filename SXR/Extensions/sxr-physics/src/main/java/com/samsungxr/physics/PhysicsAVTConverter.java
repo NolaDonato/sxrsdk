@@ -15,8 +15,6 @@
 
 package com.samsungxr.physics;
 
-
-
 import android.provider.ContactsContract;
 
 import com.samsungxr.SXRAndroidResource;
@@ -27,7 +25,6 @@ import com.samsungxr.SXRContext;
 import com.samsungxr.SXRNode;
 import com.samsungxr.SXRScene;
 import com.samsungxr.SXRSphereCollider;
-import com.samsungxr.SXRTransform;
 import com.samsungxr.animation.SXRPose;
 import com.samsungxr.animation.SXRSkeleton;
 import com.samsungxr.utility.Log;
@@ -115,26 +112,20 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         Object o = loaderProperties.get("AngularSpringDamping");
 
         mAttachBoneName = (String) loaderProperties.get("AttachBone");
-        mSkeleton = (SXRSkeleton) loaderProperties.get("Skeleton");
-
         mAngularSpringDamping = (o != null) ? (Vector3f) o :
                                  new Vector3f(0, 0, 0);
-
         o = loaderProperties.get("AngularSpringStiffness");
         mAngularSpringStiffness = (o != null) ? (Vector3f) o :
-                                   new Vector3f(0, 0, 0);
-
+                                  new Vector3f(0, 0, 0);
         o = loaderProperties.get("AngularLimits");
         mAngularLimits = (o != null) ? (Vector3f) o :
-                          new Vector3f((float) Math.PI,
-                                    (float) Math.PI / 2,
-                                     (float) Math.PI);
-
+                          new Vector3f((float) Math.PI, (float) Math.PI / 2, (float) Math.PI);
         o = loaderProperties.get("CollisionGroup");
         mCollisionGroup = (o != null) ? (int) o : SXRCollisionMatrix.DEFAULT_GROUP;
-
         o = loaderProperties.get("SimulationType");
         mSimType = (o != null) ? (int) o : SXRRigidBody.DYNAMIC;
+        o = loaderProperties.get("Skeleton");
+        mSkeleton = (o != null) ? (SXRSkeleton) o : null;
     }
 
     public SXRPhysicsContent loadPhysics(SXRScene scene, SXRAndroidResource resource, Map<String, Object> loaderProperties)
@@ -153,14 +144,12 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             applyLoaderProperties(loaderProperties);
             SXRPhysicsContent world = parse(inputData);
             mAttachBoneName = null;
-            SXRSkeleton skel = mSkeleton;
-            mSkeleton = null;
             if (world != null)
             {
                 getSXRContext().getEventManager().sendEvent(this,
                                                             IPhysicsLoaderEvents.class,
                                                             "onPhysicsLoaded",
-                                                            world, skel, mFileName);
+                                                            world, mSkeleton, mFileName);
                 return mWorld;
             }
          }
@@ -193,13 +182,12 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             mWorld = world;
             applyLoaderProperties(loaderProperties);
             SXRPhysicsContent content = parse(inputData);
-            SXRSkeleton skel = mSkeleton;
             if (content != null)
             {
                 getSXRContext().getEventManager().sendEvent(this,
                                                             IPhysicsLoaderEvents.class,
                                                             "onPhysicsLoaded",
-                                                            world, skel, mFileName);
+                                                            world, mSkeleton, mFileName);
                 return;
             }
         }
@@ -296,6 +284,8 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         SXRNode root = mSkeleton.getBone(mAttachBoneIndex);
         SXRCollider collider = mColliders.get(mAttachBoneIndex);
         SXRRigidBody body = (SXRRigidBody) root.getComponent(SXRRigidBody.getComponentType());
+        int boneoptions = (mSimType == SXRRigidBody.DYNAMIC) ? SXRSkeleton.BONE_PHYSICS :
+                           SXRSkeleton.BONE_ANIMATE;
 
         if (body == null)
         {
@@ -317,6 +307,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             collider = mColliders.get(i);
             if (body != null)
             {
+                mSkeleton.setBoneOptions(i, boneoptions);
                 if (collider != null)
                 {
                     node.detachComponent(SXRCollider.getComponentType());
@@ -414,7 +405,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                     {
                         continue;
                     }
-                    firstNewBone = boneIndex;
+                    firstNewBone = numInputBones;
                 }
             }
             node = new SXRNode(ctx);
@@ -446,58 +437,48 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 mSkeleton = skel;
                 mSkeleton.getBone(0).attachComponent(skel);
                 mRoot.addChildObject(mSkeleton.getBone(0));
+                mWorldOffset.set(0, 0, 0);
+                updateSkeletonPose(mSkeleton, 0, basebone, bonelist);
             }
             else
             {
+                JSONObject bone = bonelist.getJSONObject(attachBone - 1).getJSONObject("value");;
+                Matrix4f worldMtx = mSkeleton.getBone(attachBone).getTransform().getModelMatrix4f();
+                Vector3f newPos = getPosition(bone);
+
+                worldMtx.getTranslation(mWorldOffset);
+                mWorldOffset.sub(newPos);
+                updateSkeletonPose(skel, firstNewBone, basebone, bonelist);
                 mSkeleton.merge(skel, mAttachBoneName);
             }
-            updateSkeletonPose(mSkeleton, firstNewBone, basebone, bonelist, attachBone);
         }
         else
         {
-            updateSkeletonPose(mSkeleton, 0, basebone, bonelist, 0);
+            updateSkeletonPose(mSkeleton, 0, basebone, bonelist);
         }
         return mSkeleton;
     }
 
-    private void updateSkeletonPose(SXRSkeleton skel, int firstBoneAdded, JSONObject basebone, JSONArray bonelist, int attachBoneIndex) throws JSONException
+    private void updateSkeletonPose(SXRSkeleton skel, int firstBoneAdded, JSONObject basebone, JSONArray bonelist) throws JSONException
     {
         SXRPose worldPose = new SXRPose(skel.getPose());
         Matrix4f worldMtx = new Matrix4f();
         int numInputBones = bonelist.length() + 1;
 
-        if (attachBoneIndex > 0)
-        {
-            JSONObject bone = bonelist.getJSONObject(attachBoneIndex - 1).getJSONObject("value");;
-            Vector3f newpos = getPosition(bone);
-            Vector3f oldpos = new Vector3f();
-
-            worldMtx = skel.getBone(attachBoneIndex).getTransform().getModelMatrix4f();
-            worldMtx.getTranslation(oldpos);
-            oldpos.sub(newpos, mWorldOffset);
-        }
-        else
-        {
-            mWorldOffset.set(0, 0, 0);
-        }
-        for (int i = 0; i < numInputBones; ++i)
+        for (int i = firstBoneAdded; i < numInputBones; ++i)
         {
             JSONObject bone = (i == 0) ? basebone : bonelist.getJSONObject(i - 1).getJSONObject("value");
             JSONObject xform = bone.getJSONObject("Transform");
             JSONObject orientation = xform.getJSONObject("Orientation");
             Vector3f worldPos = getPosition(bone);
-            int boneindex = skel.getBoneIndex(bone.getString("Target Bone"));
 
-            if (boneindex > attachBoneIndex)
-            {
-                worldPos.add(mWorldOffset, worldPos);
-                worldMtx.translationRotate(worldPos.x, worldPos.y, worldPos.z,
-                                           (float) orientation.getDouble("X"),
-                                           (float) orientation.getDouble("Y"),
-                                           (float) orientation.getDouble("Z"),
-                                           (float) orientation.getDouble("W"));
-                worldPose.setWorldMatrix(boneindex, worldMtx);
-            }
+            worldPos.add(mWorldOffset, worldPos);
+            worldMtx.translationRotate(worldPos.x, worldPos.y, worldPos.z,
+                                       (float) orientation.getDouble("X"),
+                                       (float) orientation.getDouble("Y"),
+                                       (float) orientation.getDouble("Z"),
+                                       (float) orientation.getDouble("W"));
+            worldPose.setWorldMatrix(i, worldMtx);
         }
         worldPose.sync();
         skel.setPose(worldPose);
@@ -602,6 +583,9 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         }
         SXRNode root = mSkeleton.getBone(mAttachBoneIndex);
         SXRCollider collider = mColliders.get(mAttachBoneIndex);
+        int boneoptions = (mSimType == SXRRigidBody.DYNAMIC) ? SXRSkeleton.BONE_PHYSICS :
+                           SXRSkeleton.BONE_ANIMATE;
+
         if (collider != null)
         {
             root.detachComponent(SXRCollider.getComponentType());
@@ -621,6 +605,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 {
                     throw new UnsupportedOperationException("Collider missing for joint " + joint.getName());
                 }
+                mSkeleton.setBoneOptions(i, boneoptions);
                 node.detachComponent(SXRCollider.getComponentType());
                 node.attachComponent(collider);
                 if (joint.getOwnerObject() == null)
