@@ -286,7 +286,6 @@ public class SXRPoseMapper extends SXRAnimation
         }
     }
 
-
     /**
      * Maps the pose of the source skeleton onto the destination skeleton in local space.
      * <p>
@@ -321,24 +320,22 @@ public class SXRPoseMapper extends SXRAnimation
             Quaternionf q = new Quaternionf();
             int numsrcbones = srcskel.getNumBones();
 
-            mDestPose = new SXRPose(dstskel.getPose());
-            mDestPose.sync();
+            if (mDestPose.getNumBones() != dstskel.getNumBones())
+            {
+                mDestPose = new SXRPose(dstskel);
+            }
+            mDestPose.copy(dstskel.getPose());
             srcskel.getPosition(v);
             v.mul(mScale);
             for (int i = 0; i < numsrcbones; ++i)
             {
                 int boneindex = mBoneMap[i];
 
-                if (boneindex >= 0)
+                if ((boneindex >= 0) &&
+                   ((mBoneOptions & srcskel.getBoneOptions(i)) == mBoneOptions))
                 {
-                    int boneoptions = srcskel.getBoneOptions(i) & (SXRSkeleton.BONE_ANIMATE | SXRSkeleton.BONE_PHYSICS);
-                    boolean animatable = (mBoneOptions == 0) || (boneoptions == 0) || (boneoptions == mBoneOptions);
-
-                    if (animatable)
-                    {
-                        srcpose.getLocalRotation(i, q);
-                        mDestPose.setLocalRotation(boneindex, q.x, q.y, q.z, q.w);
-                    }
+                    srcpose.getLocalRotation(i, q);
+                    mDestPose.setLocalRotation(boneindex, q.x, q.y, q.z, q.w);
                 }
             }
         }

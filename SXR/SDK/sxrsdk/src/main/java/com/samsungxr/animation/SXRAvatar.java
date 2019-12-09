@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -168,11 +169,15 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
 
         protected void parseModelDescription(JSONObject root) throws JSONException
         {
-            for (String propName : new String[] { "name", "type", "attachbone", "model", "bonemap", "source", "avt" })
+            Iterator<String> iter = root.keys();
+            while (iter.hasNext())
             {
-                if (root.has(propName))
+                String propName = iter.next();
+                Object o = root.get(propName);
+
+                if (o != null)
                 {
-                    setProperty(propName, root.getString(propName));
+                    setProperty(propName, o.toString());
                 }
             }
             if (root.has("hideparts"))
@@ -470,19 +475,19 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
      * the avatar and all of its attachments.
      * @param modelResource    resource with avatar file.
      * @param modelDesc        model descriptor (for subclasses, unused in SXRAvatar).
-     * @param modelName        name of model (used to refer to it later)
+     * @param modelType        name of model (used to refer to it later)
      * @see #removeModel(String)
      */
-    public void loadModel(SXRAndroidResource modelResource, String modelDesc, String modelName)
+    public void loadModel(SXRAndroidResource modelResource, String modelDesc, String modelType)
     {
         SXRContext ctx = getSXRContext();
         SXRResourceVolume volume = new SXRResourceVolume(ctx, modelResource);
         SXRNode modelRoot = new SXRNode(ctx);
         Attachment modelInfo;
-        if (modelName != null)
+        if (modelType != null)
         {
-            removeModel(modelName);
-            modelInfo = addAttachment(modelName);
+            removeModel(modelType);
+            modelInfo = addAttachment(modelType);
          }
         else
         {

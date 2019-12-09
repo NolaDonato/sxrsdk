@@ -23,7 +23,7 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
     protected SXRSkeleton mPhysicsSkel = null;
     protected SXRNode mPhysicsRoot = null;
     protected SXRPhysicsLoader mPhysicsLoader;
-    protected SXRPoseMapper mPhysicsToAvatar = null;
+    protected PhysicsRetargeter mPhysicsToAvatar = null;
     protected final Map<String, Map<String, Object>> mPhysicsProperties = new HashMap<String, Map<String, Object>>();
 
     public SXRAvatarPhysics(SXRAvatar avatar, SXRWorld physicsWorld)
@@ -84,26 +84,27 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
     {
         if (mPhysicsToAvatar == null)
         {
-            mPhysicsToAvatar = new SXRPoseMapper(mAvatar.getSkeleton(), mPhysicsSkel, 100000);
+            mPhysicsToAvatar = new PhysicsRetargeter();
             mPhysicsToAvatar.setName("PhysicsToAvatar");
-            mPhysicsSkel.enable();
-            mAvatar.getSkeleton().enable();
         }
+        mAvatar.getSkeleton().enable();
         SXRAnimationEngine.getInstance(mAvatar.getSXRContext()).start(mPhysicsToAvatar);
         mPhysicsWorld.enable();
+        mPhysicsSkel.enable();
     }
 
     public void stop()
     {
         mPhysicsWorld.disable();
+        mPhysicsSkel.disable();
         SXRAnimationEngine.getInstance(mAvatar.getSXRContext()).stop(mPhysicsToAvatar);
     }
 
     @Override
     public void onPhysicsLoaded(SXRPhysicsContent world, SXRSkeleton skel, String filename)
     {
-        Map<String, Object> loaderProps = getPhysicsProperties(filename);
-        String attachBone = (String) loaderProps.get("AttachBone");
+        Map<String, Object> physicsProps = getPhysicsProperties(filename);
+        String attachBone = (physicsProps != null) ? (String) physicsProps.get("AttachBone") : null;
 
         setPhysicsProperties(filename, null);
         if (mPhysicsSkel == null)
@@ -150,13 +151,13 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
                 }
             }
             SXRRigidBody attachBody1 = (SXRRigidBody) ((attachNode1 != null) ?
-                attachNode1.getComponent(SXRRigidBody.getComponentType()) : 0);
+                                        attachNode1.getComponent(SXRRigidBody.getComponentType()) : 0);
             SXRRigidBody attachBody2 = (SXRRigidBody) ((attachNode2 != null) ?
-                attachNode2.getComponent(SXRRigidBody.getComponentType()) : 0);
+                                        attachNode2.getComponent(SXRRigidBody.getComponentType()) : 0);
             final SXRPhysicsCollidable bodyA = ((attachBody1 != attachBody2) && (attachBody1 != null)) ?
-                attachBody1 : attachJoint1;
+                                                attachBody1 : attachJoint1;
             final SXRPhysicsCollidable bodyB = ((attachBody1 != attachBody2) && (attachBody2 != null)) ?
-                attachBody2 : attachJoint2;
+                                                attachBody2 : attachJoint2;
 
             if ((bodyA != bodyB) &&
                 ((bodyA != null) || (bodyB != null)))
@@ -188,15 +189,23 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
     @Override
     public void onAvatarLoaded(SXRAvatar avatar, SXRNode avatarRoot, String filePath, String errors)
     {
-        String physicsfile = avatar.getProperty("urdf");
-        physicsfile = (physicsfile != null) ? physicsfile : avatar.getProperty("bullet");
-        physicsfile = (physicsfile != null) ? physicsfile : avatar.getProperty("avt");
+        String physicsfile = avatar.getProperty("physics");
 
+        physicsfile = (physicsfile != null) ? physicsfile : avatar.getProperty("avt");
         avatar.getSkeleton().disable();
         if (physicsfile != null)
         {
             SXRAndroidResource res;
+            Map<String, Object> physicsProps = getPhysicsProperties(physicsfile);
 
+            if (physicsProps == null)
+            {
+                physicsProps = initPhysicsProperties(avatar, "avatar");
+            }
+            if (physicsProps != null)
+            {
+                setPhysicsProperties(physicsfile, physicsProps);
+            }
             try
             {
                 if (physicsfile.startsWith("/"))
@@ -207,12 +216,11 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
                 {
                     res = new SXRAndroidResource(mAvatar.getSXRContext(), physicsfile);
                 }
-                Map<String, Object> loaderProps = getPhysicsProperties(physicsfile);
-                mPhysicsLoader.loadPhysics(mPhysicsWorld, res, loaderProps);
+                mPhysicsLoader.loadPhysics(mPhysicsWorld, res, physicsProps);
             }
             catch (IOException ex)
             {
-                return;
+                ex.printStackTrace();
             }
         }
     }
@@ -228,8 +236,7 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
         {
             return;
         }
-        physicsfile = avatar.getModelProperty(modelType, "urdf");
-        physicsfile = (physicsfile != null) ? physicsfile : avatar.getModelProperty(modelType, "bullet");
+        physicsfile = avatar.getModelProperty(modelType, "physics");
         physicsfile = (physicsfile != null) ? physicsfile : avatar.getModelProperty(modelType, "avt");
         if (physicsfile == null)
         {
@@ -245,55 +252,69 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
             {
                 res = new SXRAndroidResource(mAvatar.getSXRContext(), physicsfile);
             }
-            Map<String, Object> loaderProps = new HashMap<String, Object>();
-            String s;
-            String attachbone = avatar.getModelProperty(modelType, "attachbone");
+            Map<String, Object> physicsProps = getPhysicsProperties(physicsfile);
 
-            if (attachbone != null)
+            if (physicsProps == null)
             {
-                loaderProps.put("AttachBone", attachbone);
+                physicsProps = initPhysicsProperties(avatar, modelType);
             }
-            loaderProps.put("Skeleton", mPhysicsSkel);
-            s = avatar.getModelProperty(modelType, "angularspringdamping");
-            if (s != null)
+            if (physicsProps != null)
             {
-                float angularspringdamping = Float.parseFloat(s);
-                loaderProps.put("AngularSpringDamping",
-                                new Vector3f(angularspringdamping, angularspringdamping, angularspringdamping));
+                physicsProps.put("Skeleton", mPhysicsSkel);
+                setPhysicsProperties(physicsfile, physicsProps);
             }
-            s = avatar.getModelProperty(modelType, "angularspringstiffness");
-            if (s != null)
-            {
-                float angularspringstiffness = Float.parseFloat(s);
-                loaderProps.put("AngularSpringStiffness",
-                                new Vector3f(angularspringstiffness, angularspringstiffness, angularspringstiffness));
-            }
-            s = avatar.getModelProperty(modelType, "angularlimits");
-            if (s != null)
-            {
-                float angularlimits = Float.parseFloat(s);
-                loaderProps.put("AngularLimits",
-                                new Vector3f(angularlimits, angularlimits, angularlimits));
-            }
-            s = avatar.getModelProperty(modelType, "collisiongroup");
-            if (s != null)
-            {
-                int collisiongroup = Integer.parseInt(s);
-                loaderProps.put("CollisionGroup", collisiongroup);
-            }
-            s = avatar.getModelProperty(modelType, "simulationtype");
-            if (s != null)
-            {
-                int simulationType = Integer.parseInt(s);
-                loaderProps.put("SimulationType", simulationType);
-            }
-            setPhysicsProperties(physicsfile, loaderProps);
             synchronized (mPhysicsSkel)
             {
-                mPhysicsLoader.loadPhysics(mPhysicsWorld, res, loaderProps);
+                mPhysicsLoader.loadPhysics(mPhysicsWorld, res, physicsProps);
             }
         }
         catch (IOException ex) { }
+    }
+
+    protected  Map<String, Object> initPhysicsProperties(SXRAvatar avatar, String modelType)
+    {
+        Map<String, Object> physicsProps = new HashMap<>();
+        String attachbone = avatar.getModelProperty(modelType, "attachbone");
+        String s;
+
+        if (attachbone != null)
+        {
+            physicsProps.put("AttachBone", attachbone);
+        }
+        s = avatar.getModelProperty(modelType, "angularspringdamping");
+        if (s != null)
+        {
+            float angularspringdamping = Float.parseFloat(s);
+            physicsProps.put("AngularSpringDamping",
+                    new Vector3f(angularspringdamping, angularspringdamping, angularspringdamping));
+        }
+        s = avatar.getModelProperty(modelType, "angularspringstiffness");
+        if (s != null)
+        {
+            float angularspringstiffness = Float.parseFloat(s);
+            physicsProps.put("AngularSpringStiffness",
+                    new Vector3f(angularspringstiffness, angularspringstiffness, angularspringstiffness));
+        }
+        s = avatar.getModelProperty(modelType, "angularlimits");
+        if (s != null)
+        {
+            float angularlimits = Float.parseFloat(s);
+            physicsProps.put("AngularLimits",
+                    new Vector3f(angularlimits, angularlimits, angularlimits));
+        }
+        s = avatar.getModelProperty(modelType, "collisiongroup");
+        if (s != null)
+        {
+            int collisiongroup = Integer.parseInt(s);
+            physicsProps.put("CollisionGroup", collisiongroup);
+        }
+        s = avatar.getModelProperty(modelType, "simulationtype");
+        if (s != null)
+        {
+            int simulationType = Integer.parseInt(s);
+            physicsProps.put("SimulationType", simulationType);
+        }
+        return physicsProps;
     }
 
     @Override
@@ -318,6 +339,20 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
                 animator.removeAnimation(animToAvatar);
                 animator.addAnimation(animToPhysics);
             }
+        }
+    }
+
+    protected class PhysicsRetargeter extends SXRPoseMapper
+    {
+        public PhysicsRetargeter()
+        {
+            super(mAvatar.getSkeleton(), mPhysicsSkel, 100);
+        }
+
+        public void animate(float time)
+        {
+            mPhysicsSkel.poseFromBones();
+            super.animate(time);
         }
     }
 };

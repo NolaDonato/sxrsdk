@@ -64,23 +64,6 @@ public class SXRPose implements PrettyPrint
     private static boolean sDebug = false;
 
     /**
-     * The pose space designates how the world matrices
-     * of the pose relate to one another.
-     */
-    public enum PoseSpace
-    {
-        /**
-         * world positions and orientations are relative to the root bone of the skeleton.
-         */
-        SKELETON,
-
-        /*
-         * pose only contains local rotations
-         */
-        ROTATION_ONLY,
-    };
-
-    /**
      * Constructs a pose based on the specified skeleton.
      * Initially all of the bone matrices are identity.
      * @param skel	skeleton associated with the pose.
@@ -96,7 +79,6 @@ public class SXRPose implements PrettyPrint
             mBones[i] = new Bone();
         }
     }
-
 
     /**
      * Makes a copy of the input pose.
@@ -116,7 +98,6 @@ public class SXRPose implements PrettyPrint
         }
     }
 
-
    /**
     * @return number of bones in the skeleton associated with this pose.
     * If there is no skeleton associated with the pose, 0 is returned.
@@ -132,9 +113,13 @@ public class SXRPose implements PrettyPrint
      */
     public SXRSkeleton	getSkeleton() { return mSkeleton; }
 
-
+    /**
+     * Get the {@link Bone} containing the transformation
+     * for the specified bone.
+     * @param boneindex  0 based index of bone to check.
+     * @return Bone with local and world transform.
+     */
     Bone	getBone(int boneindex) { return mBones[boneindex]; }
-
 
     /**
      * Get the world position of the given bone (relative to skeleton root).
@@ -148,7 +133,6 @@ public class SXRPose implements PrettyPrint
      *
      * @see #setWorldPositions
      */
-
     public void     getWorldPosition(int boneindex, Vector3f pos) 
     {
         Bone bone = mBones[boneindex];
@@ -1071,7 +1055,6 @@ public class SXRPose implements PrettyPrint
         prettyPrint(sb, 0);
         return sb.toString();
     }
-
 
 /**
  * Internal structure used to maintain information about each bone.

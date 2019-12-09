@@ -182,7 +182,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             mWorld = world;
             applyLoaderProperties(loaderProperties);
             SXRPhysicsContent content = parse(inputData);
-            mAttachBoneName = (String) loaderProperties.get("AttachBone");
             if (content != null)
             {
                 getSXRContext().getEventManager().sendEvent(this,
@@ -285,6 +284,8 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         SXRNode root = mSkeleton.getBone(mAttachBoneIndex);
         SXRCollider collider = mColliders.get(mAttachBoneIndex);
         SXRRigidBody body = (SXRRigidBody) root.getComponent(SXRRigidBody.getComponentType());
+        int boneoptions = (mSimType == SXRRigidBody.DYNAMIC) ? SXRSkeleton.BONE_PHYSICS :
+                           SXRSkeleton.BONE_ANIMATE;
 
         if (body == null)
         {
@@ -306,6 +307,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             collider = mColliders.get(i);
             if (body != null)
             {
+                mSkeleton.setBoneOptions(i, boneoptions);
                 if (collider != null)
                 {
                     node.detachComponent(SXRCollider.getComponentType());
@@ -581,6 +583,9 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         }
         SXRNode root = mSkeleton.getBone(mAttachBoneIndex);
         SXRCollider collider = mColliders.get(mAttachBoneIndex);
+        int boneoptions = (mSimType == SXRRigidBody.DYNAMIC) ? SXRSkeleton.BONE_PHYSICS :
+                           SXRSkeleton.BONE_ANIMATE;
+
         if (collider != null)
         {
             root.detachComponent(SXRCollider.getComponentType());
@@ -600,6 +605,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 {
                     throw new UnsupportedOperationException("Collider missing for joint " + joint.getName());
                 }
+                mSkeleton.setBoneOptions(i, boneoptions);
                 node.detachComponent(SXRCollider.getComponentType());
                 node.attachComponent(collider);
                 if (joint.getOwnerObject() == null)
