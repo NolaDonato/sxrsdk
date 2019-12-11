@@ -17,48 +17,69 @@
 #define EXTENSIONS_PHYSICS_CONSTRAINT_H
 
 #include "../objects/node.h"
+#include "physics_world.h"
 
 namespace sxr {
 
-    struct JointFeedback {
-        float torqueA[3] = {0.0f, 0.0f, 0.0f};
-        float forceA[3] = {0.0f, 0.0f, 0.0f};
-        float torqueB[3] = {0.0f, 0.0f, 0.0f};
-        float forceB[3] = {0.0f, 0.0f, 0.0f};
-
-    };
-
-    class PhysicsConstraint : public Component {
+    class PhysicsConstraint : public Component
+    {
     public:
-        PhysicsConstraint() : Component(PhysicsConstraint::getComponentType()){}
+        PhysicsConstraint() :
+        Component(PhysicsConstraint::getComponentType()),
+        mBodyA(nullptr),
+        mPivotA(0, 0, 0),
+        mPivotB(0, 0, 0)
+        { }
 
         virtual ~PhysicsConstraint() {}
 
-        static long long getComponentType() {
+        static long long getComponentType()
+        {
             return COMPONENT_TYPE_PHYSICS_CONSTRAINT;
         }
 
-        virtual int getConstraintType() const = 0;
+        virtual int                getConstraintType() const = 0;
+        virtual void*              getUnderlying() = 0;
+        virtual void               setBreakingImpulse(float impulse) = 0;
+        virtual float              getBreakingImpulse() const = 0;
+        virtual PhysicsCollidable* getBodyA() const { return mBodyA; }
+        virtual const glm::vec3&   getPivotA() const { return mPivotA; }
+        virtual const glm::vec3&   getPivotB() const { return mPivotB; }
+        virtual void               setPivotA(const glm::vec3& v) { mPivotA = v; }
+        virtual void               setPivotB(const glm::vec3& v) { mPivotB = v; }
+        virtual void               sync(PhysicsWorld *world) = 0;
+        virtual void               addToWorld(PhysicsWorld* world) = 0;
+        virtual void               removeFromWorld(PhysicsWorld* world) = 0;
+        virtual int                getNumChildren()      { return mConstraints.size(); }
+        PhysicsConstraint*         getChildAt(int i) { return mConstraints.at(i); }
 
-    //virtual float getAppliedImpulse() const = 0;
-        //virtual float getBreakingImpulseThreshold() const = 0;
-        //virtual void setBreakingImpulseThreshold(float n) = 0;
-    //virtual void getJointFeedback(JointFeedback* feedback) = 0;
-    //virtual void setJointFeedback(JointFeedback const * feedback) = 0;
-        virtual void *getUnderlying() = 0;
+        virtual void  addChildComponent(Component* constraint)
+        {
+            mConstraints.push_back(static_cast<PhysicsConstraint*>(constraint));
+        }
 
-        virtual void setBreakingImpulse(float impulse) = 0;
-        virtual float getBreakingImpulse() const = 0;
-        virtual void updateConstructionInfo() = 0;
+        virtual void removeChildComponent(Component* constraint)
+        {
+            mConstraints.erase(std::remove(mConstraints.begin(), mConstraints.end(),
+                                           static_cast<PhysicsConstraint*>(constraint)), mConstraints.end());
+        }
 
-        enum ConstraintType {
+        enum ConstraintType
+        {
             fixedConstraint = 1,
             point2pointConstraint = 2,
             sliderConstraint = 3,
             hingeConstraint = 4,
             coneTwistConstraint = 5,
             genericConstraint = 6,
+            universalConstraint = 7,
+            jointMotor = 8
         };
+
+        std::vector<PhysicsConstraint*> mConstraints;
+        PhysicsCollidable* mBodyA;
+        glm::vec3         mPivotA;
+        glm::vec3         mPivotB;
     };
 
 }

@@ -41,7 +41,13 @@ public class SXRPhysicsContext {
         mHandler = new Handler(mHandlerThread.getLooper());
     }
 
-    public boolean runOnPhysicsThread(Runnable r) {
+    public boolean runOnPhysicsThread(Runnable r)
+    {
+        if (mHandlerThread == Thread.currentThread())
+        {
+            r.run();
+            return true;
+        }
         return mHandler.post(r);
     }
 

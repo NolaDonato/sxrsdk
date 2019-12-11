@@ -33,18 +33,22 @@ import java.nio.IntBuffer;
 public class SXRIndexBuffer extends SXRHybridObject implements PrettyPrint
 {
     private static final String TAG = SXRIndexBuffer.class.getSimpleName();
-    private String mDescriptor;
 
     /**
      * Constructs an index buffer of a give size and type.
-     * @param gvrContext        SXRContext to associate index buffer with.
+     * @param context        SXRContext to associate index buffer with.
      * @param bytesPerIndex     Number of bytes per index: may be 2 or 4.
      * @param indexCount        Number of indices in the buffer.
      * @throws IllegalArgumentException if <i>bytesPerIndex</i> is not 2 or 4.
      */
-    public SXRIndexBuffer(SXRContext gvrContext, int bytesPerIndex, int indexCount)
+    public SXRIndexBuffer(SXRContext context, int bytesPerIndex, int indexCount)
     {
-        super(gvrContext, NativeIndexBuffer.ctor(bytesPerIndex, indexCount));
+        super(context, NativeIndexBuffer.ctor(bytesPerIndex, indexCount));
+    }
+
+    public SXRIndexBuffer(SXRContext context, long nativePtr)
+    {
+        super(context, nativePtr);
     }
 
     /**

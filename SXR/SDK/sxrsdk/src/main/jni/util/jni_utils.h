@@ -20,9 +20,68 @@
 
 
 namespace sxr {
+class SmartGlobalRef;
 
-jmethodID GetStaticMethodID(JNIEnv& env, jclass clazz, const char * name,
-        const char * signature);
+// Automatically deletes a local ref when it goes out of scope
+class SmartLocalRef
+{
+protected:
+    JavaVM* mJVM;
+    jobject mJavaObj;
+
+public:
+    SmartLocalRef(JavaVM& vm, jobject object);
+    SmartLocalRef(const SmartLocalRef& src);
+    SmartLocalRef(const SmartGlobalRef& src);
+
+    SmartLocalRef()
+    : mJVM(nullptr),
+      mJavaObj(nullptr)
+    { }
+
+
+    virtual ~SmartLocalRef();
+    virtual SmartLocalRef& operator=(const SmartLocalRef& src);
+    virtual SmartLocalRef& operator=(const SmartGlobalRef& src);
+    virtual SmartLocalRef& operator=(jobject javaObj);
+
+    jobject getObject() const { return mJavaObj; }
+
+    JavaVM* getJVM() const { return mJVM; }
+    JNIEnv* getEnv() const;
+
+    virtual bool operator==(const SmartLocalRef& r)
+    {
+        return r.getObject() == getObject();
+    }
+};
+
+class SmartGlobalRef : public SmartLocalRef
+{
+public:
+    SmartGlobalRef(JavaVM& jvm, jobject object);
+    SmartGlobalRef(const SmartGlobalRef& src);
+    SmartGlobalRef(const SmartLocalRef& src);
+    SmartGlobalRef() { }
+
+    jobject getObject() const { return mJavaObj; }
+
+    virtual bool operator==(const SmartGlobalRef& r)
+    {
+        return r.getObject() == getObject();
+    }
+
+    virtual ~SmartGlobalRef();
+    virtual SmartGlobalRef& operator=(const SmartGlobalRef& src);
+    virtual SmartGlobalRef& operator=(const SmartLocalRef& src);
+    virtual SmartGlobalRef& operator=(jobject javaObj);
+};
+
+jobject   CreateInstance(JNIEnv& env, const char* className, const char* signature, ...);
+
+void CallVoidMethod(JNIEnv& env, jobject obj, const char* className, const char* methodName, const char* signature, ...);
+
+jmethodID GetStaticMethodID(JNIEnv& env, jclass clazz, const char * name, const char * signature);
 
 jmethodID GetMethodId(JNIEnv& env, const jclass clazz, const char* name, const char* signature);
 

@@ -21,52 +21,42 @@
 #define EXTENSIONS_BULLET_SLIDERCONSTRAINT_H
 
 #include "../physics_sliderconstraint.h"
-#include "bullet_object.h"
+#include "../physics_collidable.h"
 
 class btSliderConstraint;
+class btMultiBodySliderConstraint;
 
 namespace sxr {
 
     class PhysicsRigidBody;
     class BulletRigidBody;
 
-    class BulletSliderConstraint : public PhysicsSliderConstraint,
-                                          BulletObject {
+    class BulletSliderConstraint : public PhysicsSliderConstraint
+    {
     public:
-        explicit BulletSliderConstraint(PhysicsRigidBody *rigidBodyB);
-
+        BulletSliderConstraint(PhysicsCollidable* bodyA, const glm::vec3& pivotA, const glm::vec3& pivotB);
         BulletSliderConstraint(btSliderConstraint *constraint);
-
+        BulletSliderConstraint(btMultiBodySliderConstraint *constraint);
         virtual ~BulletSliderConstraint();
 
-        void setAngularLowerLimit(float limit);
-
-        float getAngularLowerLimit() const;
-
-        void setAngularUpperLimit(float limit);
-
-        float getAngularUpperLimit() const;
-
-        void setLinearLowerLimit(float limit);
-
-        float getLinearLowerLimit() const;
-
-        void setLinearUpperLimit(float limit);
-
-        float getLinearUpperLimit() const;
-
-        void setBreakingImpulse(float impulse);
-
-        float getBreakingImpulse() const;
-
-        void *getUnderlying() { return mSliderConstraint; }
-
-        void updateConstructionInfo();
+        virtual void* getUnderlying() { return mMBConstraint ? static_cast<void*>(mMBConstraint) : static_cast<void*>(mConstraint); }
+        virtual void  setAngularLowerLimit(float limit);
+        virtual float getAngularLowerLimit() const;
+        virtual void  setAngularUpperLimit(float limit);
+        virtual float getAngularUpperLimit() const;
+        virtual void  setLinearLowerLimit(float limit);
+        virtual float getLinearLowerLimit() const;
+        virtual void  setLinearUpperLimit(float limit);
+        virtual float getLinearUpperLimit() const;
+        virtual void  setBreakingImpulse(float impulse);
+        virtual float getBreakingImpulse() const;
+        virtual void  sync(PhysicsWorld *);
+        virtual void  addToWorld(PhysicsWorld*);
+        virtual void  removeFromWorld(PhysicsWorld*);
 
     private:
-        btSliderConstraint *mSliderConstraint;
-        BulletRigidBody *mRigidBodyB;
-
+        btSliderConstraint* mConstraint;
+        btMultiBodySliderConstraint* mMBConstraint;
         float mBreakingImpulse;
         float mLowerAngularLimit;
         float mUpperAngularLimit;

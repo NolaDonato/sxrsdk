@@ -16,32 +16,157 @@
 #ifndef EXTENSIONS_BULLET_FILELOADER_H
 #define EXTENSIONS_BULLET_FILELOADER_H
 
-#include "../physics_common.h"
-#include "../physics_loader.h"
+#include "util/jni_utils.h"
+#include <unordered_map>
+#include <vector>
+#include <Utils/b3BulletDefaultFileIO.h>
+#include <LinearMath/btMatrix3x3.h>
+#include <LinearMath/btTransform.h>
 
 class btBulletWorldImporter;
+class btMultiBodyWorldImporter;
+class btDynamicsWorld;
+class btMultiBodyDynamicsWorld;
+class btMultibodyLink;
+class btTypedConstraint;
+class btMultiBodyConstraint;
+class btCollisionShape;
+class btMultiBodyFixedConstraint;
+class btGeneric6DofConstraint;
+class btGeneric6DofSpring2Constraint;
+class btGeneric6DofSpringConstraint;
+class btPoint2PointConstraint;
+class btMultiBodyPoint2Point;
+class btMultiBodySliderConstraint;
+class btMultiBodyFixedConstraint;
+class btSliderConstraint;
+class btConeTwistConstraint;
+class btHingeConstraint;
+class btFixedConstraint;
+class btCollisionObject;
+class btConvexPolyhedron;
+class btConvexHullShape;
+class btRigidBody;
+class btSerializer;
+class btVector3;
+class btQuaternion;
+class URDFConverter;
 
-namespace sxr{
-class BulletFileLoader : public PhysicsLoader
+
+namespace std
 {
+    template <>
+    struct hash<sxr::SmartGlobalRef>
+    {
+        size_t operator()(const sxr::SmartGlobalRef& k) const
+        {
+            long l = reinterpret_cast<long>(k.getObject());
+            return std::hash<long>{}(l);
+        }
+    };
+}
+
+namespace sxr
+{
+class PhysicsCollidable;
+class PhysicsConstraint;
+class Collider;
+class BulletWorld;
+class BulletRigidBody;
+class BulletJoint;
+
+
+/**
+ * Imports a binary .bullet file and constructs the SXR
+ * Java physics components from it:
+ * btRigidBody          SXRRigidBody
+ * btCollisionShape     SXRCollider
+ * btMultiBody          SXRPhysicsJoint
+ * btTypedConstraint    SXRConstraint
+ * These objects are connected to each other upon return
+ * but are not connected to nodes in the scene.
+ *
+ * The C++ loader maintain maps between the name of
+ * the scene node and the physics components that
+ * should be attached to it. They are used by the
+ * Java part of the physics loader to attach the physics
+ * components to the right nodes.
+ */
+class BulletFileLoader : public HybridObject
+{
+protected:
+    struct FileIO : b3BulletDefaultFileIO
+    {
+        AAssetManager* mAssetManager;
+        std::string    mBaseDir;
+
+        FileIO(AAssetManager* am, int fileIOType = 0, const char* pathPrefix = nullptr);
+        virtual int fileOpen(const char* fileName, const char* mode);
+
+    private:
+        FILE* fopen(const char* fileName, const char* mode);
+    };
+
 public:
-    BulletFileLoader(char *buffer, size_t length, bool ignoreUpAxis);
+    BulletFileLoader(jobject context, JavaVM& jvm, AAssetManager* am);
     virtual ~BulletFileLoader();
 
-    PhysicsRigidBody* getNextRigidBody();
-
-    const char* getRigidBodyName(PhysicsRigidBody *body) const;
-
-    PhysicsConstraint* getNextConstraint();
-
-    PhysicsRigidBody* getConstraintBodyA(PhysicsConstraint *constraint);
-
-    PhysicsRigidBody* getConstraintBodyB(PhysicsConstraint *constraint);
+    bool         parse(BulletWorld* world, char *buffer, size_t length, bool ignoreUpAxis);
+    bool         parse(char *buffer, size_t lengh, bool ignoreUpAxis);
+    bool         parseURDF(BulletWorld* world, const char* xmldata, bool ignoreUpAxis, bool multiBody);
+    bool         exportBullet(BulletWorld* world, const char* fileName);
+    void         clear();
+    const char*  getConstraintName(PhysicsConstraint* constraint);
+    jobject      getRigidBody(const char* name);
+    jobject      getJoint(const char* name);
+    jobject      getCollider(const char* name);
+    jobjectArray getRigidBodies();
+    jobjectArray getJoints();
+    jobjectArray getConstraints();
 
 private:
-    btBulletWorldImporter *mImporter;
-    int mCurrRigidBody;
-    int mCurrConstraint;
+    jobject     getConstraintBodyA(PhysicsConstraint*);
+    jobject     createP2PConstraint(JNIEnv& env, btPoint2PointConstraint* , PhysicsConstraint*& constraint);
+    jobject     createP2PConstraint(JNIEnv& env, btMultiBodyPoint2Point* , PhysicsConstraint*& constraint);
+    jobject     createHingeConstraint(JNIEnv& env, btHingeConstraint* hg, PhysicsConstraint*& constraint);
+    jobject     createConeTwistConstraint(JNIEnv& env, btConeTwistConstraint* ct, PhysicsConstraint*& constraint);
+    jobject     createFixedConstraint(JNIEnv& env, btFixedConstraint* fix, PhysicsConstraint*& constraint);
+    jobject     createFixedConstraint(JNIEnv& env, btMultiBodyFixedConstraint* fix, PhysicsConstraint*& constraint);
+    jobject     createSliderConstraint(JNIEnv& env, btSliderConstraint* sld, PhysicsConstraint*& constraint);
+    jobject     createSliderConstraint(JNIEnv& env, btMultiBodySliderConstraint* sld, PhysicsConstraint*& constraint);
+    jobject     createGenericConstraint(JNIEnv& env, btGeneric6DofConstraint* gen, PhysicsConstraint*& constraint);
+    jobject     createGenericConstraint(JNIEnv& env, btGeneric6DofSpringConstraint* gen, PhysicsConstraint*& constraint);
+    jobject     createSpringConstraint(JNIEnv& env, btGeneric6DofSpring2Constraint* gen, PhysicsConstraint*& constraint);
+    void        createRigidBodies(btBulletWorldImporter&);
+    void        createRigidBodies(btDynamicsWorld&);
+    void        createRigidBody(JNIEnv& env, btRigidBody* rb);
+    void        createJoints(btMultiBodyDynamicsWorld&);
+    void        createConstraints(btBulletWorldImporter&);
+    void        createConstraints(btDynamicsWorld&);
+    void        createMultiBodyConstraints(btMultiBodyDynamicsWorld&);
+    jobject     createCollider(btCollisionObject*);
+    void        createConstraint(JNIEnv& env, btTypedConstraint* constraint);
+    void        createMultiBodyConstraint(JNIEnv& env, btMultiBodyConstraint* c);
+    void        registerNames(btDynamicsWorld* world, btSerializer* s);
+    const char* getNameForPointer(void* p);
+    btVector3&  rotatePoint(btVector3& p);
+    void        createCollisionShape(JNIEnv& env, btCollisionShape* shape, jobject& obj, btVector3& debugColor);
+    btConvexHullShape*  copyHull(const btConvexHullShape *input, float *outVerts, btVector3& dimensions);
+
+    std::unordered_map<std::string, SmartGlobalRef>  mRigidBodies;
+    std::unordered_map<std::string, SmartGlobalRef>  mJoints;
+    std::unordered_map<std::string, SmartGlobalRef>  mColliders;
+    std::unordered_map<std::string, SmartGlobalRef>  mConstraints;
+    btSerializer*               mSerializer;
+    btBulletWorldImporter*      mBulletImporter;
+    URDFConverter*              mURDFImporter;
+    JavaVM&                     mJavaVM;
+    SmartGlobalRef              mContext;
+    bool                        mNeedRotate;
+    btMatrix3x3                 mRotateCoords;
+    btTransform                 mTransformCoords;
+    int                         mFirstMultiBody;
+    FileIO                      mFileIO;
 };
 
 }

@@ -13,6 +13,7 @@ public class SXRPoseMapper extends SXRAnimation
     protected SXRSkeleton mDestSkeleton;
     protected int[]       mBoneMap;
     protected SXRPose     mDestPose;
+    protected int         mBoneOptions = 0;
     protected float       mScale = 1.0f;
 
     /**
@@ -62,6 +63,24 @@ public class SXRPoseMapper extends SXRAnimation
     {
         mStartOffset = start;
         return this;
+    }
+
+    /**
+     * Set the bone options for the bones that should be mapped.
+     * @param options (one of SXRSkeleton.BONE_PHYSICS or SXRSkeleton.BONE_ANIMATE
+     */
+    public void setBoneOptions(int options)
+    {
+        mBoneOptions = options;
+    }
+
+    /**
+     * Get the bone options for the bones that should be mapped.
+     * @return SXRSkeleton.BONE_PHYSICS or SXRSkeleton.BONE_ANIMATE
+     */
+    public int getBoneOptions()
+    {
+        return mBoneOptions;
     }
 
     /**
@@ -135,8 +154,8 @@ public class SXRPoseMapper extends SXRAnimation
      */
     public void	setBoneMap(int[] bonemap)
     {
-        SXRSkeleton	dstskel = mDestSkeleton;
-        int			numbones;
+        SXRSkeleton dstskel = mDestSkeleton;
+        int numbones;
 
         if (bonemap == null)
         {
@@ -166,7 +185,11 @@ public class SXRPoseMapper extends SXRAnimation
      */
     public void setBoneMap(String bonemap)
     {
-        if ((bonemap == null) || bonemap.isEmpty())
+        if (bonemap == null)
+        {
+            mBoneMap = null;
+        }
+        if (bonemap.isEmpty())
         {
             throw new IllegalArgumentException("BoneMap cannot be empty");
         }
@@ -195,7 +218,6 @@ public class SXRPoseMapper extends SXRAnimation
                 if ((sourceIndex >= 0) && (destIndex >= 0))
                 {
                     mBoneMap[sourceIndex] = destIndex;
-                    mDestSkeleton.setBoneOptions(destIndex, mDestSkeleton.getBoneOptions(destIndex) | SXRSkeleton.BONE_ANIMATE);
                     Log.w("BONE", "%s %d -> %s %d", words[0], sourceIndex, words[1], destIndex);
                 }
                 else
@@ -234,7 +256,6 @@ public class SXRPoseMapper extends SXRAnimation
             bonemap[i] = boneindex;
             if (boneindex >= 0)
             {
-                dstskel.setBoneOptions(boneindex, dstskel.getBoneOptions(boneindex) | SXRSkeleton.BONE_ANIMATE);
                 Log.w("BONE", "%s\n%d: %s\n%d: %s",
                         bonename, i, srcPose.getBone(i).toString(),
                         boneindex, dstPose.getBone(boneindex).toString());
@@ -264,7 +285,6 @@ public class SXRPoseMapper extends SXRAnimation
             mDestSkeleton.poseToBones();
         }
     }
-
 
     /**
      * Maps the pose of the source skeleton onto the destination skeleton in local space.
@@ -304,17 +324,15 @@ public class SXRPoseMapper extends SXRAnimation
             {
                 mDestPose = new SXRPose(dstskel);
             }
-            else
-            {
-                mDestPose.clearRotations();
-            }
+            mDestPose.copy(dstskel.getPose());
             srcskel.getPosition(v);
             v.mul(mScale);
             for (int i = 0; i < numsrcbones; ++i)
             {
                 int boneindex = mBoneMap[i];
 
-                if (boneindex >= 0)
+                if ((boneindex >= 0) &&
+                   ((mBoneOptions & srcskel.getBoneOptions(i)) == mBoneOptions))
                 {
                     srcpose.getLocalRotation(i, q);
                     mDestPose.setLocalRotation(boneindex, q.x, q.y, q.z, q.w);
@@ -324,48 +342,8 @@ public class SXRPoseMapper extends SXRAnimation
         synchronized (dstskel)
         {
             dstskel.setPosition(v);
-            dstskel.applyPose(mDestPose, SXRSkeleton.ROTATION_ONLY);
+            dstskel.applyPose(mDestPose, SXRSkeleton.ROTATION_ONLY, mBoneOptions);
         }
-        return true;
-    }
-
-    /**
-     * Maps the pose of the source skeleton onto the destination skeleton in world space.
-     * <p>
-     * The world bone rotations of matching bones are copied.
-     * If the PoseMapper has a bone map, it is used to determine which bones
-     * of the source skeleton correspond to which bones in the destination skeleton.
-     */
-    public boolean mapWorldToTarget()
-    {
-        SXRSkeleton	srcskel = mSourceSkeleton;
-        SXRSkeleton	dstskel = mDestSkeleton;
-
-        if ((dstskel == null) || (srcskel == null))
-        {
-            return false;
-        }
-        if (mBoneMap == null)
-        {
-            mBoneMap = makeBoneMap(srcskel, dstskel);
-        }
-        SXRPose srcpose = srcskel.getPose();
-        SXRPose	dstpose = dstskel.getPose();
-        int			numsrcbones = srcpose.getNumBones();
-        Matrix4f	mtx = new Matrix4f();
-
-        srcpose.sync();
-        for (int i = 0; i < numsrcbones; ++i)
-        {
-            int	boneindex = mBoneMap[i];
-
-            if (boneindex >= 0)
-            {
-                srcpose.getWorldMatrix(i, mtx);
-                dstpose.setWorldMatrix(boneindex, mtx);
-            }
-        }
-        dstpose.sync();
         return true;
     }
 
@@ -378,7 +356,6 @@ public class SXRPoseMapper extends SXRAnimation
      * </p>
      * @param sf    positive scale factor
      * @see SXRSkin#scalePositions(float)
-     * @see SXRVertexBuffer#transform(Matrix4f, boolean)
      */
     public void setScale(float sf)
     {

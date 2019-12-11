@@ -23,80 +23,17 @@
 
 namespace sxr {
 extern "C" {
-    JNIEXPORT jlong JNICALL
-    Java_com_samsungxr_NativeNode_ctor(JNIEnv * env,
-            jobject obj);
-    JNIEXPORT jstring JNICALL
-    Java_com_samsungxr_NativeNode_getName(JNIEnv * env,
-            jobject obj, jlong jnode);
 
-    JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeNode_setName(JNIEnv * env,
-            jobject obj, jlong jnode, jstring name);
-
-    JNIEXPORT bool JNICALL
-    Java_com_samsungxr_NativeNode_attachComponent(JNIEnv * env,
-            jobject obj, jlong jnode, jlong jcomponent);
-
-    JNIEXPORT bool JNICALL
-    Java_com_samsungxr_NativeNode_detachComponent(JNIEnv * env,
-            jobject obj, jlong jnode, jlong type);
-
-    JNIEXPORT long JNICALL
-    Java_com_samsungxr_NativeNode_findComponent(JNIEnv * env,
-            jobject obj, jlong jnode, jlong type);
-
-    JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeNode_addChildObject(JNIEnv * env,
-            jobject obj, jlong jnode, jlong jchild);
-
-    JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeNode_removeChildObject(
-            JNIEnv * env, jobject obj, jlong jnode, jlong jchild);
-
-    JNIEXPORT bool JNICALL
-    Java_com_samsungxr_NativeNode_isColliding(
-            JNIEnv * env, jobject obj, jlong jnode, jlong jother_object);
-
-    JNIEXPORT bool JNICALL
-    Java_com_samsungxr_NativeNode_isEnabled(
-            JNIEnv * env, jobject obj, jlong jnode);
-
-    JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeNode_setEnable(
-            JNIEnv * env, jobject obj, jlong jnode, bool flag);
-
-    JNIEXPORT bool JNICALL
-    Java_com_samsungxr_NativeNode_rayIntersectsBoundingVolume(JNIEnv * env,
-            jobject obj, jlong jnode, jfloat rox, jfloat roy, jfloat roz,
-            jfloat rdx, jfloat rdy, jfloat rdz);
-
-    JNIEXPORT bool JNICALL
-    Java_com_samsungxr_NativeNode_objectIntersectsBoundingVolume(
-            JNIEnv * env, jobject obj, jlong jnode, jlong jother_object);
-
-    JNIEXPORT jfloatArray JNICALL
-    Java_com_samsungxr_NativeNode_getBoundingVolume(JNIEnv * env,
-            jobject obj, jlong jNode);
-
-    JNIEXPORT jfloatArray JNICALL
-    Java_com_samsungxr_NativeNode_expandBoundingVolumeByPoint(JNIEnv * env,
-            jobject obj, jlong jNode, jfloat pointX, jfloat pointY, jfloat pointZ);
-
-    JNIEXPORT jfloatArray JNICALL
-    Java_com_samsungxr_NativeNode_expandBoundingVolumeByCenterAndRadius(JNIEnv * env,
-            jobject obj, jlong jNode, jfloat centerX, jfloat centerY, jfloat centerZ, jfloat radius);
-} // extern "C"
 
 JNIEXPORT jlong JNICALL
-Java_com_samsungxr_NativeNode_ctor(JNIEnv * env,
-        jobject obj) {
+Java_com_samsungxr_NativeNode_ctor(JNIEnv* env, jclass obj) 
+{
     return reinterpret_cast<jlong>(new Node());
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_samsungxr_NativeNode_getName(JNIEnv * env,
-        jobject obj, jlong jnode) {
+Java_com_samsungxr_NativeNode_getName(JNIEnv* env, jclass obj, jlong jnode)
+{
     Node* node = reinterpret_cast<Node*>(jnode);
     std::string name = node->name();
     jstring jname = env->NewStringUTF(name.c_str());
@@ -104,8 +41,8 @@ Java_com_samsungxr_NativeNode_getName(JNIEnv * env,
 }
 
 JNIEXPORT void JNICALL
-Java_com_samsungxr_NativeNode_setName(JNIEnv * env,
-        jobject obj, jlong jnode, jstring name) {
+Java_com_samsungxr_NativeNode_setName(JNIEnv* env, jclass obj, jlong jnode, jstring name)
+{
     Node* node = reinterpret_cast<Node*>(jnode);
     const char* native_name = env->GetStringUTFChars(name, 0);
     node->set_name(std::string(native_name));
@@ -114,24 +51,24 @@ Java_com_samsungxr_NativeNode_setName(JNIEnv * env,
 
 
 JNIEXPORT bool JNICALL
-Java_com_samsungxr_NativeNode_attachComponent(JNIEnv * env,
-        jobject obj, jlong jnode, jlong jcomponent) {
+Java_com_samsungxr_NativeNode_attachComponent(JNIEnv* env, jclass obj, jlong jnode, jlong jcomponent)
+{
     Node* node = reinterpret_cast<Node*>(jnode);
     Component* component = reinterpret_cast<Component*>(jcomponent);
     return node->attachComponent(component);
 }
 
 JNIEXPORT bool JNICALL
-Java_com_samsungxr_NativeNode_detachComponent(JNIEnv * env,
-        jobject obj, jlong jnode, jlong type) {
+Java_com_samsungxr_NativeNode_detachComponent(JNIEnv* env, jclass obj, jlong jnode, jlong type)
+{
     Node* node = reinterpret_cast<Node*>(jnode);
     return node->detachComponent(type) != NULL;
 }
 
 
 JNIEXPORT long JNICALL
-Java_com_samsungxr_NativeNode_findComponent(JNIEnv * env,
-        jobject obj, jlong jnode, jlong type) {
+Java_com_samsungxr_NativeNode_findComponent(JNIEnv* env, jclass obj, jlong jnode, jlong type)
+{
     Node* node = reinterpret_cast<Node*>(jnode);
     Component* component = node->getComponent(type);
     return (long) component;
@@ -139,24 +76,25 @@ Java_com_samsungxr_NativeNode_findComponent(JNIEnv * env,
 
 
 JNIEXPORT void JNICALL
-Java_com_samsungxr_NativeNode_addChildObject(JNIEnv * env,
-        jobject obj, jlong jnode, jlong jchild) {
+Java_com_samsungxr_NativeNode_addChildObject(JNIEnv* env, jclass obj, jlong jnode, jlong jchild)
+{
     Node* node = reinterpret_cast<Node*>(jnode);
     Node* child = reinterpret_cast<Node*>(jchild);
     node->addChildObject(node, child);
 }
 
 JNIEXPORT void JNICALL
-Java_com_samsungxr_NativeNode_removeChildObject(
-        JNIEnv * env, jobject obj, jlong jnode, jlong jchild) {
+Java_com_samsungxr_NativeNode_removeChildObject(JNIEnv* env, jclass obj, jlong jnode, jlong jchild)
+{
     Node* node = reinterpret_cast<Node*>(jnode);
     Node* child = reinterpret_cast<Node*>(jchild);
     node->removeChildObject(child);
 }
 
 JNIEXPORT bool JNICALL
-Java_com_samsungxr_NativeNode_isColliding(
-        JNIEnv * env, jobject obj, jlong jnode, jlong jother_object) {
+Java_com_samsungxr_NativeNode_isColliding(JNIEnv* env, jclass obj,
+                                          jlong jnode, jlong jother_object)
+{
     Node* node = reinterpret_cast<Node*>(jnode);
     Node* other_object = reinterpret_cast<Node*>(jother_object);
     return node->isColliding(other_object);
@@ -164,36 +102,39 @@ Java_com_samsungxr_NativeNode_isColliding(
 
 
 JNIEXPORT bool JNICALL
-Java_com_samsungxr_NativeNode_isEnabled(
-        JNIEnv * env, jobject obj, jlong jnode) {
+Java_com_samsungxr_NativeNode_isEnabled(JNIEnv* env, jclass obj, jlong jnode)
+{
     Node* node = reinterpret_cast<Node*>(jnode);
     return node->enabled();
 }
 
 JNIEXPORT void JNICALL
-Java_com_samsungxr_NativeNode_setEnable(
-        JNIEnv * env, jobject obj, jlong jnode, bool flag) {
+Java_com_samsungxr_NativeNode_setEnable(JNIEnv* env, jclass obj, jlong jnode, jboolean flag)
+{
     Node* node = reinterpret_cast<Node*>(jnode);
     node->set_enable(flag);
 }
 
 JNIEXPORT bool JNICALL
-Java_com_samsungxr_NativeNode_rayIntersectsBoundingVolume(JNIEnv * env,
-        jobject obj, jlong jnode, jfloat rox, jfloat roy, jfloat roz,
-        jfloat rdx, jfloat rdy, jfloat rdz) {
+Java_com_samsungxr_NativeNode_rayIntersectsBoundingVolume(JNIEnv* env, jclass obj, jlong jnode,
+                                                          jfloat rox, jfloat roy, jfloat roz,
+                                                          jfloat rdx, jfloat rdy, jfloat rdz)
+{
     Node* node = reinterpret_cast<Node*>(jnode);
     return node->intersectsBoundingVolume(rox, roy, roz, rdx, rdy, rdz);
 }
 
 JNIEXPORT bool JNICALL
-Java_com_samsungxr_NativeNode_objectIntersectsBoundingVolume(
-        JNIEnv * env, jobject obj, jlong jnode, jlong jother_object) {
+Java_com_samsungxr_NativeNode_objectIntersectsBoundingVolume(JNIEnv* env, jclass obj,
+                                                             jlong jnode, jlong jother_object)
+{
     Node* node = reinterpret_cast<Node*>(jnode);
     Node* other_object = reinterpret_cast<Node*>(jother_object);
     return node->intersectsBoundingVolume(other_object);
 }
 
-jfloatArray boundingVolumeToArray(JNIEnv* env, const BoundingVolume& bvol) {
+jfloatArray boundingVolumeToArray(JNIEnv* env, const BoundingVolume& bvol)
+{
     jfloat temp[10];
     temp[0] = bvol.center().x;
     temp[1] = bvol.center().y;
@@ -212,17 +153,17 @@ jfloatArray boundingVolumeToArray(JNIEnv* env, const BoundingVolume& bvol) {
 }
 
 JNIEXPORT jfloatArray JNICALL
-Java_com_samsungxr_NativeNode_getBoundingVolume(JNIEnv * env,
-        jobject obj, jlong jNode) {
+Java_com_samsungxr_NativeNode_getBoundingVolume(JNIEnv* env, jclass obj, jlong jNode)
+{
     Node* sceneObject = reinterpret_cast<Node*>(jNode);
     const BoundingVolume& bvol = sceneObject->getBoundingVolume();
     return boundingVolumeToArray(env, bvol);
 }
 
 JNIEXPORT jfloatArray JNICALL
-Java_com_samsungxr_NativeNode_expandBoundingVolumeByPoint(JNIEnv * env,
-        jobject obj, jlong jNode, jfloat pointX, jfloat pointY, jfloat pointZ) {
-
+Java_com_samsungxr_NativeNode_expandBoundingVolumeByPoint(JNIEnv* env, jclass obj, jlong jNode,
+                                                          jfloat pointX, jfloat pointY, jfloat pointZ)
+{
     Node* sceneObject = reinterpret_cast<Node*>(jNode);
     BoundingVolume& bvol = sceneObject->getBoundingVolume();
     bvol.expand(glm::vec3(pointX, pointY, pointZ));
@@ -231,14 +172,15 @@ Java_com_samsungxr_NativeNode_expandBoundingVolumeByPoint(JNIEnv * env,
 }
 
 JNIEXPORT jfloatArray JNICALL
-Java_com_samsungxr_NativeNode_expandBoundingVolumeByCenterAndRadius(JNIEnv * env,
-        jobject obj, jlong jNode, jfloat centerX, jfloat centerY, jfloat centerZ, jfloat radius) {
-
+Java_com_samsungxr_NativeNode_expandBoundingVolumeByCenterAndRadius(JNIEnv* env, jclass obj, jlong jNode,
+                                                                    jfloat centerX, jfloat centerY,
+                                                                    jfloat centerZ, jfloat radius)
+{
     Node* sceneObject = reinterpret_cast<Node*>(jNode);
     BoundingVolume& bvol = sceneObject->getBoundingVolume();
     bvol.expand(glm::vec3(centerX, centerY, centerZ), radius);
 
     return boundingVolumeToArray(env, bvol);
 }
-
+} // extern "C"
 } // namespace sxr

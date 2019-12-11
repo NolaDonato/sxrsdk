@@ -16,20 +16,30 @@
 //
 // Created by c.bozzetto on 31/05/2017.
 //
+#include "objects/node.h"
+#include "../physics_world.h"
+
+#include <BulletDynamics/ConstraintSolver/btSliderConstraint.h>
+#include <BulletDynamics/Featherstone/btMultiBodySliderConstraint.h>
+#include <LinearMath/btTransform.h>
+#include <BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h>
 
 #include "bullet_rigidbody.h"
+#include "bullet_joint.h"
 #include "bullet_sliderconstraint.h"
-#include <BulletDynamics/ConstraintSolver/btSliderConstraint.h>
-#include <LinearMath/btTransform.h>
+#include "bullet_sxr_utils.h"
 
 static const char tag[] = "BulletSliderConstrN";
 
 namespace sxr {
 
-    BulletSliderConstraint::BulletSliderConstraint(PhysicsRigidBody *rigidBodyB) {
-        mRigidBodyB = reinterpret_cast<BulletRigidBody*>(rigidBodyB);
-        mSliderConstraint = 0;
-
+    BulletSliderConstraint::BulletSliderConstraint(PhysicsCollidable* bodyA, const glm::vec3& pivotA, const glm::vec3& pivotB)
+    {
+        mBodyA = bodyA;
+        mPivotA = pivotA;
+        mPivotB = pivotB;
+        mConstraint = nullptr;
+        mMBConstraint = nullptr;
         mBreakingImpulse = SIMD_INFINITY;
 
         // Default values from btSliderConstraint
@@ -39,128 +49,292 @@ namespace sxr {
         mUpperLinearLimit = -1.0f;
     }
 
-    BulletSliderConstraint::BulletSliderConstraint(btSliderConstraint *constraint)
+    BulletSliderConstraint::BulletSliderConstraint(btSliderConstraint* constraint)
     {
-        mSliderConstraint = constraint;
-        mRigidBodyB = static_cast<BulletRigidBody*>(constraint->getRigidBodyB().getUserPointer());
+        btTransform& tA = constraint->getFrameOffsetA();
+        btVector3 v(tA.getOrigin());
+        btTransform& tB = constraint->getFrameOffsetB();
+
+        mMBConstraint = nullptr;
+        mConstraint = constraint;
+        mBodyA = static_cast<BulletRigidBody*>(constraint->getRigidBodyA().getUserPointer());
+        mLowerAngularLimit = constraint->getLowerAngLimit();
+        mUpperAngularLimit = constraint->getUpperAngLimit();
+        mLowerLinearLimit = constraint->getLowerLinLimit();
+        mUpperLinearLimit = constraint->getUpperLinLimit();
+        mBreakingImpulse = constraint->getBreakingImpulseThreshold();
+        mPivotA = glm::vec3(v.x(), v.y(), v.z());
+        v = tB.getOrigin();
+        mPivotB = glm::vec3(v.x(), v.y(), v.z());
         constraint->setUserConstraintPtr(this);
     }
 
-    BulletSliderConstraint::~BulletSliderConstraint() {
-        if (0 != mSliderConstraint) {
-            delete mSliderConstraint;
+    BulletSliderConstraint::BulletSliderConstraint(btMultiBodySliderConstraint* constraint)
+    {
+        btVector3 pA(constraint->getPivotInA());
+        btVector3 pB(constraint->getPivotInB());
+
+        mConstraint = nullptr;
+        mMBConstraint = constraint;
+        mBodyA = static_cast<BulletJoint*>(constraint->getMultiBodyA()->getUserPointer());
+        mBreakingImpulse = SIMD_INFINITY;
+
+        // Default values from btSliderConstraint
+        mLowerAngularLimit = 0.0f;
+        mUpperAngularLimit = 0.0f;
+        mLowerLinearLimit = 1.0f;
+        mUpperLinearLimit = -1.0f;
+        mPivotA = glm::vec3(pA.x(), pA.y(), pA.z());
+        mPivotB = glm::vec3(pB.x(), pB.y(), pB.z());
+    }
+
+    BulletSliderConstraint::~BulletSliderConstraint()
+    {
+        if (mConstraint)
+        {
+            delete mConstraint;
+        }
+        if (mMBConstraint)
+        {
+            delete mMBConstraint;
         }
     }
 
-    void BulletSliderConstraint::setAngularLowerLimit(float limit) {
-        if (0 != mSliderConstraint) {
-            mSliderConstraint->setLowerAngLimit(limit);
+    void BulletSliderConstraint::setAngularLowerLimit(float limit)
+    {
+        if (mConstraint)
+        {
+            mConstraint->setLowerAngLimit(limit);
         }
-        else {
+        else
+        {
             mLowerAngularLimit = limit;
         }
     }
 
-    float BulletSliderConstraint::getAngularLowerLimit() const {
-        if (0 != mSliderConstraint) {
-            return mSliderConstraint->getLowerAngLimit();
+    float BulletSliderConstraint::getAngularLowerLimit() const
+    {
+        if (mConstraint)
+        {
+            return mConstraint->getLowerAngLimit();
         }
-        else {
+        else
+        {
             return mLowerAngularLimit;
         }
     }
 
-    void BulletSliderConstraint::setAngularUpperLimit(float limit) {
-        if (0 != mSliderConstraint) {
-            mSliderConstraint->setUpperAngLimit(limit);
+    void BulletSliderConstraint::setAngularUpperLimit(float limit)
+    {
+        if (mConstraint)
+        {
+            mConstraint->setUpperAngLimit(limit);
         }
-        else {
+        else
+        {
             mUpperAngularLimit = limit;
         }
     }
 
-    float BulletSliderConstraint::getAngularUpperLimit() const {
-        if (0 != mSliderConstraint) {
-            return mSliderConstraint->getUpperAngLimit();
+    float BulletSliderConstraint::getAngularUpperLimit() const
+    {
+        if (mConstraint)
+        {
+            return mConstraint->getUpperAngLimit();
         }
-        else {
+        else
+        {
             return mUpperAngularLimit;
         }
     }
 
-    void BulletSliderConstraint::setLinearLowerLimit(float limit) {
-        if (0 != mSliderConstraint) {
-            mSliderConstraint->setLowerLinLimit(limit);
+    void BulletSliderConstraint::setLinearLowerLimit(float limit)
+    {
+        if (mConstraint)
+        {
+            mConstraint->setLowerLinLimit(limit);
         }
-        else {
+        else
+        {
             mLowerLinearLimit = limit;
         }
     }
 
-    float BulletSliderConstraint::getLinearLowerLimit() const {
-        if (0 != mSliderConstraint) {
-            return mSliderConstraint->getLowerLinLimit();
+    float BulletSliderConstraint::getLinearLowerLimit() const
+    {
+        if (mConstraint)
+        {
+            return mConstraint->getLowerLinLimit();
         }
-        else {
+        else
+        {
             return mLowerLinearLimit;
         }
     }
 
-    void BulletSliderConstraint::setLinearUpperLimit(float limit) {
-        if (0 != mSliderConstraint) {
-            mSliderConstraint->setUpperLinLimit(limit);
+    void BulletSliderConstraint::setLinearUpperLimit(float limit)
+    {
+        if (mConstraint)
+        {
+            mConstraint->setUpperLinLimit(limit);
         }
-        else {
+        else
+        {
             mUpperLinearLimit = limit;
         }
     }
 
-    void BulletSliderConstraint::setBreakingImpulse(float impulse) {
-        if (0 != mSliderConstraint) {
-            mSliderConstraint->setBreakingImpulseThreshold(impulse);
+    void BulletSliderConstraint::setBreakingImpulse(float impulse)
+    {
+        if (mConstraint)
+        {
+            mConstraint->setBreakingImpulseThreshold(impulse);
         }
-        else {
+        else
+        {
             mBreakingImpulse = impulse;
         }
     }
 
-    float BulletSliderConstraint::getBreakingImpulse() const {
-        if (0 != mSliderConstraint) {
-            return mSliderConstraint->getBreakingImpulseThreshold();
-        }
-        else {
-            return mBreakingImpulse;
-        }
+    float BulletSliderConstraint::getBreakingImpulse() const
+    {
+        return mBreakingImpulse;
     }
 
-    float BulletSliderConstraint::getLinearUpperLimit() const {
-        if (0 != mSliderConstraint) {
-            return mSliderConstraint->getUpperLinLimit();
+    float BulletSliderConstraint::getLinearUpperLimit() const
+    {
+        if (mConstraint)
+        {
+            return mConstraint->getUpperLinLimit();
         }
-        else {
+        else
+        {
             return mUpperLinearLimit;
         }
     }
 
-void BulletSliderConstraint::updateConstructionInfo() {
-    if (mSliderConstraint != nullptr) {
-        return;
+    void BulletSliderConstraint::sync(PhysicsWorld *world)
+    {
+        if ((mConstraint != nullptr) || (mMBConstraint != nullptr))
+        {
+            return;
+        }
+        BulletRigidBody *rigidBodyB = static_cast<BulletRigidBody*>(owner_object()->
+                                      getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY));
+        btTransform worldFrameA = convertTransform2btTransform(mBodyA->owner_object()->transform());
+        btTransform worldFrameB = convertTransform2btTransform(owner_object()->transform());
+        btTransform localFrameA = worldFrameB.inverse() * worldFrameA;
+        btTransform localFrameB = worldFrameA.inverse() * worldFrameB;
+        btVector3 pivotA(mPivotA.x, mPivotA.y, mPivotA.z);
+        btVector3 pivotB(mPivotB.x, mPivotB.y, mPivotB.z);
+        btVector3 sliderAxisA = localFrameA.getOrigin();
+        btVector3 sliderAxisB = localFrameB.getOrigin();
+        int typeA = mBodyA->getType();
+
+        sliderAxisA.normalize();
+        sliderAxisB.normalize();
+        if (rigidBodyB)
+        {
+            btRigidBody *rbB = rigidBodyB->getRigidBody();
+
+            if (typeA == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
+            {
+                btRigidBody *rbA = static_cast<BulletRigidBody *>(mBodyA)->getRigidBody();
+                btMatrix3x3 rotX2SliderAxis;
+                btVector3 Xaxis(1, 0, 0);
+                btVector3 negXaxis(-1, 0, 0);
+
+                rotX2SliderAxis = btMatrix3x3(shortestArcQuatNormalize2(Xaxis, sliderAxisA));
+                localFrameA.getBasis() *= rotX2SliderAxis;
+                rotX2SliderAxis = btMatrix3x3(shortestArcQuatNormalize2(negXaxis, sliderAxisB));
+                localFrameB.getBasis() *= rotX2SliderAxis;
+                localFrameA.setOrigin(pivotA);
+                localFrameB.setOrigin(pivotB);
+
+                mConstraint = new btSliderConstraint(*rbA, *rbB, localFrameA, localFrameB, true);
+                mConstraint->setLowerAngLimit(mLowerAngularLimit);
+                mConstraint->setUpperAngLimit(mUpperAngularLimit);
+                mConstraint->setLowerLinLimit(mLowerLinearLimit);
+                mConstraint->setUpperLinLimit(mUpperLinearLimit);
+                mConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
+            }
+            else if (typeA == COMPONENT_TYPE_PHYSICS_JOINT)
+            {
+                BulletJoint *jointA = static_cast<BulletJoint *>(mBodyA);
+                btMultiBody *mbA = jointA->getMultiBody();
+                mMBConstraint = new btMultiBodySliderConstraint(mbA, jointA->getJointIndex(), rbB,
+                                                                pivotA, pivotB,
+                                                                localFrameA.getBasis(),
+                                                                localFrameB.getBasis(),
+                                                                sliderAxisB);
+            }
+            return;
+        }
+
+        BulletJoint *jointB = static_cast<BulletJoint*>(
+                                owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_JOINT));
+        if (jointB)
+        {
+            btMultiBody *mbB = jointB->getMultiBody();
+
+            if (typeA == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
+            {
+                BulletRigidBody *rigidBodyA = static_cast<BulletRigidBody *>(mBodyA);
+                btRigidBody *rbA = rigidBodyA->getRigidBody();
+                mMBConstraint = new btMultiBodySliderConstraint(mbB, jointB->getJointIndex(), rbA,
+                                                                pivotB, pivotA,
+                                                                localFrameB.getBasis(),
+                                                                localFrameA.getBasis(),
+                                                                sliderAxisB);
+
+            }
+            else if (typeA == COMPONENT_TYPE_PHYSICS_JOINT)
+            {
+                BulletJoint *jointA = static_cast<BulletJoint *>(mBodyA);
+                btMultiBody *mbA = jointA->getMultiBody();
+                mMBConstraint = new btMultiBodySliderConstraint(mbA, jointA->getJointIndex(),
+                                                                mbB, jointB->getJointIndex(),
+                                                                pivotA, pivotB,
+                                                                localFrameA.getBasis(),
+                                                                localFrameB.getBasis(),
+                                                                sliderAxisA);
+            }
+        }
     }
 
-    btRigidBody* rbA = ((BulletRigidBody*)this->owner_object()->getComponent(COMPONENT_TYPE_PHYSICS_RIGID_BODY))->getRigidBody();
+    void BulletSliderConstraint::addToWorld(PhysicsWorld* w)
+    {
+        BulletWorld* bw = static_cast<BulletWorld*>(w);
 
-    btTransform frameInA, frameInB;
-    frameInA = btTransform::getIdentity();
-    frameInB = btTransform::getIdentity();
+        if (w->isMultiBody() && mMBConstraint)
+        {
+            btMultiBodyDynamicsWorld* world = dynamic_cast<btMultiBodyDynamicsWorld*>(bw->getPhysicsWorld());
+            if (world)
+            {
+                world->addMultiBodyConstraint(mMBConstraint);
+            }
+        }
+        else if (mConstraint)
+        {
+            bw->getPhysicsWorld()->addConstraint(mConstraint, true);
+        }
+    }
 
-    mSliderConstraint = new btSliderConstraint(*rbA, *mRigidBodyB->getRigidBody(), frameInA,
-                                               frameInB, true);
+    void BulletSliderConstraint::removeFromWorld(PhysicsWorld* w)
+    {
+        BulletWorld* bw = static_cast<BulletWorld*>(w);
 
-    mSliderConstraint->setLowerAngLimit(mLowerAngularLimit);
-    mSliderConstraint->setUpperAngLimit(mUpperAngularLimit);
-    mSliderConstraint->setLowerLinLimit(mLowerLinearLimit);
-    mSliderConstraint->setUpperLinLimit(mUpperLinearLimit);
-    mSliderConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
-}
-
+        if (w->isMultiBody() && mMBConstraint)
+        {
+            btMultiBodyDynamicsWorld* world = dynamic_cast<btMultiBodyDynamicsWorld*>(bw->getPhysicsWorld());
+            if (world)
+            {
+                world->removeMultiBodyConstraint(mMBConstraint);
+            }
+        }
+        else if (mConstraint)
+        {
+            bw->getPhysicsWorld()->removeConstraint(mConstraint);
+        }
+    }
 }

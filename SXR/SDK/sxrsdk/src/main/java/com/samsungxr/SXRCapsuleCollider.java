@@ -58,6 +58,8 @@ public class SXRCapsuleCollider extends SXRCollider {
         super(context, NativeCapsuleCollider.ctor());
     }
 
+    public SXRCapsuleCollider(SXRContext context, long nativePtr) { super(context, nativePtr); }
+
     /**
      * Set the radius of the collision capsule.
      *

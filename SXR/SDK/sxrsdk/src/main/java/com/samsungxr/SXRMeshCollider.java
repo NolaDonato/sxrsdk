@@ -67,6 +67,7 @@ public class SXRMeshCollider extends SXRCollider {
      */
     public SXRMeshCollider(SXRContext gvrContext, SXRMesh mesh, boolean pickCoordinates) {
         super(gvrContext, NativeMeshCollider.ctorMeshPicking((mesh != null) ? mesh.getNative() : 0L, pickCoordinates));
+        long nativeMeshPtr = NativeMeshCollider.getMesh(getNative());
         mMesh = mesh;
     }
 
@@ -99,8 +100,22 @@ public class SXRMeshCollider extends SXRCollider {
      * @param mesh
      *            The {@link SXRMesh} that the picking ray will test against.
      */
-    public SXRMeshCollider(SXRMesh mesh) {
+    public SXRMeshCollider(SXRMesh mesh)
+    {
         this(mesh.getSXRContext(), mesh);
+    }
+
+    /**
+     * Construct from native object.
+     *
+     * @param nativeCollider The native collider pointer
+     *
+     */
+    public SXRMeshCollider(SXRMesh mesh, long nativeCollider)
+    {
+        super(mesh.getSXRContext(), nativeCollider);
+        long nativeMeshPtr = NativeMeshCollider.getMesh(getNative());
+        mMesh = new SXRMesh(mesh.getSXRContext(), nativeMeshPtr);
     }
 
     /**
@@ -128,6 +143,8 @@ public class SXRMeshCollider extends SXRCollider {
 
 class NativeMeshCollider {
     static native long ctorMesh(long mesh);
+
+    static native long getMesh(long mesh);
 
     static native long ctor(boolean useMeshBounds);
 

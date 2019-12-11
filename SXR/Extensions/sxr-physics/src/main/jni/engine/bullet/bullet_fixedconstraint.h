@@ -18,39 +18,35 @@
 #define BULLET_FIXEDCONSTRAINT_H
 
 #include "../physics_fixedconstraint.h"
-#include "bullet_object.h"
+#include "../physics_collidable.h"
 
 class btFixedConstraint;
+class btMultiBodyFixedConstraint;
 
 namespace sxr {
 
     class PhysicsRigidBody;
     class BulletRigidBody;
 
-    class BulletFixedConstraint : public PhysicsFixedConstraint,
-                                         BulletObject  {
+    class BulletFixedConstraint : public PhysicsFixedConstraint
+    {
 
     public:
-        explicit BulletFixedConstraint(PhysicsRigidBody* rigidBodyB);
-
-        BulletFixedConstraint(btFixedConstraint *constraint);
-
+        explicit BulletFixedConstraint(PhysicsCollidable* bodyA);
+        BulletFixedConstraint(btFixedConstraint* constraint);
+        BulletFixedConstraint(btMultiBodyFixedConstraint* constraint);
         virtual ~BulletFixedConstraint();
 
-        void* getUnderlying() {
-            return this->mFixedConstraint;
-        }
-
-        void setBreakingImpulse(float impulse);
-
-        float getBreakingImpulse() const;
-
-        void updateConstructionInfo();
+        virtual void* getUnderlying() { return mMBConstraint ? reinterpret_cast<void*>(mMBConstraint) : reinterpret_cast<void*>(mConstraint); }
+        virtual void  setBreakingImpulse(float impulse);
+        virtual float getBreakingImpulse() const;
+        virtual void  sync(PhysicsWorld *world);
+        virtual void  addToWorld(PhysicsWorld*);
+        virtual void  removeFromWorld(PhysicsWorld*);
 
     private:
-        btFixedConstraint *mFixedConstraint;
-        BulletRigidBody *mRigidBodyB; //this is A
-
+        btFixedConstraint* mConstraint;
+        btMultiBodyFixedConstraint* mMBConstraint;
         float mBreakingImpulse;
     };
 

@@ -20,9 +20,10 @@
 #ifndef EXTENSIONS_BULLET_CONETWISTCONSTRAINT_H
 #define EXTENSIONS_BULLET_CONETWISTCONSTRAINT_H
 
-#include "../physics_common.h"
 #include "../physics_conetwistconstraint.h"
-#include "bullet_object.h"
+#include "../physics_collidable.h"
+#include <glm/glm.hpp>
+#include <glm/mat3x3.hpp>
 
 class btConeTwistConstraint;
 namespace sxr {
@@ -30,45 +31,34 @@ namespace sxr {
     class PhysicsRigidBody;
     class BulletRigidBody;
 
-    class BulletConeTwistConstraint : public PhysicsConeTwistConstraint, BulletObject {
+    class BulletConeTwistConstraint : public PhysicsConeTwistConstraint
+    {
     public:
-        explicit BulletConeTwistConstraint(PhysicsRigidBody *rigidBodyB, PhysicsVec3 pivot,
-                                           PhysicsMat3x3 const &bodyRotation,
-                                           PhysicsMat3x3 const &coneRotation);
+        explicit BulletConeTwistConstraint(PhysicsCollidable* bodyA,
+                                           const glm::vec3& pivotA,
+                                           const glm::vec3& pivotB,
+                                           const glm::vec3& coneAxis);
 
         BulletConeTwistConstraint(btConeTwistConstraint *constraint);
-
         virtual ~BulletConeTwistConstraint();
 
-        void setSwingLimit(float limit);
+        virtual void* getUnderlying() { return this->mConeTwistConstraint; }
+        virtual void  setBreakingImpulse(float impulse);
+        virtual float getBreakingImpulse() const;
+        virtual void  sync(PhysicsWorld *world);
+        virtual void  addToWorld(PhysicsWorld*);
+        virtual void  removeFromWorld(PhysicsWorld*);
+        virtual void  setSwingLimit(float limit);
+        virtual float getSwingLimit() const;
+        virtual void  setTwistLimit(float limit);
+        virtual float getTwistLimit() const;
 
-        float getSwingLimit() const;
-
-        void setTwistLimit(float limit);
-
-        float getTwistLimit() const;
-
-        void* getUnderlying() {
-            return this->mConeTwistConstraint;
-        }
-
-        void setBreakingImpulse(float impulse);
-
-        float getBreakingImpulse() const;
-
-        void updateConstructionInfo();
     private:
-
-        btConeTwistConstraint *mConeTwistConstraint;
-        BulletRigidBody *mRigidBodyB;
-
-        float mBreakingImpulse;
-        PhysicsVec3 mPivot;
-        PhysicsMat3x3 mBodyRotation;
-        PhysicsMat3x3 mConeRotation;
-
-        float mSwingLimit;
-        float mTwistLimit;
+        btConeTwistConstraint* mConeTwistConstraint;
+        float      mBreakingImpulse;
+        glm::vec3  mConeAxis;
+        float      mSwingLimit;
+        float      mTwistLimit;
     };
 
 }
