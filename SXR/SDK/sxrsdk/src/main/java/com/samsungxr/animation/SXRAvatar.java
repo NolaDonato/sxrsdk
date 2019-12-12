@@ -302,7 +302,7 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
      */
     public void onAnimationStarted(SXRAnimationQueue queue, SXRAnimator animator)
     {
-        Log.d("ANIMATOR", "Start %s", animator.getName());
+        Log.d("ANIMATION", "Start %s", animator.getName());
         getSXRContext().getEventManager().sendEvent(SXRAvatar.this,
                                                              SXRAvatar.IAvatarEvents.class,
                                                              "onAnimationStarted",
@@ -316,7 +316,7 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
      */
     public void onAnimationFinished(SXRAnimationQueue queue, SXRAnimator animator)
     {
-        Log.d("ANIMATOR", "Stop %s", animator.getName());
+        Log.d("ANIMATION", "Stop %s", animator.getName());
         getSXRContext().getEventManager().sendEvent(SXRAvatar.this,
                                                              SXRAvatar.IAvatarEvents.class,
                                                              "onAnimationFinished",
