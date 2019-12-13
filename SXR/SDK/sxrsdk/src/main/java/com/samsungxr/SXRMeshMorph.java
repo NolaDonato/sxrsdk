@@ -238,11 +238,11 @@ public class SXRMeshMorph extends SXRBehavior
     public void setWeights(float[] weights)
     {
         SXRMaterial mtl = getMaterial();
-        if (weights.length != mNumBlendShapes)
+        if (weights.length > mNumBlendShapes)
         {
-            throw new IllegalArgumentException("Weights array must have an entry for each blend shape");
+            throw new IllegalArgumentException("Weights array has more entries than available blend shapesw");
         }
-        System.arraycopy(weights, 0, mWeights, 0, mWeights.length);
+        System.arraycopy(weights, 0, mWeights, 0, weights.length);
         if (mtl != null)
         {
             mtl.setInt("u_numblendshapes", mNumBlendShapes);

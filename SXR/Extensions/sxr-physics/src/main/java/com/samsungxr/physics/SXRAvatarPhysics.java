@@ -1,6 +1,8 @@
 package com.samsungxr.physics;
 
 import com.samsungxr.SXRAndroidResource;
+import com.samsungxr.SXRBehavior;
+import com.samsungxr.SXRHybridObject;
 import com.samsungxr.SXRNode;
 import com.samsungxr.animation.SXRAnimation;
 import com.samsungxr.animation.SXRAnimationEngine;
@@ -16,8 +18,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, SXRAvatar.IAvatarEvents
+public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IPhysicsLoaderEvents, SXRAvatar.IAvatarEvents
 {
+    static private long TYPE_AVATAR_PHYSICS = newComponentType(SXRAnimator.class);
     protected SXRAvatar mAvatar;
     protected SXRWorld mPhysicsWorld;
     protected SXRSkeleton mPhysicsSkel = null;
@@ -28,17 +31,12 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
 
     public SXRAvatarPhysics(SXRAvatar avatar, SXRWorld physicsWorld)
     {
-        mAvatar = avatar;
-        mPhysicsWorld = physicsWorld;
-        mPhysicsLoader = new SXRPhysicsLoader(mAvatar.getSXRContext());
-        mPhysicsLoader.setMultiBody(false);
-        mPhysicsLoader.getEventReceiver().addListener(this);
-        mAvatar.getEventReceiver().addListener(this);
-        mPhysicsWorld.getEventReceiver().addListener(this);
+        this(avatar, physicsWorld, new SXRPhysicsLoader(avatar.getSXRContext()));
     }
 
     public SXRAvatarPhysics(SXRAvatar avatar, SXRWorld physicsWorld, SXRPhysicsLoader loader)
     {
+        super(avatar.getSXRContext(), 0L);
         mAvatar = avatar;
         mPhysicsWorld = physicsWorld;
         mPhysicsLoader = loader;
@@ -46,6 +44,25 @@ public class SXRAvatarPhysics implements SXRPhysicsLoader.IPhysicsLoaderEvents, 
         mAvatar.getEventReceiver().addListener(this);
         mPhysicsWorld.getEventReceiver().addListener(this);
     }
+
+    protected SXRAvatarPhysics(SXRAvatar avatar, SXRWorld physicsWorld, SXRPhysicsLoader loader, long nativePtr)
+    {
+        super(avatar.getSXRContext(), nativePtr);
+        mAvatar = avatar;
+        mPhysicsWorld = physicsWorld;
+        mPhysicsLoader = loader;
+        mAvatar.getEventReceiver().addListener(this);
+        if (loader != null)
+        {
+            mPhysicsLoader.getEventReceiver().addListener(this);
+        }
+        if (physicsWorld != null)
+        {
+            mPhysicsWorld.getEventReceiver().addListener(this);
+        }
+    }
+
+    public static long getComponentType() { return TYPE_AVATAR_PHYSICS; }
 
     public SXRPhysicsLoader getPhysicsLoader()
     {

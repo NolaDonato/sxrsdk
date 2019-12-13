@@ -130,7 +130,7 @@ public final class SXRMorphAnimation extends SXRAnimation implements PrettyPrint
     {
         int numweightsTarget = morph.getBlendShapeCount();
         int numWeightsAnim = mKeyInterpolator.getKeySize() - 1;
-        if (numweightsTarget != numWeightsAnim)
+        if (numweightsTarget < numWeightsAnim)
         {
             throw new IllegalArgumentException("The number blend weights on the target morph must match the animation");
         }

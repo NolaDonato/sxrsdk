@@ -188,6 +188,7 @@ public class SXRPoseMapper extends SXRAnimation
         if (bonemap == null)
         {
             mBoneMap = null;
+            return;
         }
         if (bonemap.isEmpty())
         {

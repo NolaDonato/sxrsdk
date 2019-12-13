@@ -376,11 +376,49 @@ public class SXRStateMachine
         State state = findState(nextState);
         if (state == null)
         {
-            throw new UnsupportedOperationException("State not found " +state);
+            throw new IllegalArgumentException("State not found " + nextState);
         }
-        mCurrentState.leave();
+        if (mCurrentState != null)
+        {
+            mCurrentState.leave();
+        }
         mCurrentState = state;
         state.enter();
+    }
+
+    /**
+     * Leave the current state if it is the named state.
+     * <p>
+     * The <i>leave</i> action is executed for the current state
+     * if its name matches the input state name.
+     * The state machine will not enter a new state. It is up
+     * to the <i>leave</i> action of the current state to go to a new state.
+     * @param stateName name of state to leave.
+     */
+    public void leaveCurrentState(String stateName)
+    {
+        if (mCurrentState.getName().equals(stateName))
+        {
+            State state = mCurrentState;
+            mCurrentState = null;
+            state.leave();
+        }
+    }
+
+    /**
+     * Leave the current state.
+     * <p>
+     * The <i>leave</i> action is executed for the current state.
+     * The state machine will not enter a new state. It is up
+     * to the "leave" action of the current state to go to a new state.
+     */
+    public void leaveCurrentState()
+    {
+        if (mCurrentState != null)
+        {
+            mCurrentState.leave();
+            mCurrentState = null;
+        }
     }
 
     /**
