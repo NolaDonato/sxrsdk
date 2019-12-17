@@ -565,7 +565,7 @@ public class ARCoreSession implements IMixedReality
         {
             showSnackbarMessage(message, true);
             android.util.Log.e(TAG, "Exception creating session", exception);
-            mContext.getEventManager().sendEvent(this, IMixedRealityEvents.class, "onMixedRealityError", message);
+            mContext.getEventManager().sendEvent(this, IMixedRealityEvents.class, "onMixedRealityError", this, message);
             return false;
         }
 

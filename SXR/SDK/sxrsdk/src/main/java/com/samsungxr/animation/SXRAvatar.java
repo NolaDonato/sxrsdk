@@ -973,7 +973,7 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
                 SXRAnimation a = animator.getAnimation(i);
                 if (a instanceof SXRSkeletonAnimation)
                 {
-                    SXRSkeletonAnimation skelAnim = (SXRSkeletonAnimation) animator.getAnimation(0);
+                    SXRSkeletonAnimation skelAnim = (SXRSkeletonAnimation) a;
                     SXRSkeleton skel = skelAnim.getSkeleton();
                     if (skel != mSkeleton)
                     {
