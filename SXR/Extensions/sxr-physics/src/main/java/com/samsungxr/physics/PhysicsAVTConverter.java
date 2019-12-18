@@ -219,7 +219,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             JSONObject start = new JSONObject(inputData);
             mAttachBoneIndex = -1;
             mWorldOffset.set(0, 0, 0);
-            if ((mSkeleton != null )&& (mAttachBoneName != null))
+            if ((mSkeleton != null) && (mAttachBoneName != null))
             {
                 mAttachBoneIndex = mSkeleton.getBoneIndex(mAttachBoneName);
                 if (mAttachBoneIndex < 0)
@@ -916,7 +916,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         String        name = link.getString("Name");
         JSONObject    pivot = link.optJSONObject("Pivot Pos.");
         String        parentName = link.optString("Parent", null);
-        float         PIover2 = (float) Math.PI / 2;
         Vector3f      pivotB = new Vector3f(0, 0, 0);
         String        type = link.getString("Joint Type");
         JSONArray     dofdata = link.getJSONArray("DOF Data");

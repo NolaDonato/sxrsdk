@@ -18,6 +18,8 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.samsungxr.animation.SXRRepeatMode.REPEATED;
+
 public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IPhysicsLoaderEvents
 {
     static private long TYPE_AVATAR_PHYSICS = newComponentType(SXRAnimator.class);
@@ -103,6 +105,7 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
         {
             mPhysicsToAvatar = new PhysicsRetargeter();
             mPhysicsToAvatar.setName("PhysicsToAvatar");
+            mPhysicsToAvatar.setRepeatMode(REPEATED);
         }
         mAvatar.getSkeleton().enable();
         SXRAnimationEngine.getInstance(mAvatar.getSXRContext()).start(mPhysicsToAvatar);
@@ -156,6 +159,7 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
             SXRPhysicsJoint attachJoint2 = (SXRPhysicsJoint) ((attachNode2 != null) ?
                 attachNode2.getComponent(SXRPhysicsJoint.getComponentType()) : null);
 
+            skel.poseFromBones();
             if (mPhysicsWorld != world)
             {
                 if ((attachJoint1 != null) && (attachJoint2 != null))
@@ -299,18 +303,30 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
         @Override
         public void onAnimationLoaded(SXRAvatar avatar, SXRAnimator animator, String filePath, String errors)
         {
-            if (animator.getAnimationCount() > 1)
+            if (animator == null)
             {
-                SXRAnimation anim = animator.getAnimation(1);
-                if (anim instanceof SXRPoseMapper)
+                return;
+            }
+            synchronized (animator)
+            {
+                if (animator.getAnimationCount() > 1)
                 {
-                    SXRPoseMapper animToAvatar = (SXRPoseMapper) anim;
-                    SXRPoseMapper animToPhysics = new SXRPoseMapper(mPhysicsSkel, animToAvatar.getSourceSkeleton(), anim.getDuration());
+                    SXRAnimation anim = animator.getAnimation(1);
+                    if (anim instanceof SXRPoseMapper)
+                    {
+                        SXRPoseMapper animToAvatar = (SXRPoseMapper) anim;
+                        SXRPoseMapper animToPhysics = new SXRPoseMapper(mPhysicsSkel,
+                                                                        animToAvatar
+                                                                            .getSourceSkeleton(),
+                                                                        anim.getDuration());
 
-                    animToPhysics.setName(anim.getName() + ".ToPhysics");
-                    animToPhysics.setBoneOptions(SXRSkeleton.BONE_ANIMATE);
-                    animator.removeAnimation(animToAvatar);
-                    animator.addAnimation(animToPhysics);
+                        animToPhysics.setName(anim.getName() + ".ToPhysics");
+                        animToPhysics.setBoneOptions(SXRSkeleton.BONE_ANIMATE);
+                        animToPhysics.setBoneMap(avatar.getProperty("bonemap"));
+
+                        animator.removeAnimation(animToAvatar);
+                        animator.addAnimation(animToPhysics);
+                    }
                 }
             }
         }
@@ -371,6 +387,10 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
             int simulationType = Integer.parseInt(s);
             physicsProps.put("SimulationType", simulationType);
         }
+        else
+        {
+            physicsProps.put("SimulationType", SXRRigidBody.DYNAMIC);
+        }
         return physicsProps;
     }
 
@@ -383,8 +403,11 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
 
         public void animate(float time)
         {
-            mPhysicsSkel.poseFromBones();
-            super.animate(time);
+            if (mPhysicsSkel != null)
+            {
+                mPhysicsSkel.poseFromBones();
+                super.animate(time);
+            }
         }
     }
 };
