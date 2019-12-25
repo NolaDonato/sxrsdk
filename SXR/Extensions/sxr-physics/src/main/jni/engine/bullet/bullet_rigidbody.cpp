@@ -97,7 +97,7 @@ namespace sxr
         mConstructionInfo.m_additionalDamping = false;
         mConstructionInfo.m_additionalDampingFactor = 0.005f;
         mConstructionInfo.m_additionalLinearDampingThresholdSqr = 0;
-        mConstructionInfo. m_additionalAngularDampingThresholdSqr = 0;
+        mConstructionInfo.m_additionalAngularDampingThresholdSqr = 0;
         mConstructionInfo.m_additionalAngularDampingFactor = 0.01f;
         if (shape)
         {
@@ -162,7 +162,7 @@ namespace sxr
         return mName.c_str();
     }
 
-    void BulletRigidBody::setSimulationType(PhysicsRigidBody::SimulationType type)
+    void BulletRigidBody::setSimulationType(PhysicsCollidable::SimulationType type)
     {
         if (type != mSimType)
         {
@@ -194,7 +194,10 @@ namespace sxr
         {
             mConstructionInfo.m_mass = mass;
             mNeedsSync |= SyncOptions::PROPERTIES;
-            sync();
+            if (mRigidBody)
+            {
+                sync();
+            }
         }
     }
 
@@ -202,7 +205,7 @@ namespace sxr
     {
         if (mRigidBody)
         {
-            mRigidBody->activate((mSimType == SimulationType::DYNAMIC) ? WANTS_DEACTIVATION : ACTIVE_TAG);
+            mRigidBody->setActivationState(WANTS_DEACTIVATION);
         }
     }
 
@@ -210,7 +213,14 @@ namespace sxr
     {
         if (mRigidBody)
         {
-            mRigidBody->activate((mSimType == SimulationType::DYNAMIC) ? ACTIVE_TAG : WANTS_DEACTIVATION);
+            if (mSimType == SimulationType::DYNAMIC)
+            {
+                mRigidBody->activate(ACTIVE_TAG);
+            }
+            else
+            {
+                mRigidBody->setActivationState(ISLAND_SLEEPING);
+            }
         }
     }
 
@@ -262,7 +272,7 @@ namespace sxr
                 mRigidBody->setCollisionFlags(
                         (collisionFlags | btCollisionObject::CollisionFlags::CF_STATIC_OBJECT) &
                         ~btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT);
-                mRigidBody->setActivationState(enabled() ? ACTIVE_TAG : WANTS_DEACTIVATION);
+                mRigidBody->setActivationState(enabled() ? ISLAND_SLEEPING : WANTS_DEACTIVATION);
                 break;
 
                 case SimulationType::KINEMATIC:
@@ -274,7 +284,7 @@ namespace sxr
                         ~btCollisionObject::CollisionFlags::CF_STATIC_OBJECT);
                 if (enabled())
                 {
-                    mRigidBody->setActivationState(DISABLE_DEACTIVATION);
+                    mRigidBody->setActivationState(ISLAND_SLEEPING);
                 }
                 else
                 {
@@ -294,6 +304,8 @@ namespace sxr
         mCollisionMask = collidesWith;
         if (mNeedsSync & SyncOptions::IMPORTED)
         {
+            mRigidBody->setMotionState(this);
+            mRigidBody->activate();
             setWorldTransform(mRigidBody->getWorldTransform());
         }
         else
@@ -309,6 +321,8 @@ namespace sxr
     {
         if (mNeedsSync & SyncOptions::IMPORTED)
         {
+            mRigidBody->setMotionState(this);
+            mRigidBody->activate();
             setWorldTransform(mRigidBody->getWorldTransform());
         }
         else
@@ -375,10 +389,10 @@ namespace sxr
         Transform* trans = owner_object()->transform();
 
         centerOfMassWorldTrans = convertTransform2btTransform(trans);
-/*        LOGV("BULLET: rigid body getPosition %s pos = %f, %f, %f", owner_object()->name().c_str(),
+        LOGV("BULLET: rigid body getPosition %s pos = %f, %f, %f", owner_object()->name().c_str(),
              trans->position_x(),
              trans->position_y(),
-             trans->position_z());*/
+             trans->position_z());
     }
 
     void BulletRigidBody::setWorldTransform(const btTransform &centerOfMassWorldTrans)

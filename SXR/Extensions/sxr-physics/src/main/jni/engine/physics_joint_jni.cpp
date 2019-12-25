@@ -48,6 +48,21 @@ Java_com_samsungxr_physics_NativePhysicsJoint_getCollisionGroup(JNIEnv *env, jcl
     return mb->getCollisionGroup();
 }
 
+JNIEXPORT jint JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_getSimulationType(JNIEnv *env, jclass obj,
+                                                             jlong jjoint)
+{
+    PhysicsJoint* joint = reinterpret_cast<PhysicsJoint*>(jjoint);
+    return joint->getSimulationType();
+}
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_setSimulationType(JNIEnv *env, jclass obj,
+                                                                jlong jjoint, jint type)
+{
+    PhysicsJoint* joint = reinterpret_cast<PhysicsJoint*>(jjoint);
+    return joint->setSimulationType((PhysicsCollidable::SimulationType) type);
+}
 JNIEXPORT jfloat JNICALL
 Java_com_samsungxr_physics_NativePhysicsJoint_getMass(JNIEnv *env, jclass obj, jlong jjoint)
 {

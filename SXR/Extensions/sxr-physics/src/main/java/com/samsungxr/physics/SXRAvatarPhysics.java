@@ -9,6 +9,7 @@ import com.samsungxr.animation.SXRAnimationEngine;
 import com.samsungxr.animation.SXRAnimator;
 import com.samsungxr.animation.SXRAvatar;
 import com.samsungxr.animation.SXRPoseMapper;
+import com.samsungxr.animation.SXRRepeatMode;
 import com.samsungxr.animation.SXRSkeleton;
 import com.samsungxr.utility.FileNameUtils;
 
@@ -316,14 +317,12 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
                     {
                         SXRPoseMapper animToAvatar = (SXRPoseMapper) anim;
                         SXRPoseMapper animToPhysics = new SXRPoseMapper(mPhysicsSkel,
-                                                                        animToAvatar
-                                                                            .getSourceSkeleton(),
+                                                                        animToAvatar.getSourceSkeleton(),
                                                                         anim.getDuration());
 
                         animToPhysics.setName(anim.getName() + ".ToPhysics");
                         animToPhysics.setBoneOptions(SXRSkeleton.BONE_ANIMATE);
                         animToPhysics.setBoneMap(avatar.getProperty("bonemap"));
-
                         animator.removeAnimation(animToAvatar);
                         animator.addAnimation(animToPhysics);
                     }
@@ -399,6 +398,7 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
         public PhysicsRetargeter()
         {
             super(mAvatar.getSkeleton(), mPhysicsSkel, 100);
+            setRepeatMode(REPEATED);
         }
 
         public void animate(float time)

@@ -73,10 +73,12 @@ namespace sxr {
         mCollisionGroup = collisionGroup;
         if (mass != 0)
         {
+            mSimType = DYNAMIC;
             mCollisionMask = btBroadphaseProxy::AllFilter;
         }
         else
         {
+            mSimType = STATIC;
             mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
         }
     }
@@ -102,10 +104,12 @@ namespace sxr {
         mCollisionGroup = collisionGroup;
         if (mass != 0)
         {
+            mSimType = DYNAMIC;
             mCollisionMask = btBroadphaseProxy::AllFilter;
         }
         else
         {
+            mSimType = STATIC;
             mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
         }
     }
@@ -131,10 +135,12 @@ namespace sxr {
         mCollisionGroup = collisionGroup;
         if (mMass != 0)
         {
+            mSimType = DYNAMIC;
             mCollisionMask = btBroadphaseProxy::AllFilter;
         }
         else
         {
+            mSimType = STATIC;
             mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
         }
         if (mCollider)
@@ -244,15 +250,6 @@ namespace sxr {
         mAngularDamping = ad;
     }
 
-    void BulletJoint::setMaxAppliedImpulse(float v)
-    {
-        mMaxAppliedImpulse = v;
-    }
-
-    void BulletJoint::setMaxCoordVelocity(float v)
-    {
-        mMaxCoordVelocity = v;
-    }
 
     void BulletJoint::setMass(float mass)
     {
@@ -263,11 +260,6 @@ namespace sxr {
             mMass = mass;
             mNeedsSync |= SyncOptions::PROPERTIES;
         }
-    }
-
-    float  BulletJoint::getFriction() const
-    {
-        return mFriction;
     }
 
     void BulletJoint::setFriction(float friction)
@@ -298,6 +290,16 @@ namespace sxr {
         }
     }
 
+    void BulletJoint::setMaxAppliedImpulse(float v)
+    {
+        // this should never be called, only for root joint
+    }
+
+    void BulletJoint::setMaxCoordVelocity(float v)
+    {
+        // this should never be called, only for root joint
+    }
+
     Skeleton* BulletJoint::getSkeleton() const
     {
         const BulletRootJoint* root = findRoot();
@@ -306,7 +308,7 @@ namespace sxr {
 
     void BulletJoint::update(int jointIndex, BulletJoint* parent)
     {
-        btMultiBody* oldMB = getMultiBody();
+        btMultiBody* oldMB = mMultiBody;
         if (parent == nullptr)
         {
             if (oldMB)
@@ -415,9 +417,9 @@ namespace sxr {
     {
         if (mMultiBody)
         {
-            float torque[] = { x, y, z, 0 };
+            btVector3 torque(x, y, z);
             mMultiBody->addJointTorqueMultiDof(mJointIndex, torque);
-            mMultiBody->addLinkTorque(mJointIndex, btVector3(x, y, z));
+            mMultiBody->addLinkTorque(mJointIndex, torque);
         }
     }
 
@@ -426,7 +428,8 @@ namespace sxr {
         if (mMultiBody)
         {
             btVector3 torque(t, 0, 0);
-            mMultiBody->addBaseTorque(torque);
+            mMultiBody->addJointTorqueMultiDof(mJointIndex, torque);
+            mMultiBody->addLinkTorque(mJointIndex, torque);
         }
     }
 
@@ -438,6 +441,19 @@ namespace sxr {
                  getName(), mScale.x, mScale.y, mScale.z, s.x, s.y, s.z);
             mScale = s;
             mNeedsSync |= SyncOptions::PROPERTIES;
+        }
+    }
+
+    void BulletJoint::setSimulationType(PhysicsCollidable::SimulationType type)
+    {
+        if (type != mSimType)
+        {
+            mSimType = type;
+            mNeedsSync |= SyncOptions::PROPERTIES;
+            if (mMultiBody)
+            {
+                sync();
+            }
         }
     }
 
@@ -506,7 +522,6 @@ namespace sxr {
             mCollider->setCollisionShape(newShape);
             mCollider->m_link = getJointIndex();
             mCollider->setUserPointer(this);
-            mCollider->setActivationState(ACTIVE_TAG);
             options |= SyncOptions::PROPERTIES;
         }
         else
@@ -544,6 +559,46 @@ namespace sxr {
             mLocalInertia.x = localInertia.x();
             mLocalInertia.y = localInertia.y();
             mLocalInertia.z = localInertia.z();
+            int collisionFlags = mCollider->getCollisionFlags();
+            switch (mSimType)
+            {
+                case SimulationType::DYNAMIC:
+                mCollisionGroup &= ~(btBroadphaseProxy::StaticFilter | btBroadphaseProxy::KinematicFilter);
+                mCollisionMask = btBroadphaseProxy::AllFilter;
+                mCollider->setCollisionFlags(collisionFlags &
+                                              ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
+                                                btCollisionObject::CollisionFlags::CF_STATIC_OBJECT));
+                mCollider->setActivationState(enabled() ? ACTIVE_TAG : WANTS_DEACTIVATION);
+                break;
+
+                case SimulationType::STATIC:
+                mCollisionGroup |= btBroadphaseProxy::StaticFilter;
+                mCollisionGroup &= ~(btBroadphaseProxy::KinematicFilter |
+                                     btBroadphaseProxy::DefaultFilter);
+                mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
+                mCollider->setCollisionFlags(
+                        (collisionFlags | btCollisionObject::CollisionFlags::CF_STATIC_OBJECT) &
+                        ~btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT);
+                mCollider->setActivationState(enabled() ? ISLAND_SLEEPING : WANTS_DEACTIVATION);
+                break;
+
+                case SimulationType::KINEMATIC:
+                mCollisionGroup |= btBroadphaseProxy::KinematicFilter;
+                mCollisionGroup &= ~(btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter);
+                mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::KinematicFilter;
+                mCollider->setCollisionFlags((collisionFlags |
+                                               btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT) &
+                                              ~btCollisionObject::CollisionFlags::CF_STATIC_OBJECT);
+                if (enabled())
+                {
+                    mCollider->setActivationState(DISABLE_DEACTIVATION);
+                }
+                else
+                {
+                    mCollider->forceActivationState(WANTS_DEACTIVATION);
+                }
+                break;
+            }
         }
     }
 
@@ -593,7 +648,6 @@ namespace sxr {
         link->m_linkName = mName.c_str();
         link->m_jointName = mName.c_str();
         mWorld = bw;
-        mCollider->setActivationState(enabled() ? ACTIVE_TAG : ISLAND_SLEEPING);
         bw->getPhysicsWorld()->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
         LOGD("BULLET: attaching joint %s to world", getName());
     }
@@ -791,7 +845,7 @@ namespace sxr {
     {
         if (mCollider)
         {
-            mCollider->setActivationState(ISLAND_SLEEPING);
+            mCollider->setActivationState(WANTS_DEACTIVATION);
         }
     }
 
@@ -799,7 +853,14 @@ namespace sxr {
     {
         if (mCollider)
         {
-            mCollider->setActivationState(ACTIVE_TAG);
+            if (mSimType == SimulationType::DYNAMIC)
+            {
+                mCollider->activate(ACTIVE_TAG);
+            }
+            else
+            {
+                mCollider->setActivationState(ISLAND_SLEEPING);
+            }
         }
     }
 }

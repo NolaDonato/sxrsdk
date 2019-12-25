@@ -67,6 +67,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
 {
     protected SXRSkeleton             mSkeleton = null;
     protected int                     mBoneIndex = -1;
+    private final SXRPhysicsContext   mPhysicsContext;
 
     /**
      * Joint is fixed and does not move.
@@ -106,14 +107,15 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
      *
      * @param ctx            The context of the app.
      * @param mass           mass of the root joint.
-     * @oaran numBones       number of child joints in the hierarchy.
+     * @oaran numJoints      number of child joints in the hierarchy.
      * @param collisionGroup inteeger between 0 and 16 indicating which
      *                       collision group the joint belongs to
      */
     public SXRPhysicsJoint(SXRContext ctx, float mass, int numJoints, int collisionGroup)
     {
-        super(ctx, NativePhysicsJoint.ctorRoot(mass, numJoints, collisionGroup));
+        super(ctx, NativePhysicsJoint.ctorRoot(mass, numJoints, 1 << collisionGroup));
         mType = getComponentType();
+        mPhysicsContext = SXRPhysicsContext.getInstance();
     }
 
     /**
@@ -127,9 +129,10 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
      */
     public SXRPhysicsJoint(SXRSkeleton skel, float mass, int numJoints, int collisionGroup)
     {
-        super(skel.getSXRContext(), NativePhysicsJoint.ctorRoot(mass, numJoints, collisionGroup));
+        super(skel.getSXRContext(), NativePhysicsJoint.ctorRoot(mass, numJoints, 1 << collisionGroup));
         mSkeleton = skel;
         mType = getComponentType();
+        mPhysicsContext = SXRPhysicsContext.getInstance();
     }
 
     /**
@@ -164,7 +167,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     {
         super(parent.getSXRContext(),
               NativePhysicsJoint.ctorLink(parent.getNative(),
-                                          jointType, jointIndex, mass, collisionGroup));
+                                          jointType, jointIndex, mass, 1 << collisionGroup));
         if (jointIndex < 1)
         {
             throw new IllegalArgumentException("Joint index must be greater than zero");
@@ -172,6 +175,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
         mType = getComponentType();
         mSkeleton = parent.mSkeleton;
         mBoneIndex = parent.mBoneIndex + 1;
+        mPhysicsContext = SXRPhysicsContext.getInstance();
     }
 
     /** Used only by {@link SXRPhysicsLoader} */
@@ -180,6 +184,7 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
         super(ctx, nativeJoint);
         mType = getComponentType();
         mBoneIndex = 0;
+        mPhysicsContext = SXRPhysicsContext.getInstance();
     }
 
     static public long getComponentType()
@@ -214,6 +219,44 @@ public class SXRPhysicsJoint extends SXRPhysicsCollidable
     public void setName(String name)
     {
         NativePhysicsJoint.setName(getNative(), name);
+    }
+
+
+    /**
+     * Establishes how this joint will behave in the simulation.
+     *
+     * @param type type of simulation desired for the rigid body:
+     * <table>
+     * <tr><td>DYNAMIC</td><td>Collides with other objects, moved by simulation</td></tr>
+     * <tr><td>STATIC</td><td>Collides with other objects, does not move</td></tr>
+     * <tr><td>KINEMATIC</td><td>Collides with other objects, moved by application</td></tr>
+     * </table>
+     */
+    public void setSimulationType(final int type)
+    {
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                NativePhysicsJoint.setSimulationType(getNative(), type);
+            }
+        });
+    }
+
+    /**
+     * Queries how this joint will behave in the simulation.
+     *
+     * @return type of simulation desired for the rigid body
+     * <table>
+     * <tr><td>DYNAMIC</td><td>Collides with other objects, moved by simulation</td></tr>
+     * <tr><td>STATIC</td><td>Collides with other objects, does not move</td></tr>
+     * <tr><td>KINEMATIC</td><td>Collides with other objects, moved by application</td></tr>
+     * </table>
+     */
+    public int getSimulationType()
+    {
+        return NativePhysicsJoint.getSimulationType(getNative());
     }
 
     public void setScale(Vector3f v)
@@ -712,6 +755,7 @@ class NativePhysicsJoint
     static native float[] getScale(long joint);
     static native int     getNumJoints(long joint);
     static native int     getCollisionGroup(long joint);
+    static native int     getSimulationType(long jjoint);
 
     static native void setFriction(long joint, float friction);
     static native void setAxis(long joint, float x, float y, float z);
@@ -722,6 +766,7 @@ class NativePhysicsJoint
     static native void setMaxAppliedImpulse(long joint, float d);
     static native void setMaxCoordVelocity(long joint, float d);
     static native void setScale(long joint, float x, float y, float z);
+    static native void setSimulationType(long jjoint, int jtype);
 
     static native void applyTorque(long joint, float x, float y, float z);
     static native void applyCentralForce(long joint, float x, float y, float z);

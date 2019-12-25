@@ -58,6 +58,7 @@ class PhysicsJoint :  public PhysicsCollidable
 	virtual Skeleton*        getSkeleton() const = 0;
 	virtual float            getMaxAppliedImpulse() const = 0;
 	virtual float            getMaxCoordVelocity() const = 0;
+	virtual SimulationType   getSimulationType() const = 0;
 
 	virtual void  setAxis(const glm::vec3& axis) = 0;
 	virtual void  setPivot(const glm::vec3& pivot) = 0;
@@ -65,6 +66,7 @@ class PhysicsJoint :  public PhysicsCollidable
 	virtual void  setAngularDamping(float ad) = 0;
 	virtual void  setMaxAppliedImpulse(float v) = 0;
 	virtual void  setMaxCoordVelocity(float v) = 0;
+	virtual void  setSimulationType(SimulationType type) = 0;
 	virtual void  applyCentralForce(float x, float y, float z) = 0;
 	virtual void  applyTorque(float x, float y, float z) = 0;
 	virtual void  applyTorque(float t) = 0;

@@ -30,22 +30,13 @@ class PhysicsWorld;
 
 class PhysicsRigidBody : public PhysicsCollidable
 {
- public:
-	enum SimulationType
-	{
-		DYNAMIC = 0,
-		STATIC = 1,
-		KINEMATIC = 2
-	};
-
+public:
 	PhysicsRigidBody() : PhysicsCollidable(PhysicsRigidBody::getComponentType()) {}
 
 	virtual ~PhysicsRigidBody() {}
 
 	static long long getComponentType() { return COMPONENT_TYPE_PHYSICS_RIGID_BODY; }
 
-	virtual void setSimulationType(SimulationType t) = 0;
-	virtual SimulationType getSimulationType() const = 0;
     virtual void applyCentralForce(float x, float y, float z) = 0;
 	virtual void applyForce(float force_x, float force_y, float force_z,
 			float rel_pos_x, float rel_pos_y, float rel_pos_z) = 0;

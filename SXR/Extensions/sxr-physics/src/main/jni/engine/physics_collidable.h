@@ -24,6 +24,13 @@ namespace sxr {
     class PhysicsCollidable : public Component
     {
     public:
+        enum SimulationType
+        {
+            DYNAMIC = 0,
+            STATIC = 1,
+            KINEMATIC = 2
+        };
+
         enum SyncOptions
         {
             COLLISION_SHAPE = 1,
@@ -39,11 +46,13 @@ namespace sxr {
         virtual float getFriction() const = 0;
         virtual int   getCollisionGroup() const = 0;
         virtual const glm::vec3& getScale() const = 0;
+        virtual SimulationType getSimulationType() const = 0;
 
         virtual void setName(const char*) = 0;
         virtual void setMass(float mass) = 0;
         virtual void setFriction(float n)  = 0;
         virtual void setScale(const glm::vec3& v) = 0;
+        virtual void setSimulationType(SimulationType t) = 0;
 
         virtual void applyTorque(float x, float y, float z) = 0;
         virtual void sync(int options = 0) = 0;

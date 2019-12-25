@@ -55,26 +55,21 @@ namespace sxr {
     BulletRootJoint::BulletRootJoint(float mass, int numJoints, int collisionGroup)
     : BulletJoint(mass, numJoints, collisionGroup),
       mNumJoints(numJoints - 1),
-      mLinksAdded(0)
+      mLinksAdded(0),
+      mMaxCoordVelocity(100),
+      mMaxAppliedImpulse(1000)
     {
         mJointType = JointType::baseJoint;
         mJoints.reserve(mNumJoints);
         mJoints.resize(mNumJoints);
-        mCollisionGroup = collisionGroup;
-        if (mass != 0)
-        {
-            mCollisionMask = btBroadphaseProxy::AllFilter;
-        }
-        else
-        {
-            mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
-        }
     }
 
     BulletRootJoint::BulletRootJoint(btMultiBody* multiBody)
     : BulletJoint(multiBody->getNumLinks(), multiBody->getBaseMass(),
                   btBroadphaseProxy::DefaultFilter),
       mLinksAdded(0),
+      mMaxCoordVelocity(100),
+      mMaxAppliedImpulse(1000),
       mNumJoints(multiBody->getNumLinks())
     {
         mNeedsSync |= SyncOptions::IMPORTED;
@@ -86,6 +81,8 @@ namespace sxr {
         mLinearDamping = mMultiBody->getLinearDamping();
         mAngularDamping = mMultiBody->getAngularDamping();
         mCollider = multiBody->getBaseCollider();
+        mMaxAppliedImpulse = multiBody->getMaxAppliedImpulse();
+        mMaxCoordVelocity = multiBody->getMaxCoordinateVelocity();
         if (mCollider)
         {
             btCollisionShape* shape = mCollider->getCollisionShape();
@@ -466,11 +463,48 @@ namespace sxr {
 
             mMultiBody->setBaseMass(mMass);
             curShape->setLocalScaling(scale);
-            curShape->calculateLocalInertia(getMass(), localInertia);
+            curShape->calculateLocalInertia(mMass, localInertia);
             mMultiBody->setBaseInertia(localInertia);
+            int collisionFlags = mCollider->getCollisionFlags();
+
+            switch (mSimType)
+            {
+                case SimulationType::DYNAMIC:
+                    mCollisionGroup &=
+                            ~(btBroadphaseProxy::StaticFilter | btBroadphaseProxy::KinematicFilter);
+                    mCollisionMask = btBroadphaseProxy::AllFilter;
+                    mCollider->setCollisionFlags(collisionFlags &
+                                                 ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
+                                                   btCollisionObject::CollisionFlags::CF_STATIC_OBJECT));
+                    mCollider->setActivationState(enabled() ? ACTIVE_TAG : WANTS_DEACTIVATION);
+                    break;
+
+                case SimulationType::STATIC:
+                    mCollisionGroup |= btBroadphaseProxy::StaticFilter;
+                    mCollisionGroup &= ~(btBroadphaseProxy::KinematicFilter |
+                                         btBroadphaseProxy::DefaultFilter);
+                    mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
+                    mCollider->setCollisionFlags(
+                            (collisionFlags | btCollisionObject::CollisionFlags::CF_STATIC_OBJECT) &
+                            ~btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT);
+                    mCollider->setActivationState(enabled() ? ISLAND_SLEEPING : WANTS_DEACTIVATION);
+                    break;
+
+                case SimulationType::KINEMATIC:
+                    mCollisionGroup |= btBroadphaseProxy::KinematicFilter;
+                    mCollisionGroup &=
+                            ~(btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter);
+                    mCollisionMask =
+                            btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::KinematicFilter;
+                    mCollider->setCollisionFlags((collisionFlags |
+                                                  btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT) &
+                                                 ~btCollisionObject::CollisionFlags::CF_STATIC_OBJECT);
+                    mCollider->setActivationState(enabled() ? ISLAND_SLEEPING : WANTS_DEACTIVATION);
+                    break;
+            }
+
         }
     }
-
 
     bool BulletRootJoint::addJointToWorld(PhysicsJoint* joint, PhysicsWorld* world)
     {
@@ -538,7 +572,7 @@ namespace sxr {
                                          mMass,
                                          btVector3(0, 0, 0),
                                          (mMass == 0),
-                                         true);
+                                         false);
             mMultiBody->setUserPointer(this);
             mMultiBody->setHasSelfCollision(false);
             mMultiBody->setBaseMass(mMass);
@@ -569,7 +603,6 @@ namespace sxr {
         {
             mName = owner->name();
         }
-        mCollider->setActivationState(enabled() ? ACTIVE_TAG : ISLAND_SLEEPING);
         bw->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
         mMultiBody->setBaseName(mName.c_str());
         bw->addMultiBody(mMultiBody);

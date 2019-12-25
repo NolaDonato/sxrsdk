@@ -817,6 +817,7 @@ public class SXRWorld extends SXRPhysicsContent implements IEventReceiver
         rd.setRenderingOrder(SXRRenderData.SXRRenderingOrder.OVERLAY);
         rd.setDrawMode(GL_LINES);
         debugDrawNode.attachRenderData(rd);
+        debugDrawNode.setName("BulletDebugDraw");
         NativePhysics3DWorld.setupDebugDraw(getNative(), debugDrawNode.getNative());
         return debugDrawNode;
     }
