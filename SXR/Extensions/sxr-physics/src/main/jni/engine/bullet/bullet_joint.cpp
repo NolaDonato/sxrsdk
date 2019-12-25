@@ -360,7 +360,7 @@ namespace sxr {
             btTransform t = convertTransform2btTransform(trans);
             btVector3 pos = t.getOrigin();
 
-            LOGE("BULLET: UPDATE %s, %f, %f, %f", owner->name().c_str(), pos.getX(), pos.getY(), pos.getZ());
+//            LOGD("BULLET: UPDATE %s, %f, %f, %f", owner->name().c_str(), pos.getX(), pos.getY(), pos.getZ());
             mCollider->setWorldTransform(t);
         }
     }
@@ -397,11 +397,7 @@ namespace sxr {
             trans->set_rotation(rot.getW(), rot.getX(), rot.getY(), rot.getZ());
         }
         mNeedsSync = 0;
-        LOGD("BULLET: JOINT %s %3f, %3f, %3f",
-             owner->name().c_str(),
-             pos.x(),
-             pos.y(),
-             pos.z());
+//        LOGD("BULLET: JOINT %s %3f, %3f, %3f",owner->name().c_str(),pos.x(),pos.y(),pos.z());
     }
 
     void BulletJoint::applyCentralForce(float x, float y, float z)

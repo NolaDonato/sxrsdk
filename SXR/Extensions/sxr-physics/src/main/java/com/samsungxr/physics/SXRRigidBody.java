@@ -162,9 +162,16 @@ public class SXRRigidBody extends SXRPhysicsCollidable
         NativeRigidBody.setName(getNative(), name);
     }
 
-    public void setScale(float x, float y, float z)
+    public void setScale(final float x, final float y, final float z)
     {
-        NativeRigidBody.setScale(getNative(), x, y, z);
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                NativeRigidBody.setScale(getNative(), x, y, z);
+            }
+        });
     }
 
     public void setScale(Vector3f v)
@@ -359,9 +366,16 @@ public class SXRRigidBody extends SXRPhysicsCollidable
      * @param y factor on the 'Y' axis.
      * @param z factor on the 'Z' axis.
      */
-    public void setGravity(float x, float y, float z)
+    public void setGravity(final float x, final float y, final float z)
     {
-        NativeRigidBody.setGravity(getNative(), x, y, z);
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                NativeRigidBody.setGravity(getNative(), x, y, z);
+            }
+        });
     }
 
     /**
@@ -370,9 +384,16 @@ public class SXRRigidBody extends SXRPhysicsCollidable
      * @param linear factor on how much the rigid body resists translation.
      * @param angular factor on how much the rigid body resists rotation.
      */
-    public void setDamping(float linear, float angular)
+    public void setDamping(final float linear, final float angular)
     {
-        NativeRigidBody.setDamping(getNative(), linear, angular);
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                NativeRigidBody.setDamping(getNative(), linear, angular);
+            }
+        });
     }
 
     /**
@@ -382,9 +403,16 @@ public class SXRRigidBody extends SXRPhysicsCollidable
      * @param y factor on the 'Y' axis.
      * @param z factor on the 'Z' axis.
      */
-    public void setLinearVelocity(float x, float y, float z)
+    public void setLinearVelocity(final float x, final float y, final float z)
     {
-        NativeRigidBody.setLinearVelocity(getNative(), x, y, z);
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                NativeRigidBody.setLinearVelocity(getNative(), x, y, z);
+            }
+        });
     }
 
     /**
@@ -394,9 +422,16 @@ public class SXRRigidBody extends SXRPhysicsCollidable
      * @param y factor on the 'Y' axis.
      * @param z factor on the 'Z' axis.
      */
-    public void setAngularVelocity(float x, float y, float z)
+    public void setAngularVelocity(final float x, final float y, final float z)
     {
-        NativeRigidBody.setAngularVelocity(getNative(), x, y, z);
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                NativeRigidBody.setAngularVelocity(getNative(), x, y, z);
+            }
+        });
     }
 
     /**
@@ -406,9 +441,16 @@ public class SXRRigidBody extends SXRPhysicsCollidable
      * @param y factor on the 'Y' axis.
      * @param z factor on the 'Z' axis.
      */
-    public void setAngularFactor(float x, float y, float z)
+    public void setAngularFactor(final float x, final float y, final float z)
     {
-        NativeRigidBody.setAngularFactor(getNative(), x, y, z);
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                NativeRigidBody.setAngularFactor(getNative(), x, y, z);
+            }
+        });
     }
 
     /**
@@ -418,9 +460,16 @@ public class SXRRigidBody extends SXRPhysicsCollidable
      * @param y factor on the 'Y' axis.
      * @param z factor on the 'Z' axis.
      */
-    public void setLinearFactor(float x, float y, float z)
+    public void setLinearFactor(final float x, final float y, final float z)
     {
-        NativeRigidBody.setLinearFactor(getNative(), x, y, z);
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                NativeRigidBody.setLinearFactor(getNative(), x, y, z);
+            }
+        });
     }
 
     /**
@@ -429,9 +478,16 @@ public class SXRRigidBody extends SXRPhysicsCollidable
      * @param linear factor for the linearVelocity
      * @param angular factor for the angularVelocity
      */
-    public void setSleepingThresholds(float linear, float angular)
+    public void setSleepingThresholds(final float linear, final float angular)
     {
-        NativeRigidBody.setSleepingThresholds(getNative(), linear, angular);
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                NativeRigidBody.setSleepingThresholds(getNative(), linear, angular);
+            }
+        });
     }
 
     /**
@@ -440,9 +496,103 @@ public class SXRRigidBody extends SXRPhysicsCollidable
      * @param collisionObject rigidbody object on the collision check
      * @param ignore boolean to indicate if the specified object will be ignored or not
      */
-    public void setIgnoreCollisionCheck(SXRRigidBody collisionObject, boolean ignore)
+    public void setIgnoreCollisionCheck(final SXRRigidBody collisionObject, final boolean ignore)
     {
-        NativeRigidBody.setIgnoreCollisionCheck(getNative(), collisionObject.getNative(), ignore);
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                NativeRigidBody.setIgnoreCollisionCheck(getNative(), collisionObject.getNative(), ignore);
+            }
+        });
+    }
+
+    /**
+     * Set the restitution factor of this {@linkplain SXRRigidBody rigid body}
+     *
+     * @param n the restitution factor
+     */
+    public void setRestitution(final float n)
+    {
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                NativeRigidBody.setRestitution(getNative(), n);
+            }
+        });
+    }
+
+    /**
+     * Set the friction factor of this {@linkplain SXRRigidBody rigid body}
+     *
+     * @param n the friction factor
+     */
+    public void setFriction(final float n)
+    {
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                NativeRigidBody.setFriction(getNative(), n);
+            }
+        });
+    }
+
+
+    /**
+     * Set the continuous collision detection motion threshold factor of this {@linkplain SXRRigidBody rigid body}
+     *
+     * @param n the continuous collision detection motion threshold factor
+     */
+    public void setCcdMotionThreshold(final float n)
+    {
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                NativeRigidBody.setCcdMotionThreshold(getNative(), n);
+            }
+        });
+    }
+
+
+    /**
+     * Set the sphere to continuous collision detection of this {@linkplain SXRRigidBody rigid body}
+     *
+     * @param n Radius of sphere to continuous collision detection.
+     */
+    public void setCcdSweptSphereRadius(final float n)
+    {
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                NativeRigidBody.setCcdSweptSphereRadius(getNative(), n);
+            }
+        });
+    }
+
+    /**
+     * Set the  contact processing threshold factor of this {@linkplain SXRRigidBody rigid body}
+     *
+     * @param n the contact processing threshold factor
+     */
+    public void setContactProcessingThreshold(final float n)
+    {
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                NativeRigidBody.setContactProcessingThreshold(getNative(), n);
+            }
+        });
     }
 
     /**
@@ -509,30 +659,12 @@ public class SXRRigidBody extends SXRPhysicsCollidable
     }
 
     /**
-     * Set the friction factor of this {@linkplain SXRRigidBody rigid body}
-     *
-     * @param n the friction factor
-     */
-    public void setFriction(float n) {
-        NativeRigidBody.setFriction(getNative(), n);
-    }
-
-    /**
      * Returns the restitution factor on this {@linkplain SXRRigidBody rigid body}.
      *
      * @return The restitution factor scalar as a float
      */
     public float getRestitution() {
         return NativeRigidBody.getRestitution(getNative());
-    }
-
-    /**
-     * Set the restitution factor of this {@linkplain SXRRigidBody rigid body}
-     *
-     * @param n the restitution factor
-     */
-    public void setRestitution(float n) {
-        NativeRigidBody.setRestitution(getNative(), n);
     }
 
     /**
@@ -543,16 +675,6 @@ public class SXRRigidBody extends SXRPhysicsCollidable
     public float getCcdMotionThreshold()
     {
         return NativeRigidBody.getCcdMotionThreshold(getNative());
-    }
-
-    /**
-     * Set the continuous collision detection motion threshold factor of this {@linkplain SXRRigidBody rigid body}
-     *
-     * @param n the continuous collision detection motion threshold factor
-     */
-    public void setCcdMotionThreshold(float n)
-    {
-        NativeRigidBody.setCcdMotionThreshold(getNative(), n);
     }
 
     /**
@@ -573,26 +695,6 @@ public class SXRRigidBody extends SXRPhysicsCollidable
     public float getCcdSweptSphereRadius()
     {
         return NativeRigidBody.getCcdSweptSphereRadius(getNative());
-    }
-
-    /**
-     * Set the sphere to continuous collision detection of this {@linkplain SXRRigidBody rigid body}
-     *
-     * @param n Radius of sphere to continuous collision detection.
-     */
-    public void setCcdSweptSphereRadius(float n)
-    {
-        NativeRigidBody.setCcdSweptSphereRadius(getNative(), n);
-    }
-
-    /**
-     * Set the  contact processing threshold factor of this {@linkplain SXRRigidBody rigid body}
-     *
-     * @param n the contact processing threshold factor
-     */
-    public void setContactProcessingThreshold(float n)
-    {
-        NativeRigidBody.setContactProcessingThreshold(getNative(), n);
     }
 
     /**
@@ -639,7 +741,6 @@ public class SXRRigidBody extends SXRPhysicsCollidable
             world.removeBody(this);
         }
     }
-
 }
 
 class NativeRigidBody

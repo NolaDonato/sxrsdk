@@ -262,7 +262,14 @@ namespace sxr
                 mRigidBody->setCollisionFlags(collisionFlags &
                                           ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
                                             btCollisionObject::CollisionFlags::CF_STATIC_OBJECT));
-                mRigidBody->setActivationState(enabled() ? ACTIVE_TAG : WANTS_DEACTIVATION);
+                if (enabled())
+                {
+                    mRigidBody->activate();
+                }
+                else
+                {
+                    mRigidBody->setActivationState(WANTS_DEACTIVATION);
+                }
                 break;
 
                 case SimulationType::STATIC:
@@ -284,7 +291,7 @@ namespace sxr
                         ~btCollisionObject::CollisionFlags::CF_STATIC_OBJECT);
                 if (enabled())
                 {
-                    mRigidBody->setActivationState(ISLAND_SLEEPING);
+                    mRigidBody->setActivationState(DISABLE_DEACTIVATION);
                 }
                 else
                 {
@@ -389,10 +396,10 @@ namespace sxr
         Transform* trans = owner_object()->transform();
 
         centerOfMassWorldTrans = convertTransform2btTransform(trans);
-        LOGV("BULLET: rigid body getPosition %s pos = %f, %f, %f", owner_object()->name().c_str(),
-             trans->position_x(),
-             trans->position_y(),
-             trans->position_z());
+//        LOGV("BULLET: rigid body getPosition %s pos = %f, %f, %f", owner_object()->name().c_str(),
+//             trans->position_x(),
+//             trans->position_y(),
+//             trans->position_z());
     }
 
     void BulletRigidBody::setWorldTransform(const btTransform &centerOfMassWorldTrans)
@@ -426,10 +433,10 @@ namespace sxr
             trans->set_rotation(rot.getW(), rot.getX(), rot.getY(), rot.getZ());
         }
         mNeedsSync &= ~SyncOptions::IMPORTED;
-        LOGV("BULLET: rigid body %s setPosition = %f, %f, %f", owner->name().c_str(),
-                trans->position_x(),
-                trans->position_y(),
-                trans->position_z());
+//        LOGV("BULLET: rigid body %s setPosition = %f, %f, %f", owner->name().c_str(),
+//                trans->position_x(),
+//                trans->position_y(),
+//                trans->position_z());
     }
 
     void BulletRigidBody::applyCentralForce(float x, float y, float z)

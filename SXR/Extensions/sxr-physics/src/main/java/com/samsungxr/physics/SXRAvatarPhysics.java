@@ -375,6 +375,7 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
                     new Vector3f(angularlimits, angularlimits, angularlimits));
         }
         s = avatar.getModelProperty(modelType, "collisiongroup");
+        s = avatar.getModelProperty(modelType, "collisiongroup");
         if (s != null)
         {
             int collisiongroup = Integer.parseInt(s);
@@ -399,6 +400,7 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
         {
             super(mAvatar.getSkeleton(), mPhysicsSkel, 100);
             setRepeatMode(REPEATED);
+            setRepeatCount(-1);
         }
 
         public void animate(float time)
