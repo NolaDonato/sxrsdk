@@ -328,6 +328,8 @@ public class SXRPoseMapper extends SXRAnimation
             mDestPose.copy(dstskel.getPose());
             srcskel.getPosition(v);
             v.mul(mScale);
+            Log.w("ANIMATION", "%s (%3f %3f %3f)",
+                    getName(), v.x, v.y, v.z);
             for (int i = 0; i < numsrcbones; ++i)
             {
                 int boneindex = mBoneMap[i];

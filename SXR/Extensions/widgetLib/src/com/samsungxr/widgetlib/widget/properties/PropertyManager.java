@@ -1,7 +1,7 @@
 package com.samsungxr.widgetlib.widget.properties;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.samsungxr.widgetlib.widget.Widget;
 import com.samsungxr.widgetlib.log.Log;

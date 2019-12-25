@@ -17,7 +17,7 @@ package com.samsungxr.mixedreality.CVLibrary;
 
 //import com.google.ar.core.Plane;
 import com.google.ar.core.Pose;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.samsungxr.SXRContext;
 import com.samsungxr.SXRNode;

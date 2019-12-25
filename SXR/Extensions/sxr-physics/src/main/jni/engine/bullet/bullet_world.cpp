@@ -249,7 +249,6 @@ void BulletWorld::step(float timeStep, int maxSubSteps)
     }
     if (mIsMultiBody)
     {
-        //setPhysicsTransform();
         mPhysicsWorld->stepSimulation(timeStep, maxSubSteps);
         getPhysicsTransforms();
     }

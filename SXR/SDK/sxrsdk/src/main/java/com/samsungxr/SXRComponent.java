@@ -198,7 +198,12 @@ public class SXRComponent extends SXRHybridObject
      * @return SXRComponent of requested type or null if none exists.
      */
     public SXRComponent getComponent(long type) {
-        return getOwnerObject().getComponent(type);
+        SXRNode owner = getOwnerObject();
+        if (owner != null)
+        {
+            return owner.getComponent(type);
+        }
+        return null;
     }
     
     /**

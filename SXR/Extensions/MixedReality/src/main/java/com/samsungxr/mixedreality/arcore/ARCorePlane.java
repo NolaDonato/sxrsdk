@@ -15,7 +15,7 @@
 
 package com.samsungxr.mixedreality.arcore;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.google.ar.core.Anchor;
 import com.google.ar.core.Plane;

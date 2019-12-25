@@ -2,8 +2,8 @@ package com.samsungxr.widgetlib.log;
 
 import android.content.Context;
 import android.os.Environment;
-import android.support.annotation.NonNull;
-import android.support.v4.util.Pools.SynchronizedPool;
+import androidx.annotation.NonNull;
+import androidx.core.util.Pools.SynchronizedPool;
 import android.util.SparseArray;
 
 import java.io.BufferedWriter;

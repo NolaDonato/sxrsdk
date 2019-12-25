@@ -1,6 +1,6 @@
 package com.samsungxr.widgetlib.widget;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.samsungxr.SXRMesh;
 import com.samsungxr.SXRNode;

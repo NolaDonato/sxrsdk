@@ -6,7 +6,7 @@ buildscript {
         google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.2.1'
+        classpath 'com.android.tools.build:gradle:3.3.2'
     }
 }
 
@@ -25,11 +25,11 @@ def buildRoot = project.getRootDir()
 def buildType = gradle.startParameter.taskNames.any {it.toLowerCase().contains("debug") ? "debug" : "release"}
 
 android {
-    compileSdkVersion 26
+    compileSdkVersion 28
 
     defaultConfig {
         minSdkVersion 21
-        targetSdkVersion 26
+        targetSdkVersion 28
         versionCode 1
         versionName "1.0"
 
@@ -37,7 +37,7 @@ android {
         {
             cmake
             {
-                arguments '-DANDROID_PLATFORM=android-21',
+                arguments '-DANDROID_PLATFORM=android-28',
                           '-DANDROID_TOOLCHAIN=clang',
 						  '-DANDROID_STL=c++_shared',
                           '-DOPENGL_INCLUDE_DIR=' + ndkDir + '/sysroot/usr/include/GLES3',

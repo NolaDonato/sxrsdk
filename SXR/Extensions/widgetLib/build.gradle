@@ -1,6 +1,7 @@
 buildscript {
     repositories {
         jcenter()
+        google()
     }
 }
 
@@ -19,14 +20,15 @@ repositories {
     flatDir {
         dirs '../../sxr-libs'
     }
+    google()
 }
 
 android {
-    compileSdkVersion 26
+    compileSdkVersion 28
 
     defaultConfig {
-        minSdkVersion 23
-        targetSdkVersion 26
+        minSdkVersion 21
+        targetSdkVersion 28
         multiDexEnabled true
     }
 
@@ -60,10 +62,11 @@ dependencies {
     if (findProject(':sxrsdk')) {
         implementation project(':sxrsdk')
     } else {
-        implementation(name: 'sxrsdk-release', ext: 'aar')
+        implementation(name: 'sxrsdk-debug', ext: 'aar')
     }
 
-    implementation 'com.android.support:support-v4:26.1.0'
+    implementation "androidx.annotation:annotation:1.0.2"
+    implementation "androidx.core:core:1.0.2"
     implementation "org.joml:joml-android:${jomlVersion}"
     implementation 'com.google.code.gson:gson:2.8.5'
 }

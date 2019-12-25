@@ -7,11 +7,11 @@ repositories {
 }
 
 android {
-    compileSdkVersion 26
+    compileSdkVersion 28
 
     defaultConfig {
-        minSdkVersion 21
-        targetSdkVersion 26
+        minSdkVersion 23
+        targetSdkVersion 28
 
         externalNativeBuild {
             ndkBuild {

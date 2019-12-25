@@ -1,7 +1,7 @@
 package com.samsungxr.widgetlib.widget.custom;
 
 import android.graphics.PointF;
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.samsungxr.widgetlib.widget.compound.CheckableGroup;
 import com.samsungxr.widgetlib.log.Log;

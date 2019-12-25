@@ -1,6 +1,6 @@
 package com.samsungxr.widgetlib.main;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.samsungxr.widgetlib.thread.ConcurrentListPool;
 import com.samsungxr.widgetlib.thread.ConcurrentObjectPool;

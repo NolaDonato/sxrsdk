@@ -15,7 +15,7 @@
 
 package com.samsungxr.mixedreality;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
 
 import com.google.ar.core.Pose;
 import com.samsungxr.SXRBehavior;

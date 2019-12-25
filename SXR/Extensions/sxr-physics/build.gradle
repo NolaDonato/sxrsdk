@@ -40,11 +40,11 @@ task extractBulletDebugLibs (type: Copy) {
 }
 
 android {
-    compileSdkVersion 26
+    compileSdkVersion 28
 
     defaultConfig {
-        minSdkVersion 21
-        targetSdkVersion 26
+        minSdkVersion 23
+        targetSdkVersion 28
         packagingOptions {
             pickFirst 'lib/x86/libc++_shared.so'
             pickFirst 'lib/arm64-v8a/libc++_shared.so'
@@ -61,7 +61,7 @@ android {
             jniDebuggable = true
             externalNativeBuild {
                 cmake {
-                    arguments '-DANDROID_PLATFORM=android-21',
+                    arguments '-DANDROID_PLATFORM=android-28',
                             '-DANDROID_TOOLCHAIN=clang',
                             '-DANDROID_STL=c++_shared',
                             '-DCMAKE_BUILD_TYPE=Debug'
@@ -74,7 +74,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-project.txt'
             externalNativeBuild {
                 cmake {
-                    arguments '-DANDROID_PLATFORM=android-21',
+                    arguments '-DANDROID_PLATFORM=android-28',
                             '-DANDROID_TOOLCHAIN=clang',
                             '-DANDROID_STL=c++_shared',
                             '-DCMAKE_BUILD_TYPE=Release'

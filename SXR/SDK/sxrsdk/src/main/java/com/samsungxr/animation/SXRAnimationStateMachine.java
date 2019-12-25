@@ -293,7 +293,10 @@ public class SXRAnimationStateMachine extends SXRStateMachine implements SXRAnim
         {
             queue.remove(animator);
         }
-        mCurrentState.onEvent("finish");
+        if (mCurrentState != null)
+        {
+            mCurrentState.onEvent("finish");
+        }
     }
 
     public void removeBlendAnimation(SXRAnimationQueue queue, SXRAnimator animator)
