@@ -1,11 +1,13 @@
 package com.samsungxr.animation;
 
+import com.samsungxr.SXRNode;
 import com.samsungxr.utility.Log;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.util.Arrays;
+import java.util.IllformedLocaleException;
 
 public class SXRPoseMapper extends SXRAnimation
 {
@@ -282,7 +284,14 @@ public class SXRPoseMapper extends SXRAnimation
         }
         synchronized (mDestSkeleton)
         {
-            mapLocalToTarget();
+            try
+            {
+                mapLocalToTarget();
+            }
+            catch (IllegalAccessException ex)
+            {
+                return;
+            }
             mDestSkeleton.poseToBones();
         }
     }
@@ -297,7 +306,7 @@ public class SXRPoseMapper extends SXRAnimation
      *
      * @returns true if successful, false on error
      */
-    public boolean mapLocalToTarget()
+    public boolean mapLocalToTarget() throws IllegalAccessException
     {
         SXRSkeleton	srcskel = mSourceSkeleton;
         SXRSkeleton	dstskel = mDestSkeleton;
@@ -321,6 +330,10 @@ public class SXRPoseMapper extends SXRAnimation
             Quaternionf q = new Quaternionf();
             int numsrcbones = srcskel.getNumBones();
 
+            if (mBoneMap.length != numsrcbones)
+            {
+                throw new IllegalAccessException("PoseMapper %s source skeleton does not match bone map");
+            }
             if (mDestPose.getNumBones() != dstskel.getNumBones())
             {
                 mDestPose = new SXRPose(dstskel);
@@ -369,4 +382,19 @@ public class SXRPoseMapper extends SXRAnimation
         mScale = sf;
     }
 
+    /**
+     * Get the scale factor for the output pose.
+     * <p>
+     * The scale factor is applied to the computed positions.
+     * For example, you can take an animation that is originally in
+     * centimeters and convert it to meters.
+     * </p>
+     * @returns positive scale factor (default is 1)
+     * @see SXRSkin#scalePositions(float)
+     * @see #setScale
+     */
+    public float getScale()
+    {
+        return mScale;
+    }
 }

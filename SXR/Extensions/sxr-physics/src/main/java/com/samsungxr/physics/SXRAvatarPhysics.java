@@ -65,6 +65,22 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
         }
     }
 
+    public void setPhysicsRoot(SXRNode root)
+    {
+        SXRNode parent = root.getParent();
+        SXRNode worldOwner = mPhysicsWorld.getOwnerObject();
+
+        while (parent != worldOwner)
+        {
+            if (parent == null)
+            {
+                throw new IllegalArgumentException("The physics root must be a descendant of the physics world owner");
+            }
+            parent = parent.getParent();
+        }
+        mPhysicsRoot = root;
+    }
+
     public static long getComponentType() { return TYPE_AVATAR_PHYSICS; }
 
     public SXRPhysicsLoader getPhysicsLoader()
@@ -136,12 +152,25 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
         setPhysicsProperties(filename, null);
         if (mPhysicsSkel == null)
         {
-            mPhysicsRoot = world.getOwnerObject();
-            if ((mPhysicsRoot != null) && (mAvatar.getSkeleton() != null) && (skel != null))
+            if (mPhysicsRoot == null)
             {
-                mPhysicsSkel = skel;
-                mPhysicsSkel.poseFromBones();
-                mPhysicsSkel.disable();
+                mPhysicsRoot = world.getOwnerObject();
+            }
+            if ((mAvatar.getSkeleton() != null) && (skel != null))
+            {
+                synchronized (skel)
+                {
+                    SXRNode skelRoot = skel.getBone(0);
+
+                    skel.disable();
+                    if (skelRoot.getParent() != null)
+                    {
+                        skelRoot.getParent().removeChildObject(skelRoot);
+                    }
+                    mPhysicsRoot.addChildObject(skelRoot);
+                    mPhysicsSkel = skel;
+                    mPhysicsSkel.poseFromBones();
+                }
                 if (mPhysicsWorld != world)
                 {
                     mAvatar.getModel().addChildObject(mPhysicsRoot);
@@ -160,7 +189,7 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
             SXRPhysicsJoint attachJoint2 = (SXRPhysicsJoint) ((attachNode2 != null) ?
                 attachNode2.getComponent(SXRPhysicsJoint.getComponentType()) : null);
 
-            skel.poseFromBones();
+            mPhysicsSkel.poseFromBones();
             if (mPhysicsWorld != world)
             {
                 if ((attachJoint1 != null) && (attachJoint2 != null))
@@ -208,6 +237,11 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
                 mPhysicsSkel.merge(skel, attachBone);
             }
             mPhysicsWorld.merge(world);
+        }
+        if (isRunning())
+        {
+            mPhysicsToAvatar.setBoneMap((String) null);
+            mPhysicsSkel.enable();
         }
     }
 
@@ -293,11 +327,9 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
                     physicsProps.put("Skeleton", mPhysicsSkel);
                     setPhysicsProperties(physicsfile, physicsProps);
                 }
-                synchronized (mPhysicsSkel)
-                {
-                    mPhysicsLoader.loadPhysics(mPhysicsWorld, res, physicsProps);
-                }
-            }
+                mPhysicsSkel.disable();
+                mPhysicsLoader.loadPhysics(mPhysicsWorld, res, physicsProps);
+             }
             catch (IOException ex) { }
         }
 
@@ -321,6 +353,7 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
                                                                         anim.getDuration());
 
                         animToPhysics.setName(anim.getName() + ".ToPhysics");
+                        animToPhysics.setScale(animToAvatar.getScale());
                         animToPhysics.setBoneOptions(SXRSkeleton.BONE_ANIMATE);
                         animToPhysics.setBoneMap(avatar.getProperty("bonemap"));
                         animator.removeAnimation(animToAvatar);
