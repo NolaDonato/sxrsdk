@@ -970,18 +970,12 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             Vector2f limits0 = getLimits(dof0, mAngularLimits.x);
             Vector2f limits1 = getLimits(dof1, mAngularLimits.y);
             Vector2f limits2 = getLimits(dof2, mAngularLimits.z);
-            Vector3f stiffness = new Vector3f((float) dof0.optDouble("springStiffness",
-                                                                      mAngularSpringStiffness.x),
-                                              (float) dof1.optDouble("springStiffness",
-                                                                      mAngularSpringStiffness.y),
-                                              (float) dof2.optDouble("springStiffness",
-                                                                      mAngularSpringStiffness.z));
-            Vector3f damping = new Vector3f((float) dof0.optDouble("springDamping",
-                                                                    mAngularSpringDamping.x),
-                                            (float) dof1.optDouble("springDamping",
-                                                                    mAngularSpringDamping.y),
-                                            (float) dof2.optDouble("springDamping",
-                                                                    mAngularSpringDamping.z));
+            Vector3f stiffness = new Vector3f(getValue(dof0,"springStiffness",  mAngularSpringStiffness.x),
+                                              getValue(dof1,"springStiffness",  mAngularSpringStiffness.y),
+                                              getValue(dof2,"springStiffness",  mAngularSpringStiffness.z));
+            Vector3f damping = new Vector3f(getValue(dof0,"springDamping",  mAngularSpringDamping.x),
+                                            getValue(dof1,"springDamping",  mAngularSpringDamping.y),
+                                            getValue(dof2,"springDamping",  mAngularSpringDamping.z));
 
             ball = new SXRGenericConstraint(getSXRContext(), parentBody, pivotA, pivotB);
             mConstraints.set(boneIndex, ball);
@@ -1019,10 +1013,11 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             mConstraints.set(boneIndex, ball);
             JSONObject dof0 = dofdata.getJSONObject(0);
             JSONObject dof1 = dofdata.getJSONObject(1);
-            Vector2f limits0 = getLimits(dof0, mAngularLimits.y);
-            Vector2f limits1 = getLimits(dof1, mAngularLimits.z);
-            ball.setAngularLowerLimits(0, limits0.x, limits1.x);
-            ball.setAngularUpperLimits(0, limits0.y, limits1.y);;
+            Vector2f limits0 = getLimits(dof0, mAngularLimits.x);
+            Vector2f limits1 = getLimits(dof1, mAngularLimits.y);
+
+            ball.setAngularLowerLimits(limits0.x, limits1.x, 0);
+            ball.setAngularUpperLimits(limits0.y, limits1.y, 0);
             constraint = ball;
         }
         else if (type.equals("hinge"))
@@ -1034,7 +1029,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                     (float) v.getDouble("Z"));
             SXRHingeConstraint hinge = null;
             JSONObject dof = dofdata.getJSONObject(0);
-            Vector2f limits = getLimits(dof, 0);
+            Vector2f limits = getLimits(dof, mAngularLimits.x);
 
             hinge = new SXRHingeConstraint(getSXRContext(), parentBody,
                                           pivotA, pivotB, axisA);
@@ -1081,5 +1076,18 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         return limits;
     }
 
+    float getValue(JSONObject obj, String name, float d) throws JSONException
+    {
+        if (!obj.has(name))
+        {
+            return d;
+        }
+        float v = (float) Math.toRadians(obj.getDouble(name));
+        if (v == 0)
+        {
+            return d;
+        }
+        return v;
+    }
 }
 

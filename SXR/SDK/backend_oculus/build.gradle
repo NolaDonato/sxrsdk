@@ -10,7 +10,7 @@ android {
     compileSdkVersion 26
 
     defaultConfig {
-        minSdkVersion 21
+        minSdkVersion 23
         targetSdkVersion 24
 
         externalNativeBuild {

@@ -15,8 +15,8 @@ android {
     compileSdkVersion 26
 
     defaultConfig {
-        minSdkVersion 21
-        targetSdkVersion 21
+        minSdkVersion 23
+        targetSdkVersion 26
         externalNativeBuild {
             cmake {
                 arguments.add('-DANDROID_STL=c++_shared')
