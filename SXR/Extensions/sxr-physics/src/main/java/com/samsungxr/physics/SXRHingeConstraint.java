@@ -134,6 +134,8 @@ public class SXRHingeConstraint extends SXRConstraint
     public float getUpperLimit() {
         return Native3DHingeConstraint.getUpperLimit(getNative());
     }
+
+    public float[] getAxis() { return Native3DHingeConstraint.getAxis(getNative()); }
 }
 
 class Native3DHingeConstraint
@@ -142,9 +144,8 @@ class Native3DHingeConstraint
                             float pivotBx, float pivotBy, float pivootBz,
                             float axisX, float axisY, float axisZ);
 
-    static native void setLimits(long nativeConstraint, float lower, float upper);
-
+    static native float[] getAxis(long nativeConstraint);
     static native float getLowerLimit(long nativeConstraint);
-
     static native float getUpperLimit(long nativeConstraint);
+    static native void setLimits(long nativeConstraint, float lower, float upper);
 }

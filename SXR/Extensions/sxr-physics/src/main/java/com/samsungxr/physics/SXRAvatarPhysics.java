@@ -192,19 +192,10 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
             mPhysicsSkel.poseFromBones();
             if (mPhysicsWorld != world)
             {
+                mPhysicsWorld.merge(world);
                 if ((attachJoint1 != null) && (attachJoint2 != null))
                 {
-                    attachJoint1.merge(mPhysicsSkel, skel);
-                    mPhysicsWorld.merge(world);
                     return;
-                }
-                else
-                {
-                    if (skel != null)
-                    {
-                        mPhysicsSkel.merge(skel, attachBone);
-                    }
-                    mPhysicsWorld.merge(world);
                 }
             }
             SXRRigidBody attachBody1 = (SXRRigidBody) ((attachNode1 != null) ?
@@ -232,10 +223,6 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
         }
         else if (mPhysicsWorld != world)
         {
-            if (skel != null)
-            {
-                mPhysicsSkel.merge(skel, attachBone);
-            }
             mPhysicsWorld.merge(world);
         }
         if (isRunning())
@@ -295,6 +282,7 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
             String modelType = avatar.findModelType(modelRoot);
             String physicsfile;
             SXRAndroidResource res;
+            String attachBoneName = null;
 
             if (modelType == null)
             {
@@ -325,6 +313,11 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
                 if (physicsProps != null)
                 {
                     physicsProps.put("Skeleton", mPhysicsSkel);
+                    attachBoneName = avatar.getModelProperty(modelType, "attachbone");
+                    if (attachBoneName != null)
+                    {
+                        physicsProps.put("AttachBone", attachBoneName);
+                    }
                     setPhysicsProperties(physicsfile, physicsProps);
                 }
                 mPhysicsSkel.disable();

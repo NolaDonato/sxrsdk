@@ -150,8 +150,8 @@ private:
     void        registerNames(btDynamicsWorld* world, btSerializer* s);
     const char* getNameForPointer(void* p);
     btVector3&  rotatePoint(btVector3& p);
-    void        createCollisionShape(JNIEnv& env, btCollisionShape* shape, jobject& obj, btVector3& debugColor);
-    btConvexHullShape*  copyHull(const btConvexHullShape *input, float *outVerts, btVector3& dimensions);
+    void        createCollisionShape(JNIEnv& env, const btCollisionShape* shape, jobject& obj, btVector3& debugColor);
+    void        copyHull(const btConvexHullShape *input, float *outVerts, btVector3& dimensions);
 
     std::unordered_map<std::string, SmartGlobalRef>  mRigidBodies;
     std::unordered_map<std::string, SmartGlobalRef>  mJoints;

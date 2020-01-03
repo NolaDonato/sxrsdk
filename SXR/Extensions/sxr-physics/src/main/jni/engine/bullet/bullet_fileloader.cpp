@@ -98,7 +98,7 @@ namespace sxr
     {
     }
 
-    int BulletFileLoader::FileIO::fileOpen(const char *fileName, const char *mode)
+    int BulletFileLoader::FileIO::fileOpen(const char* fileName, const char *mode)
     {
         //search a free slot
         int slot = -1;
@@ -126,7 +126,7 @@ namespace sxr
     }
 
 
-    FILE *BulletFileLoader::FileIO::fopen(const char *fileName, const char *mode)
+    FILE* BulletFileLoader::FileIO::fopen(const char* fileName, const char* mode)
     {
         if (fileName[0] == '/')
         {
@@ -146,7 +146,7 @@ namespace sxr
         }
         std::string path(mBaseDir);
         path += fileName;
-        AAsset *asset = AAssetManager_open(mAssetManager, path.c_str(), 0);
+        AAsset* asset = AAssetManager_open(mAssetManager, path.c_str(), 0);
         if (asset)
         {
             return funopen(asset, android_read, android_write, android_seek, android_close);
@@ -161,111 +161,111 @@ namespace sxr
  * @param collider Bullet collider
  * @return Java SXRCollider object
  */
-    jobject BulletFileLoader::createCollider(btCollisionObject *collider)
+    jobject BulletFileLoader::createCollider(btCollisionObject* collider)
     {
         jobject o = 0;
-        JNIEnv *env;
+        JNIEnv* env;
         btVector3 color(1, 1, 1);
-        mJavaVM.GetEnv((void **) &env, SUPPORTED_JNI_VERSION);
+        mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
 
-        btCollisionShape *inshape = collider->getCollisionShape();
+        const btCollisionShape* inshape = collider->getCollisionShape();
         createCollisionShape(*env, inshape, o, color);
         collider->setCustomDebugColor(color);
+        collider->setCollisionShape(nullptr);
+        delete inshape;
         return o;
     }
 
-    void
-    BulletFileLoader::createCollisionShape(JNIEnv &env, btCollisionShape *shape, jobject &javaObj,
-                                           btVector3 &debugColor)
+    void BulletFileLoader::createCollisionShape(JNIEnv& env, const btCollisionShape* shape,
+                                                jobject& javaObj, btVector3 &debugColor)
     {
         switch (shape->getShapeType())
         {
             case BOX_SHAPE_PROXYTYPE:
             {
-                btBoxShape *inbox = dynamic_cast<btBoxShape *>(shape);
-                BoxCollider *bc = new BoxCollider();
-                btVector3 he(inbox->getHalfExtentsWithoutMargin());
+                const btBoxShape* inbox = dynamic_cast<const btBoxShape*>(shape);
+                BoxCollider*      bc = new BoxCollider();
+                btVector3         he(inbox->getHalfExtentsWithoutMargin());
 
                 bc->set_half_extents(he.x(), he.y(), he.z());
                 LOGD("PHYSICS LOADER:    box collider dimensions = (%0.3f, %0.3f, %0.3f)",
-                     he.x(), he.y(), he.z());
+                     he.x(),he.y(), he.z());
                 javaObj = CreateInstance(env, "com/samsungxr/SXRBoxCollider",
-                                         "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(),
-                                         bc);
+                                         "(Lcom/samsungxr/SXRContext;J)V",
+                                         mContext.getObject(), bc);
                 debugColor.setValue(0, 0, 1);
                 return;
             }
 
             case SPHERE_SHAPE_PROXYTYPE:
             {
-                btSphereShape *sphere = dynamic_cast<btSphereShape *>(shape);
-                SphereCollider *sc = new SphereCollider();
-                float radius = sphere->getRadius();
+                const btSphereShape* sphere = dynamic_cast<const btSphereShape *>(shape);
+                SphereCollider*      sc = new SphereCollider();
+                float                radius = sphere->getRadius();
+
                 sc->set_radius(radius);
                 LOGD("PHYSICS LOADER:    sphere collider radius = %0.3f", radius);
                 javaObj = CreateInstance(env, "com/samsungxr/SXRSphereCollider",
-                                         "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(),
-                                         sc);
+                                         "(Lcom/samsungxr/SXRContext;J)V",
+                                         mContext.getObject(), sc);
                 return;
             }
 
             case CAPSULE_SHAPE_PROXYTYPE:
             {
-                btCapsuleShape *capsule = dynamic_cast<btCapsuleShape *>(shape);
-                CapsuleCollider *cc = new CapsuleCollider();
-                float r = cc->getRadius();
-                float h = cc->getHeight();
-                const char *name = capsule->getName();
-                char last = name[strlen(name) - 1];
+                const btCapsuleShape* capsule = dynamic_cast<const btCapsuleShape *>(shape);
+                CapsuleCollider*      cc = new CapsuleCollider();
+                float                 r = cc->getRadius();
+                float                 h = cc->getHeight();
+                const char*           name = capsule->getName();
+                char                  last = name[strlen(name) - 1];
 
                 switch (last)
                 {
-                    case 'X':cc->setToXDirection();
-                        break;
-
-                    case 'Z':cc->setToZDirection();
-                        break;
+                    case 'X': cc->setToXDirection(); break;
+                    case 'Z': cc->setToZDirection(); break;
                 }
                 cc->setHeight(h);
                 cc->setRadius(r);
                 LOGD("PHYSICS LOADER:    box collider height = %0.3f, radius = %0.3f", h, r);
                 javaObj = CreateInstance(env, "com/samsungxr/SXRCapsuleCollider",
-                                         "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(),
-                                         cc);
+                                         "(Lcom/samsungxr/SXRContext;J)V",
+                                         mContext.getObject(), cc);
                 debugColor.setValue(0, 1, 1);
                 return;
             }
 
             case CONVEX_HULL_SHAPE_PROXYTYPE:
             {
-                btConvexHullShape *hull = dynamic_cast<btConvexHullShape *>(shape);
-                int numVerts = hull->getNumVertices();
-                VertexBuffer *vb = Renderer::getInstance()
-                        ->createVertexBuffer("float3 a_position", numVerts);
-                float *verts = new float[numVerts * 3];
-                btVector3 dimensions;
+                const btConvexHullShape* hull = dynamic_cast<const btConvexHullShape *>(shape);
+                int                      numVerts = hull->getNumVertices();
+                VertexBuffer*            vb = Renderer::getInstance()->
+                                              createVertexBuffer("float3 a_position", numVerts);
+                float*                   verts = new float[numVerts * 3];
+                btVector3                dimensions;
 
                 copyHull(hull, verts, dimensions);
-                vb->setFloatVec("a_position", (float *) verts, numVerts * 3, 3);
+                vb->setFloatVec("a_position", verts, numVerts * 3, 3);
                 delete[] verts;
-                Mesh *mesh = new Mesh(*vb);
-                MeshCollider *mc = new MeshCollider(mesh);
+
+                Mesh*         mesh = new Mesh(*vb);
+                MeshCollider* mc = new MeshCollider(mesh);
                 LOGD("PHYSICS LOADER:    convex hull collider %d vertices dimensions = (%0.3f, %0.3f, %0.3f)",
                      numVerts, dimensions.x(), dimensions.y(), dimensions.z());
                 javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
-                                         "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(),
-                                         mc);
+                                         "(Lcom/samsungxr/SXRContext;J)V",
+                                         mContext.getObject(), mc);
                 debugColor.setValue(0, 1, 0);
                 return;
             }
 
             case COMPOUND_SHAPE_PROXYTYPE:
             {
-                btCompoundShape *cshape = dynamic_cast<btCompoundShape *>(shape);
-                btTransform t = mTransformCoords * cshape->getChildTransform(0);
+                const btCompoundShape*  cshape = dynamic_cast<const btCompoundShape*>(shape);
+                const btCollisionShape* childShape = cshape->getChildShape(0);
+                btTransform             t = mTransformCoords * cshape->getChildTransform(0);
 
-                shape = cshape->getChildShape(0);
-                createCollisionShape(env, shape, javaObj, debugColor);
+                createCollisionShape(env, childShape, javaObj, debugColor);
                 {
                     const btVector3 &pos = t.getOrigin();
                     LOGD("PHYSICS LOADER:    compound collider pos = (%0.3f, %0.3f, %0.3f)",
@@ -278,40 +278,40 @@ namespace sxr
             default:
                 if (shape->getShapeType() <= CUSTOM_POLYHEDRAL_SHAPE_TYPE)
                 {
-                    btPolyhedralConvexShape *polyshape = dynamic_cast<btPolyhedralConvexShape *>(shape);
-                    const btConvexPolyhedron *poly = polyshape->getConvexPolyhedron();
-                    int numVerts = polyshape->getNumVertices();
-                    VertexBuffer *vb = Renderer::getInstance()
-                            ->createVertexBuffer("float3 a_position", numVerts);
-                    float *verts = new float[numVerts * 3];
+                    const btPolyhedralConvexShape* polyshape = dynamic_cast<const btPolyhedralConvexShape*>(shape);
+                    const btConvexPolyhedron*      poly = polyshape->getConvexPolyhedron();
+                    int                            numVerts = polyshape->getNumVertices();
+                    const btVector3*               vtxData = &(poly->m_vertices[0]);
+                    VertexBuffer*                  vb = Renderer::getInstance()->
+                                                   createVertexBuffer("float3 a_position", numVerts);
 
-                    vb->setFloatVec("a_position", (float *) verts, numVerts * 3, 3);
-                    delete[] verts;
-                    Mesh *mesh = new Mesh(*vb);
-                    MeshCollider *mc = new MeshCollider(mesh);
+                    vb->setFloatVec("a_position", (float*) vtxData, numVerts * 3, 3);
+
+                    Mesh*         mesh = new Mesh(*vb);
+                    MeshCollider* mc = new MeshCollider(mesh);
+
                     LOGD("PHYSICS LOADER:    convex polygon collider %d vertices", numVerts);
                     javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
-                                             "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(),
-                                             mc);
+                                             "(Lcom/samsungxr/SXRContext;J)V",
+                                             mContext.getObject(), mc);
                 }
                 else
                 {
-                    MeshCollider *mc = new MeshCollider(nullptr);
+                    MeshCollider* mc = new MeshCollider(nullptr);
                     javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
-                                             "(Lcom/samsungxr/SXRContext;J)V", mContext.getObject(),
-                                             mc);
+                                             "(Lcom/samsungxr/SXRContext;J)V",
+                                             mContext.getObject(), mc);
                 }
         }
     }
 
-    btConvexHullShape *BulletFileLoader::copyHull(const btConvexHullShape *input,
-                                                  float *outverts, btVector3 &dimensions)
+    void BulletFileLoader::copyHull(const btConvexHullShape *input,
+                                                  float* outverts, btVector3& dimensions)
     {
-        const btVector3 *inverts = input->getUnscaledPoints();
-        int numVerts = input->getNumVertices();
-        float *verts = outverts;
-        btVector3 boxMin, boxMax;
-        btConvexHullShape *outshape = nullptr;
+        const btVector3*   inverts = input->getUnscaledPoints();
+        int                numVerts = input->getNumVertices();
+        float*             verts = outverts;
+        btVector3          boxMin, boxMax;
 
         input->getAabb(btTransform::getIdentity(), boxMin, boxMax);
         for (int i = 0; i < numVerts; ++i)
@@ -324,8 +324,6 @@ namespace sxr
         dimensions.setX(boxMax.x() - boxMin.x());
         dimensions.setY(boxMax.y() - boxMin.y());
         dimensions.setZ(boxMax.z() - boxMin.z());
-        return outshape;
-
     }
 
     const char *BulletFileLoader::getNameForPointer(void *ptr)
@@ -360,17 +358,17 @@ namespace sxr
  */
     jobject BulletFileLoader::getConstraintBodyA(PhysicsConstraint *constraint)
     {
-        PhysicsCollidable *bodyA = constraint->getBodyA();
-        const char *name;
+        PhysicsCollidable* bodyA = constraint->getBodyA();
+        const char* name;
 
         if (bodyA->getType() == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
         {
-            BulletRigidBody *bA = static_cast<BulletRigidBody *>(bodyA);
+            BulletRigidBody* bA = static_cast<BulletRigidBody*>(bodyA);
             return getRigidBody(bA->getName());
         }
         else if (bodyA->getType() == COMPONENT_TYPE_PHYSICS_JOINT)
         {
-            BulletJoint *bA = static_cast<BulletJoint *>(bodyA);
+            BulletJoint* bA = static_cast<BulletJoint*>(bodyA);
 
             return getJoint(bA->getName());
         }
@@ -386,26 +384,26 @@ namespace sxr
  * If the Bullet rigid body has a collider, a SXRCollider
  * subclass is created corresponding to the Bullet collision shape.
  */
-    void BulletFileLoader::createRigidBodies(btBulletWorldImporter &importer)
+    void BulletFileLoader::createRigidBodies(btBulletWorldImporter& importer)
     {
         JNIEnv *env;
         mJavaVM.GetEnv((void **) &env, SUPPORTED_JNI_VERSION);
         for (int i = 0; i < importer.getNumRigidBodies(); i++)
         {
-            btRigidBody *rb = static_cast<btRigidBody *>(importer.getRigidBodyByIndex(i));
+            btRigidBody* rb = static_cast<btRigidBody *>(importer.getRigidBodyByIndex(i));
             createRigidBody(*env, rb);
         }
     }
 
-    void BulletFileLoader::createRigidBodies(btDynamicsWorld &world)
+    void BulletFileLoader::createRigidBodies(btDynamicsWorld& world)
     {
         JNIEnv *env;
         mJavaVM.GetEnv((void **) &env, SUPPORTED_JNI_VERSION);
         btCollisionObjectArray colliders = world.getCollisionObjectArray();
         for (int i = 0; i < colliders.size(); i++)
         {
-            btCollisionObject *co = colliders.at(i);
-            btRigidBody *rb = dynamic_cast<btRigidBody *>(co);
+            btCollisionObject* co = colliders.at(i);
+            btRigidBody* rb = dynamic_cast<btRigidBody *>(co);
             if (rb)
             {
                 world.removeCollisionObject(rb);
@@ -414,9 +412,9 @@ namespace sxr
         }
     }
 
-    void BulletFileLoader::createRigidBody(JNIEnv &env, btRigidBody *rb)
+    void BulletFileLoader::createRigidBody(JNIEnv &env, btRigidBody* rb)
     {
-        const char *name = getNameForPointer(rb);
+        const char* name = getNameForPointer(rb);
 
         if (name == nullptr)    // we can't import rigid bodies without names
         {
@@ -427,18 +425,21 @@ namespace sxr
             btTransform t = mTransformCoords * rb->getWorldTransform();
             rb->setWorldTransform(t);
         }
-        BulletRigidBody *nativeBody = new BulletRigidBody(rb);
-        jobject javaBody = CreateInstance(env, "com/samsungxr/physics/SXRRigidBody",
-                                          "(Lcom/samsungxr/SXRContext;J)V",
-                                          mContext.getObject(),
-                                          reinterpret_cast<jlong>(nativeBody));
+        std::string       s(name);
+        BulletRigidBody*  nativeBody = new BulletRigidBody(rb);
+        jobject           javaCollider;
+        jobject           javaBody;
+
         nativeBody->setName(name);
+        javaBody = CreateInstance(env, "com/samsungxr/physics/SXRRigidBody",
+                                  "(Lcom/samsungxr/SXRContext;J)V",
+                                  mContext.getObject(),
+                                  reinterpret_cast<jlong>(nativeBody));
         SmartLocalRef r(mJavaVM, javaBody);
-        std::string s(name);
         mRigidBodies.emplace(s, r);
 
-        jobject javaCollider = createCollider(nativeBody->getRigidBody());
-        SmartLocalRef c(mJavaVM, javaCollider);
+        javaCollider = createCollider(rb);
+        SmartLocalRef  c(mJavaVM, javaCollider);
         mColliders.emplace(s, c);
     }
 
@@ -455,9 +456,10 @@ namespace sxr
         mJavaVM.GetEnv((void **) &env, SUPPORTED_JNI_VERSION);
         for (int i = mFirstMultiBody; i < world.getNumMultibodies(); i++)
         {
-            btMultiBody *mb = world.getMultiBody(i);
-            btMultiBodyLinkCollider *btc = mb->getBaseCollider();
-            const char *name = getNameForPointer(btc);
+            btMultiBody*             mb = world.getMultiBody(i);
+            btMultiBodyLinkCollider* btc = mb->getBaseCollider();
+            const char*              name = getNameForPointer(btc);
+            btCollisionShape*        shape = nullptr;
 
             if (name == nullptr)    // cannot import bodies without names
             {
@@ -470,20 +472,20 @@ namespace sxr
             if (mNeedRotate)
             {
                 btQuaternion qYtoZ;
+                btVector3 pos = mb->getBasePos();
 
                 mRotateCoords.getRotation(qYtoZ);
                 btQuaternion rot = qYtoZ * mb->getWorldToBaseRot();
-                btVector3 pos = mb->getBasePos();
                 mb->setWorldToBaseRot(rot);
                 mb->setBasePos(rotatePoint(pos));
                 btc->setWorldTransform(btTransform(rot, pos));
             }
             {
-                const btVector3 &p = mb->getBaseWorldTransform().getOrigin();
+                const btVector3& p = mb->getBaseWorldTransform().getOrigin();
                 LOGD("PHYSICS LOADER: root joint %s pos = (%0.3f, %0.3f, %0.3f)",
                      name, p.x(), p.y(), p.z());
             }
-            BulletJoint *rootJoint = new BulletRootJoint(mb);
+            BulletJoint* rootJoint = new BulletRootJoint(mb);
             jobject javaJoint = CreateInstance(*env, "com/samsungxr/physics/SXRPhysicsJoint",
                                                "(Lcom/samsungxr/SXRContext;J)V",
                                                mContext.getObject(),
@@ -497,7 +499,7 @@ namespace sxr
             world.removeMultiBody(mb);
             if (btc != nullptr)
             {
-                jobject javaCollider = createCollider(btc);
+                jobject       javaCollider = createCollider(btc);
                 SmartLocalRef c(mJavaVM, javaCollider);
 
                 s = name;
@@ -506,8 +508,8 @@ namespace sxr
             }
             for (int i = 0; i < mb->getNumLinks(); ++i)
             {
-                btMultibodyLink &link = mb->getLink(i);
-                btMultiBodyLinkCollider *collider = link.m_collider;
+                btMultibodyLink&         link = mb->getLink(i);
+                btMultiBodyLinkCollider* collider = link.m_collider;
 
                 name = getNameForPointer(collider);
                 if (name == nullptr)   // cannot map joints without names
@@ -515,11 +517,11 @@ namespace sxr
                     continue;
                 }
                 {
-                    const btVector3 &p = mb->getRVector(i);
+                    const btVector3& p = mb->getRVector(i);
                     LOGD("PHYSICS LOADER: joint %s index = %d, Rvector = (%0.3f, %0.3f, %0.3f)",
                          name, i, p.x(), p.y(), p.z());
                 }
-                BulletJoint *nativeJoint = (BulletJoint *) (link.m_userPtr);
+                BulletJoint* nativeJoint = (BulletJoint *) (link.m_userPtr);
                 javaJoint = CreateInstance(*env, "com/samsungxr/physics/SXRPhysicsJoint",
                                            "(Lcom/samsungxr/SXRContext;J)V",
                                            mContext.getObject(),
@@ -531,7 +533,7 @@ namespace sxr
                 nativeJoint->setName(name);
                 if (collider != nullptr)
                 {
-                    jobject javaCollider = createCollider(collider);
+                    jobject       javaCollider = createCollider(collider);
                     SmartLocalRef r(mJavaVM, javaCollider);
 
                     s = name;
@@ -778,7 +780,7 @@ jobject BulletFileLoader::createGenericConstraint(JNIEnv &env, btGeneric6DofSpri
             tB = mTransformCoords * tB;
             sld->setFrames(tA, tB);
         }
-        BulletSliderConstraint *c = new BulletSliderConstraint(sld);
+        BulletSliderConstraint* c = new BulletSliderConstraint(sld);
         constraint = c;
         return CreateInstance(env, "com/samsungxr/physics/SXRSliderConstraint",
                               "(Lcom/samsungxr/SXRContext;J)V",
@@ -826,24 +828,24 @@ jobject BulletFileLoader::createGenericConstraint(JNIEnv &env, btGeneric6DofSpri
  */
     void BulletFileLoader::createConstraints(btBulletWorldImporter &importer)
     {
-        JNIEnv *env;
-        mJavaVM.GetEnv((void **) &env, SUPPORTED_JNI_VERSION);
+        JNIEnv* env;
+        mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
 
         for (int i = 0; i < importer.getNumConstraints(); i++)
         {
-            btTypedConstraint *constraint = importer.getConstraintByIndex(i);
+            btTypedConstraint* constraint = importer.getConstraintByIndex(i);
             createConstraint(*env, constraint);
         }
     }
 
     void BulletFileLoader::createConstraints(btDynamicsWorld &w)
     {
-        JNIEnv *env;
-        mJavaVM.GetEnv((void **) &env, SUPPORTED_JNI_VERSION);
+        JNIEnv* env;
+        mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
 
-        for (int i = 0; i < w.getNumConstraints(); i++)
+        while (w.getNumConstraints() > 0)
         {
-            btTypedConstraint *constraint = w.getConstraint(i);
+            btTypedConstraint* constraint = w.getConstraint(0);
             w.removeConstraint(constraint);
             createConstraint(*env, constraint);
         }
@@ -933,7 +935,7 @@ jobject BulletFileLoader::createGenericConstraint(JNIEnv &env, btGeneric6DofSpri
             if (bodyA)
             {
                 CallVoidMethod(env, javaConstraint, "com/samsungxr/physics/SXRConstraint",
-                               "setBodyA",
+                               "setParentBody",
                                "(Lcom/samsungxr/physics/SXRPhysicsCollidable;)V",
                                env.NewLocalRef(bodyA));
             }
@@ -1014,7 +1016,7 @@ jobject BulletFileLoader::createGenericConstraint(JNIEnv &env, btGeneric6DofSpri
             if (bodyA)
             {
                 CallVoidMethod(env, javaConstraint, "com/samsungxr/physics/SXRConstraint",
-                               "setBodyA",
+                               "setParentBody",
                                "(Lcom/samsungxr/physics/SXRPhysicsCollidable;)V",
                                env.NewLocalRef(bodyA));
             }

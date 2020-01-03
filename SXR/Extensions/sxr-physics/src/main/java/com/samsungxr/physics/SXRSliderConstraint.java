@@ -164,19 +164,14 @@ class Native3DSliderConstraint {
     static native long ctor(long rbB, float pivotAx, float pivotAy, float pivotAz,
                             float pivotBx, float pivotBy, float pivotBz);
 
-    static native void setAngularLowerLimit(long nativeConstraint, float limit);
-
     static native float getAngularLowerLimit(long nativeConstraint);
-
-    static native void setAngularUpperLimit(long nativeConstraint, float limit);
-
+    static native float getLinearUpperLimit(long nativeConstraint);
     static native float getAngularUpperLimit(long nativeConstraint);
-
-    static native void setLinearLowerLimit(long nativeConstraint, float limit);
-
     static native float getLinearLowerLimit(long nativeConstraint);
 
+    static native void setLinearLowerLimit(long nativeConstraint, float limit);
     static native void setLinearUpperLimit(long nativeConstraint, float limit);
+    static native void setAngularLowerLimit(long nativeConstraint, float limit);
+    static native void setAngularUpperLimit(long nativeConstraint, float limit);
 
-    static native float getLinearUpperLimit(long nativeConstraint);
 }

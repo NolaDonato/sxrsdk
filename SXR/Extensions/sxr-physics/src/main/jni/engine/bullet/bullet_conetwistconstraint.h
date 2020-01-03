@@ -42,7 +42,7 @@ namespace sxr {
         BulletConeTwistConstraint(btConeTwistConstraint *constraint);
         virtual ~BulletConeTwistConstraint();
 
-        virtual void* getUnderlying() { return this->mConeTwistConstraint; }
+        virtual void* getUnderlying() { return this->mConstraint; }
         virtual void  setBreakingImpulse(float impulse);
         virtual float getBreakingImpulse() const;
         virtual void  sync(PhysicsWorld *world);
@@ -52,9 +52,10 @@ namespace sxr {
         virtual float getSwingLimit() const;
         virtual void  setTwistLimit(float limit);
         virtual float getTwistLimit() const;
+        virtual void  setParentBody(PhysicsCollidable* body);
 
     private:
-        btConeTwistConstraint* mConeTwistConstraint;
+        btConeTwistConstraint* mConstraint;
         float      mBreakingImpulse;
         glm::vec3  mConeAxis;
         float      mSwingLimit;

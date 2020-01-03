@@ -69,7 +69,8 @@ public class SXRRigidBody extends SXRPhysicsCollidable
      *
      * @param ctx The context of the app.
      */
-    public SXRRigidBody(SXRContext ctx) {
+    public SXRRigidBody(SXRContext ctx)
+    {
         this(ctx, 0.0f);
     }
 
@@ -714,6 +715,11 @@ public class SXRRigidBody extends SXRPhysicsCollidable
         NativeRigidBody.sync(getNative(), options);
     }
 
+    public void copy(SXRRigidBody srcBody)
+    {
+        NativeRigidBody.copy(getNative(), srcBody.getNative());
+    }
+
     @Override
     public void onAttach(SXRNode newOwner)
     {
@@ -747,6 +753,7 @@ class NativeRigidBody
 {
     static native long ctor(float mass, int collisionGroup);
     static native long getComponentType();
+    static native void copy(long jdestbody, long jsrcbody);
 
     static native float   getMass(long jrigid_body);
     static native String  getName(long jrigid_body);

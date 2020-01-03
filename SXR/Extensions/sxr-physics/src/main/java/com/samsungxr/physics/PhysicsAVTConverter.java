@@ -101,7 +101,8 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
 
     public SXRPhysicsContent loadPhysics(SXRScene scene, SXRAndroidResource resource, Map<String, Object> loaderProperties)
     {
-        mFileName = resource.getResourceFilename().toLowerCase();
+        mFileName = resource.getResourcePath();
+
         if (!mFileName.endsWith(".avt"))
         {
             return super.loadPhysics(scene, resource, loaderProperties);
@@ -134,7 +135,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
     public void loadPhysics(SXRWorld world, SXRAndroidResource resource, Map<String, Object> loaderProperties)
     {
         mRoot = world.getOwnerObject();
-        mFileName = resource.getResourceFilename().toLowerCase();
+        mFileName = resource.getResourcePath();
         if (!mFileName.endsWith(".avt"))
         {
             super.loadPhysics(world, resource, loaderProperties);
@@ -166,20 +167,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                                                     "onLoadError",
                                                     world, mFileName,
                                                     "Cannot open physics file");
-    }
-
-    public boolean convertToBullet(String infile, String outfile, boolean isMultibody)
-    {
-        SXRAndroidResource resource = toAndroidResource(getSXRContext(), infile);
-        SXRPhysicsContent content = loadPhysics(resource, null);
-        if (content == null)
-        {
-            return false;
-        }
-        SXRNode physicsRoot = new SXRNode(getSXRContext());
-        SXRWorld bulletWorld = new SXRWorld(physicsRoot, isMultibody);
-        bulletWorld.merge(content);
-        return exportPhysics(bulletWorld, outfile);
     }
 
     private SXRPhysicsContent parse(String inputData)
@@ -514,7 +501,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
             Vector3f scale = new Vector3f(1, 1, 1);
             rootJoint = new SXRPhysicsJoint(mSkeleton, mass, newJoints.size(), mCollisionGroup);
             rootJoint.setFriction((float) basebone.getJSONObject("Physic Material").getDouble("Friction"));
-            rootJoint.setBoneIndex(0);
             rootJoint.setName(name);
             rootJoint.setLinearDamping(mLinearDamping);
             rootJoint.setAngularDamping(mAngularDamping);
@@ -877,7 +863,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         Log.e(TAG, "creating joint %s parent = %s, mass = %3f",
               link.getString("Name"), parentName, mass);
         SXRPhysicsJoint joint = new SXRPhysicsJoint(parentJoint, jointType, jointIndex, mass, mCollisionGroup);
-        joint.setBoneIndex(jointIndex);
         joint.setName(link.getString("Target Bone"));
         if (addToBody)
         {

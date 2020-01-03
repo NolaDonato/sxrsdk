@@ -36,7 +36,7 @@ namespace sxr {
                                                          const glm::vec3& pivotB,
                                                          const glm::vec3& coneAxis)
     {
-        mConeTwistConstraint = 0;
+        mConstraint = 0;
         mBodyA = bodyA;
         mBreakingImpulse = SIMD_INFINITY;
         mPivotA = pivotA;
@@ -48,25 +48,25 @@ namespace sxr {
 
     BulletConeTwistConstraint::BulletConeTwistConstraint(btConeTwistConstraint *constraint)
     {
-        mConeTwistConstraint = constraint;
+        mConstraint = constraint;
         mBodyA = static_cast<BulletRigidBody*>(constraint->getRigidBodyA().getUserPointer());
         constraint->setUserConstraintPtr(this);
     }
 
     BulletConeTwistConstraint::~BulletConeTwistConstraint()
     {
-        if (mConeTwistConstraint)
+        if (mConstraint)
         {
-            delete mConeTwistConstraint;
+            delete mConstraint;
         }
     }
 
     void BulletConeTwistConstraint::setSwingLimit(float limit)
     {
-        if (0 != mConeTwistConstraint)
+        if (0 != mConstraint)
         {
-            mConeTwistConstraint->setLimit(4, limit);
-            mConeTwistConstraint->setLimit(5, limit);
+            mConstraint->setLimit(4, limit);
+            mConstraint->setLimit(5, limit);
         }
         else
         {
@@ -76,9 +76,9 @@ namespace sxr {
 
     float BulletConeTwistConstraint::getSwingLimit() const
     {
-        if (mConeTwistConstraint)
+        if (mConstraint)
         {
-            return mConeTwistConstraint->getLimit(4);
+            return mConstraint->getLimit(4);
         }
         else
         {
@@ -88,9 +88,9 @@ namespace sxr {
 
     void BulletConeTwistConstraint::setTwistLimit(float limit)
     {
-        if (mConeTwistConstraint)
+        if (mConstraint)
         {
-            mConeTwistConstraint->setLimit(3, limit);
+            mConstraint->setLimit(3, limit);
         }
         else
         {
@@ -100,9 +100,9 @@ namespace sxr {
 
     float BulletConeTwistConstraint::getTwistLimit() const
     {
-        if (mConeTwistConstraint)
+        if (mConstraint)
         {
-            return mConeTwistConstraint->getLimit(3);
+            return mConstraint->getLimit(3);
         }
         else
         {
@@ -112,9 +112,9 @@ namespace sxr {
 
     void BulletConeTwistConstraint::setBreakingImpulse(float impulse)
     {
-        if (mConeTwistConstraint)
+        if (mConstraint)
         {
-            mConeTwistConstraint->setBreakingImpulseThreshold(impulse);
+            mConstraint->setBreakingImpulseThreshold(impulse);
         }
         else
         {
@@ -124,9 +124,9 @@ namespace sxr {
 
     float BulletConeTwistConstraint::getBreakingImpulse() const
     {
-        if (mConeTwistConstraint)
+        if (mConstraint)
         {
-            return mConeTwistConstraint->getBreakingImpulseThreshold();
+            return mConstraint->getBreakingImpulseThreshold();
         }
         else
         {
@@ -134,9 +134,38 @@ namespace sxr {
         }
     }
 
+    void BulletConeTwistConstraint::setParentBody(PhysicsCollidable* body)
+    {
+        PhysicsCollidable* bodyA = mBodyA;
+        BulletRigidBody* rb = static_cast<BulletRigidBody*>(bodyA);
+        BulletWorld* bw;
+        btDynamicsWorld* dw = rb->getPhysicsWorld();
+
+        if (body == bodyA)
+        {
+            return;
+        }
+        if (mConstraint)
+        {
+            if (dw)
+            {
+                bw = static_cast<BulletWorld*>(dw->getWorldUserInfo());
+                dw->removeConstraint(mConstraint);
+            }
+            delete mConstraint;
+            mConstraint = nullptr;
+            mBodyA = body;
+            sync(bw);
+        }
+        else
+        {
+            mBodyA = body;
+        }
+    }
+
     void BulletConeTwistConstraint::sync(PhysicsWorld *world)
     {
-        if (mConeTwistConstraint)
+        if (mConstraint)
         {
             return;
         }
@@ -169,9 +198,9 @@ namespace sxr {
             localFrameA.setOrigin(pA);
             localFrameB.setOrigin(pB);
 
-            mConeTwistConstraint = new btConeTwistConstraint(*rbA, *rbB, localFrameA, localFrameB);
-            mConeTwistConstraint->setLimit(mSwingLimit, mSwingLimit, mTwistLimit);
-            mConeTwistConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
+            mConstraint = new btConeTwistConstraint(*rbA, *rbB, localFrameA, localFrameB);
+            mConstraint->setLimit(mSwingLimit, mSwingLimit, mTwistLimit);
+            mConstraint->setBreakingImpulseThreshold(mBreakingImpulse);
         }
     }
 
@@ -179,9 +208,9 @@ namespace sxr {
     {
         BulletWorld* bw = static_cast<BulletWorld*>(w);
 
-        if (mConeTwistConstraint)
+        if (mConstraint)
         {
-            bw->getPhysicsWorld()->addConstraint(mConeTwistConstraint, true);
+            bw->getPhysicsWorld()->addConstraint(mConstraint, true);
         }
     }
 
@@ -189,9 +218,9 @@ namespace sxr {
     {
         BulletWorld* bw = static_cast<BulletWorld*>(w);
 
-        if (mConeTwistConstraint)
+        if (mConstraint)
         {
-            bw->getPhysicsWorld()->removeConstraint(mConeTwistConstraint);
+            bw->getPhysicsWorld()->removeConstraint(mConstraint);
         }
     }
 }

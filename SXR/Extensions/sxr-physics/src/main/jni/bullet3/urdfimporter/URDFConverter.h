@@ -65,6 +65,13 @@ public:
 													 btRigidBody& rbB,
 													 const btTransform& offsetInA,
 													 const btTransform& offsetInB);
+	btGeneric6DofSpring2Constraint* create6DofJoint(int urdfLinkIndex,
+													  btRigidBody& rbA /*parent*/,
+													  btRigidBody& rbB,
+													  const btTransform& offsetInA,
+													  const btTransform& offsetInB,
+													  btScalar jointLowerLimit, btScalar jointUpperLimit);
+
 	void addLinkMapping(int urdfLinkIndex, int mbLinkIndex);
 	void createRigidBodyGraphicsInstance(int linkIndex, btRigidBody* body, const btVector3& colorRgba, int graphicsIndex) {}
 

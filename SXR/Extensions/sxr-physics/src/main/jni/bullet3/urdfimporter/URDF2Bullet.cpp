@@ -406,6 +406,7 @@ btTransform ConvertURDF2BulletInternal(
 			switch (jointType)
 			{
 				case URDFSphericalJoint:
+				case URDFFloatingJoint:
 				{
 					if (createMultiBody)
 					{
@@ -416,7 +417,17 @@ btTransform ConvertURDF2BulletInternal(
 					}
 					else
 					{
-						btAssert(0);
+						btGeneric6DofSpring2Constraint* dof6 = 0;
+						if (flags & CUF_RESERVED)
+						{
+							dof6 = creation.create6DofJoint(urdfLinkIndex, *parentRigidBody, *linkRigidBody, offsetInA, offsetInB, jointLowerLimit, jointUpperLimit);
+						}
+						else
+						{
+							dof6 = creation.create6DofJoint(urdfLinkIndex, *linkRigidBody, *parentRigidBody, offsetInB, offsetInA, jointLowerLimit, jointUpperLimit);
+						}
+						if (enableConstraints)
+							world1->addConstraint(dof6, true);
 					}
 					break;
 				}
@@ -462,8 +473,7 @@ btTransform ConvertURDF2BulletInternal(
 					}
 					break;
 				}
-				case URDFFloatingJoint:
-				
+
 				case URDFFixedJoint:
 				{
 					if ((jointType == URDFFloatingJoint) || (jointType == URDFPlanarJoint))

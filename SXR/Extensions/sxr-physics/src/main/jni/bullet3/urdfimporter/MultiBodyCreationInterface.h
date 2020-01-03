@@ -36,6 +36,13 @@ public:
 
 	virtual class btMultiBodyLinkCollider* allocateMultiBodyLinkCollider(int urdfLinkIndex, int mbLinkIndex, btMultiBody* body) = 0;
 
+	virtual class btGeneric6DofSpring2Constraint* create6DofJoint(int urdfLinkIndex,
+													btRigidBody& rbA /*parent*/,
+													btRigidBody& rbB,
+													const btTransform& offsetInA,
+													const btTransform& offsetInB,
+													btScalar jointLowerLimit, btScalar jointUpperLimit) = 0;
+
 	virtual void addLinkMapping(int urdfLinkIndex, int mbLinkIndex) = 0;
 };
 

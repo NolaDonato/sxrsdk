@@ -138,6 +138,31 @@ btGeneric6DofSpring2Constraint* MultiBodyCreator::createPrismaticJoint(int urdfL
 	return dof6;
 }
 
+btGeneric6DofSpring2Constraint* MultiBodyCreator::create6DofJoint(int urdfLinkIndex,
+                                                                   btRigidBody& rbA /*parent*/,
+                                                                   btRigidBody& rbB,
+                                                                   const btTransform& offsetInA,
+                                                                   const btTransform& offsetInB,
+                                                                   btScalar jointLowerLimit, btScalar jointUpperLimit)
+{
+    btGeneric6DofSpring2Constraint* dof6 = 0;
+
+    dof6 = allocateGeneric6DofSpring2Constraint(urdfLinkIndex, rbA, rbB, offsetInA, offsetInB, RO_XYZ);
+    dof6->setLinearLowerLimit(btVector3(0, 0, 0));
+    dof6->setLinearUpperLimit(btVector3(0, 0, 0));
+    dof6->setAngularLowerLimit(btVector3(jointLowerLimit, jointLowerLimit, jointLowerLimit));
+    dof6->setAngularUpperLimit(btVector3(jointUpperLimit, jointUpperLimit, jointUpperLimit));
+
+    GenericConstraintUserInfo* userInfo = new GenericConstraintUserInfo;
+    userInfo->m_jointAxisIndex = 3;
+    userInfo->m_urdfJointType = URDFFloatingJoint;
+    userInfo->m_urdfIndex = urdfLinkIndex;
+    dof6->setUserConstraintPtr(userInfo);
+    m_6DofConstraints.push_back(dof6);
+    return dof6;
+}
+
+
 btGeneric6DofSpring2Constraint* MultiBodyCreator::createRevoluteJoint(int urdfLinkIndex,
 																	  btRigidBody& rbA /*parent*/,
 																	  btRigidBody& rbB,
@@ -313,7 +338,7 @@ void URDFConverter::initPhysics()
 			createWorld();
 			m_ownWorld = true;
 		}
-		ConvertURDF2Bullet(u2b, *m_creator, identityTrans, m_dynamicsWorld, m_useMultiBody, u2b.getPathPrefix());
+		ConvertURDF2Bullet(u2b, *m_creator, identityTrans, m_dynamicsWorld, m_useMultiBody, u2b.getPathPrefix(), CUF_RESERVED);
 	}
 }
 
