@@ -78,9 +78,10 @@ abstract public class SXRConstraint extends SXRPhysicsWorldObject
      * Internal function used by the physics file loader.
      * @param bodyA BodyA for the constraint
      */
-    void setBodyA(SXRPhysicsCollidable bodyA)
+    void setParentBody(SXRPhysicsCollidable bodyA)
     {
         mBodyA = bodyA;
+        Native3DConstraint.setParentBody(getNative(), bodyA.getNative());
     }
 
     @Override
@@ -91,6 +92,8 @@ abstract public class SXRConstraint extends SXRPhysicsWorldObject
             world.addConstraint(this);
         }
     }
+
+    public SXRPhysicsCollidable getBodyA() { return mBodyA; }
 
     @Override
     protected void removeFromWorld(SXRPhysicsContent world)
@@ -132,12 +135,11 @@ class Native3DConstraint
     static native long getComponentType();
 
     static native int getConstraintType(long nativeConstraint);
-
-    static native void setBreakingImpulse(long nativeConstraint, float impulse);
-
     static native float getBreakingImpulse(long nativeConstraint);
 
-    static native void addChildComponent(long nativeConstraint, long nativeChild);
+    static native void setBreakingImpulse(long nativeConstraint, float impulse);
+    static native void setParentBody(long nativeConstraint, long parentBody);
 
+    static native void addChildComponent(long nativeConstraint, long nativeChild);
     static native void removeChildComponent(long nativeConstraint, long nativeChild);
 }
