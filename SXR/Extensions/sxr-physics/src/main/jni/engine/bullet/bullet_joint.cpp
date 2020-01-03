@@ -117,7 +117,7 @@ namespace sxr {
     BulletJoint::BulletJoint(BulletJoint* parent, int jointIndex, int collisionGroup)
     :   PhysicsJoint(parent, (JointType) parent->getMultiBody()->getLink(jointIndex).m_jointType, jointIndex, 0),
         mParent(parent),
-        mNeedsSync(SyncOptions::IMPORTED),
+        mNeedsSync(SyncOptions::IMPORTED | SyncOptions::COLLISION_SHAPE),
         mMultiBody(parent->getMultiBody()),
         mJointIndex(jointIndex),
         mFriction(0),
@@ -155,6 +155,25 @@ namespace sxr {
             }
             mCollider->setUserPointer(this);
         }
+    }
+
+    void BulletJoint::copy(PhysicsJoint* srcJoint)
+    {
+        btMultibodyLink* srcLink = static_cast<BulletJoint*>(srcJoint)->getLink();
+
+        mJointType = (JointType) srcLink->m_jointType;
+        mMass = srcLink->m_mass;
+        mLinearDamping = srcJoint->getLinearDamping();
+        mAngularDamping = srcJoint->getAngularDamping();
+        mLocalInertia = glm::vec3(srcLink->m_inertiaLocal.x(), srcLink->m_inertiaLocal.y(), srcLink->m_inertiaLocal.z());
+        mCollisionGroup = srcJoint->getCollisionGroup();
+        mFriction = srcJoint->getFriction();
+        mPivot = srcJoint->getPivot();
+        mAxis = srcJoint->getAxis();
+        mScale = srcJoint->getScale();
+        mMass = srcJoint->getMass();
+        mSimType = srcJoint->getSimulationType();
+        sync(COLLISION_SHAPE | PROPERTIES);
     }
 
     void BulletJoint::setName(const char* name)
@@ -504,7 +523,7 @@ namespace sxr {
     {
         btCollisionShape* curShape = nullptr;
         btCollisionShape* newShape = nullptr;
-        Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
+        Collider*         collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
 
         if (collider == nullptr)
         {
@@ -529,10 +548,10 @@ namespace sxr {
                 options |= SyncOptions::PROPERTIES;
                 if (mWorld)
                 {
-                    btDynamicsWorld *bw = mWorld->getPhysicsWorld();
-                    bw->removeCollisionObject(mCollider);
+                    btDynamicsWorld* bw = mWorld->getPhysicsWorld();
+
                     mCollider->setCollisionShape(newShape);
-                    bw->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
+                    bw->refreshBroadphaseProxy(mCollider);
                 }
                 else
                 {

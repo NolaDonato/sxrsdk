@@ -48,6 +48,8 @@ namespace sxr {
         virtual void  sync(PhysicsWorld *world);
         virtual void  addToWorld(PhysicsWorld*);
         virtual void  removeFromWorld(PhysicsWorld*);
+        virtual void  setParentBody(PhysicsCollidable* body);
+
 
     private:
         btPoint2PointConstraint* mConstraint;

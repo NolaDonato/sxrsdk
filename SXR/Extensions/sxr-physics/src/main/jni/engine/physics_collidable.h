@@ -45,6 +45,7 @@ namespace sxr {
         virtual float getMass() const = 0;
         virtual float getFriction() const = 0;
         virtual int   getCollisionGroup() const = 0;
+        virtual void* getUnderlying() const = 0;
         virtual const glm::vec3& getScale() const = 0;
         virtual SimulationType getSimulationType() const = 0;
 

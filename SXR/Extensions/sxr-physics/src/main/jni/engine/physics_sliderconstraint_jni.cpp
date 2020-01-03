@@ -20,6 +20,7 @@
 #include "physics_sliderconstraint.h"
 #include "physics_rigidbody.h"
 #include "bullet/bullet_sliderconstraint.h"
+#include "glm/gtc/type_ptr.hpp"
 
 namespace sxr {
 
@@ -102,6 +103,7 @@ namespace sxr {
         return reinterpret_cast<PhysicsSliderConstraint *>(jsliderconstraint)
                                 ->getLinearUpperLimit();
     }
-}
+
+    }
 
 }

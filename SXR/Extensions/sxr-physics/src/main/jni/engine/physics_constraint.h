@@ -47,6 +47,7 @@ namespace sxr {
         virtual const glm::vec3&   getPivotB() const { return mPivotB; }
         virtual void               setPivotA(const glm::vec3& v) { mPivotA = v; }
         virtual void               setPivotB(const glm::vec3& v) { mPivotB = v; }
+        virtual void               setParentBody(PhysicsCollidable* body) = 0;
         virtual void               sync(PhysicsWorld *world) = 0;
         virtual void               addToWorld(PhysicsWorld* world) = 0;
         virtual void               removeFromWorld(PhysicsWorld* world) = 0;

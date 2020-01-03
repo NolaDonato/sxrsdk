@@ -95,6 +95,7 @@ namespace sxr {
         }
     }
 
+
     void BulletJointMotor::setVelocityTarget(float vx, float vy, float vz)
     {
         btMultiBodyJointMotor* motor = dynamic_cast<btMultiBodyJointMotor*> (mMotors[0]);

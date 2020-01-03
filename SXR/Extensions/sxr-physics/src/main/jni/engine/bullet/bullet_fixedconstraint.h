@@ -40,6 +40,8 @@ namespace sxr {
         virtual void* getUnderlying() { return mMBConstraint ? reinterpret_cast<void*>(mMBConstraint) : reinterpret_cast<void*>(mConstraint); }
         virtual void  setBreakingImpulse(float impulse);
         virtual float getBreakingImpulse() const;
+        virtual void  setParentBody(PhysicsCollidable* body);
+
         virtual void  sync(PhysicsWorld *world);
         virtual void  addToWorld(PhysicsWorld*);
         virtual void  removeFromWorld(PhysicsWorld*);

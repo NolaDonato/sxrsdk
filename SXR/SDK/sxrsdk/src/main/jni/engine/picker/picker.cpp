@@ -86,7 +86,8 @@ void Picker::pickClosest(Scene* scene,
     {
         Collider* collider = static_cast<Collider*>(*it);
         Node* owner = collider->owner_object();
-        if (collider->enabled() && (owner != NULL) && owner->enabled())
+        if (collider->enabled() && (owner != NULL) &&
+            owner->enabled() && (collider->pick_distance() >= 0))
         {
             ColliderData data = collider->isHit(owner, ray_start, ray_dir);
             if ((collider->pick_distance() > 0) && (collider->pick_distance() < data.Distance))

@@ -68,6 +68,7 @@ namespace sxr {
         virtual void  setAngularDamping(const glm::vec3& v);
         virtual void  setLinearStiffness(const glm::vec3& v);
         virtual void  setAngularStiffness(const glm::vec3& v);
+        virtual void  setParentBody(PhysicsCollidable* body);
 
         virtual void  sync(PhysicsWorld *world);
         virtual void  addToWorld(PhysicsWorld*);

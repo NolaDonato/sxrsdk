@@ -47,7 +47,8 @@ public class SXRMeshCollider extends SXRCollider {
      * @param mesh
      *            The {@link SXRMesh} that the picking ray will test against.
      */
-    public SXRMeshCollider(SXRContext gvrContext, SXRMesh mesh) {
+    public SXRMeshCollider(SXRContext gvrContext, SXRMesh mesh)
+    {
         super(gvrContext, NativeMeshCollider.ctorMesh(mesh.getNative()));
         mMesh = mesh;
     }
@@ -65,7 +66,8 @@ public class SXRMeshCollider extends SXRCollider {
      * @param pickCoordinates
      *            If true, coordinate information will be supplied in {@link com.samsungxr.SXRPicker.SXRPickedObject}.
      */
-    public SXRMeshCollider(SXRContext gvrContext, SXRMesh mesh, boolean pickCoordinates) {
+    public SXRMeshCollider(SXRContext gvrContext, SXRMesh mesh, boolean pickCoordinates)
+    {
         super(gvrContext, NativeMeshCollider.ctorMeshPicking((mesh != null) ? mesh.getNative() : 0L, pickCoordinates));
         long nativeMeshPtr = NativeMeshCollider.getMesh(getNative());
         mMesh = mesh;
@@ -87,7 +89,8 @@ public class SXRMeshCollider extends SXRCollider {
      * @param useMeshBounds
      *            If true, the mesh bounding box is used instead of the mesh.
      */
-    public SXRMeshCollider(SXRContext gvrContext, boolean useMeshBounds) {
+    public SXRMeshCollider(SXRContext gvrContext, boolean useMeshBounds)
+    {
         super(gvrContext, NativeMeshCollider.ctor(useMeshBounds));
     }
 
@@ -111,11 +114,11 @@ public class SXRMeshCollider extends SXRCollider {
      * @param nativeCollider The native collider pointer
      *
      */
-    public SXRMeshCollider(SXRMesh mesh, long nativeCollider)
+    public SXRMeshCollider(SXRContext ctx, long nativeCollider)
     {
-        super(mesh.getSXRContext(), nativeCollider);
+        super(ctx, nativeCollider);
         long nativeMeshPtr = NativeMeshCollider.getMesh(getNative());
-        mMesh = new SXRMesh(mesh.getSXRContext(), nativeMeshPtr);
+        mMesh = new SXRMesh(ctx, nativeMeshPtr);
     }
 
     /**

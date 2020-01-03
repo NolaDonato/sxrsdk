@@ -60,6 +60,10 @@ public class SXRCapsuleCollider extends SXRCollider {
 
     public SXRCapsuleCollider(SXRContext context, long nativePtr) { super(context, nativePtr); }
 
+    public float getHeight() { return NativeCapsuleCollider.getHeight(getNative()); }
+
+    public float getRadius() { return NativeCapsuleCollider.getRadius(getNative()); }
+
     /**
      * Set the radius of the collision capsule.
      *
@@ -120,13 +124,11 @@ public class SXRCapsuleCollider extends SXRCollider {
 class NativeCapsuleCollider {
     static native long ctor();
 
+    static native float getRadius(long jcollider);
+    static native float getHeight(long jcollider);
     static native void setRadius(long jcollider, float radius);
-
     static native void setHeight(long jcollider, float height);
-
     static native void setToXDirection(long jcollider);
-
     static native void setToYDirection(long jcollider);
-
     static native void setToZDirection(long jcollider);
 }

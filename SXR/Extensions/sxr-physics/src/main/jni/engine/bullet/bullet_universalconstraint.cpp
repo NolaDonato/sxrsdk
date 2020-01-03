@@ -129,6 +129,35 @@ namespace sxr {
         }
     }
 
+    void BulletUniversalConstraint::setParentBody(PhysicsCollidable* body)
+    {
+        PhysicsCollidable* bodyA = mBodyA;
+        BulletRigidBody* rb = static_cast<BulletRigidBody*>(bodyA);
+        BulletWorld* bw;
+        btDynamicsWorld* dw = rb->getPhysicsWorld();
+
+        if (body == bodyA)
+        {
+            return;
+        }
+        if (mConstraint)
+        {
+            if (dw)
+            {
+                bw = static_cast<BulletWorld*>(dw->getWorldUserInfo());
+                dw->removeConstraint(mConstraint);
+            }
+            delete mConstraint;
+            mConstraint = nullptr;
+            mBodyA = body;
+            sync(bw);
+        }
+        else
+        {
+            mBodyA = body;
+        }
+    }
+
     void BulletUniversalConstraint::sync(PhysicsWorld *world)
     {
         if (mConstraint != nullptr)
@@ -143,13 +172,10 @@ namespace sxr {
             btRigidBody *rbB = bodyB->getRigidBody();
             BulletRigidBody *bodyA = reinterpret_cast<BulletRigidBody *>(mBodyA);
             btRigidBody *rbA = bodyA->getRigidBody();
-            float x, y, z;
             btVector3 p(mPivotB.x, mPivotB.y, mPivotB.z);
             btVector3 zaxis(mAxis1.x, mAxis1.y, mAxis1.z);
             btVector3 yaxis(mAxis2.x, mAxis2.y, mAxis2.z);
 
-            //        bodyA->getTranslation(x, y, z);
-            //        p += btVector3(x, y, z);
             mConstraint = new btUniversalConstraint(*rbA, *rbB, p, zaxis, yaxis);
             mConstraint->setAngularLowerLimit(Common2Bullet(mAngularLowerLimits));
             mConstraint->setAngularUpperLimit(Common2Bullet(mAngularUpperLimits));

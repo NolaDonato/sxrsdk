@@ -28,21 +28,15 @@ namespace sxr {
     public:
         virtual ~PhysicsSliderConstraint() {}
 
-        virtual void setAngularLowerLimit(float limit) = 0;
-
         virtual float getAngularLowerLimit() const = 0;
-
-        virtual void setAngularUpperLimit(float limit) = 0;
-
         virtual float getAngularUpperLimit() const = 0;
-
-        virtual void setLinearLowerLimit(float limit) = 0;
-
         virtual float getLinearLowerLimit() const = 0;
-
-        virtual void setLinearUpperLimit(float limit) = 0;
-
         virtual float getLinearUpperLimit() const = 0;
+
+        virtual void setAngularLowerLimit(float limit) = 0;
+        virtual void setAngularUpperLimit(float limit) = 0;
+        virtual void setLinearLowerLimit(float limit) = 0;
+        virtual void setLinearUpperLimit(float limit) = 0;
 
         int getConstraintType() const { return PhysicsConstraint::sliderConstraint; }
     };

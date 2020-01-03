@@ -46,7 +46,7 @@ class PhysicsJoint :  public PhysicsCollidable
 	PhysicsJoint(PhysicsJoint* parent, JointType type, int boneID, float mass) : PhysicsCollidable(PhysicsJoint::getComponentType()) { }
     virtual ~PhysicsJoint() {}
 	static long long getComponentType() { return COMPONENT_TYPE_PHYSICS_JOINT; }
-
+	virtual void             copy(PhysicsJoint* srcJoint) = 0;
 	virtual JointType        getJointType() const = 0;
 	virtual int              getNumJoints() const = 0;
 	virtual int              getJointIndex() const = 0;

@@ -213,6 +213,56 @@ namespace sxr {
         }
     }
 
+    void BulletSliderConstraint::setParentBody(PhysicsCollidable* body)
+    {
+        PhysicsCollidable* bodyA = mBodyA;
+        btDynamicsWorld* dw;
+        BulletWorld* bw;
+
+        if (body == bodyA)
+        {
+            return;
+        }
+        if (bodyA->getType() == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
+        {
+            BulletRigidBody* rb = static_cast<BulletRigidBody*>(bodyA);
+            dw = rb->getPhysicsWorld();
+
+        }
+        else if (bodyA->getType() == COMPONENT_TYPE_PHYSICS_JOINT)
+        {
+            BulletJoint* j = static_cast<BulletJoint*>(bodyA);
+            dw = j->getPhysicsWorld();
+        }
+        if (dw)
+        {
+            bw = static_cast<BulletWorld*>(dw->getWorldUserInfo());
+        }
+
+        if (mConstraint)
+        {
+            dw->removeConstraint(mConstraint);
+            delete mConstraint;
+            mConstraint = nullptr;
+        }
+        else if (mMBConstraint)
+        {
+            btMultiBodyDynamicsWorld* mbdw = dynamic_cast<btMultiBodyDynamicsWorld*>(dw);
+            if (mbdw)
+            {
+                mbdw->removeMultiBodyConstraint(mMBConstraint);
+                delete mMBConstraint;
+                mMBConstraint = nullptr;
+            }
+        }
+        else
+        {
+            mBodyA = body;
+        }
+        mBodyA = body;
+        sync(bw);
+    }
+
     void BulletSliderConstraint::sync(PhysicsWorld *world)
     {
         if ((mConstraint != nullptr) || (mMBConstraint != nullptr))

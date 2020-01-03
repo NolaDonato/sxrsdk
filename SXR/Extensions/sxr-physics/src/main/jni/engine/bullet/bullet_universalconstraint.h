@@ -45,6 +45,7 @@ namespace sxr {
         virtual void  setAngularUpperLimits(float limitX, float limitY, float limitZ);
         virtual void  setAngularLowerLimits(float limitX, float limitY, float limitZ);
         virtual void  setBreakingImpulse(float impulse);
+        virtual void  setParentBody(PhysicsCollidable* body);
         virtual void  sync(PhysicsWorld *world);
         virtual void  addToWorld(PhysicsWorld*);
         virtual void  removeFromWorld(PhysicsWorld*);

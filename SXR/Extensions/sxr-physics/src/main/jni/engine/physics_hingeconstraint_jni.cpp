@@ -15,6 +15,7 @@
 #include "physics_hingeconstraint.h"
 #include "physics_rigidbody.h"
 #include "bullet/bullet_hingeconstraint.h"
+#include "glm/gtc/type_ptr.hpp"
 
 namespace sxr {
     extern "C" {
@@ -61,6 +62,18 @@ namespace sxr {
                                                                      jlong jhinge_constraint)
     {
         return reinterpret_cast<PhysicsHingeConstraint *>(jhinge_constraint)->getUpperLimit();
+    }
+
+    JNIEXPORT jfloatArray   JNICALL
+    Java_com_samsungxr_physics_Native3DHingeConstraint_getAxis(JNIEnv *env, jclass obj,
+                                                        jlong jhinge_constraint)
+    {
+        PhysicsHingeConstraint* c = reinterpret_cast<PhysicsHingeConstraint *>(jhinge_constraint);
+        const glm::vec3& v = c->getAxis();
+        jfloatArray result = env->NewFloatArray(3);
+
+        env->SetFloatArrayRegion(result, 0, 3, glm::value_ptr(v));
+        return result;
     }
     }
 

@@ -46,6 +46,7 @@ class BulletJoint : public PhysicsJoint
     BulletJoint(BulletJoint* parent, JointType type, int jointIndex, float mass, int collisionGroup);
 	BulletJoint(BulletJoint* parent, int jointIndex, int collisionGroup);
     virtual ~BulletJoint() { }
+	virtual void  copy(PhysicsJoint* srcJoint);
 
 	virtual const BulletRootJoint* findRoot() const;
 	virtual BulletRootJoint* findRoot();
@@ -91,6 +92,7 @@ class BulletJoint : public PhysicsJoint
 
     btDynamicsWorld* 	     getPhysicsWorld() { return mWorld ? mWorld->getPhysicsWorld() : nullptr; }
 	btMultiBody*             getMultiBody() const { return mMultiBody; }
+	void*				     getUnderlying() const { return mMultiBody; }
 	btMultibodyLink*         getLink() const { return &(mMultiBody->getLink(mJointIndex)); }
 	int                      getJointIndex() const { return mJointIndex; }
 	virtual float            getMass() const { return mMass; }
@@ -141,6 +143,7 @@ public:
     BulletRootJoint(float mass, int numBones, int collisionGroup);
     BulletRootJoint(btMultiBody* multibody);
     virtual ~BulletRootJoint();
+	virtual void  copy(PhysicsJoint* srcJoint);
 
 	virtual const BulletRootJoint* findRoot() const;
 	virtual BulletRootJoint* findRoot();

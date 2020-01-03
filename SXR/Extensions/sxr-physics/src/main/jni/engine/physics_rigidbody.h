@@ -34,15 +34,16 @@ public:
 	PhysicsRigidBody() : PhysicsCollidable(PhysicsRigidBody::getComponentType()) {}
 
 	virtual ~PhysicsRigidBody() {}
+	virtual void copy(PhysicsRigidBody* srcBody) = 0;
 
 	static long long getComponentType() { return COMPONENT_TYPE_PHYSICS_RIGID_BODY; }
 
     virtual void applyCentralForce(float x, float y, float z) = 0;
 	virtual void applyForce(float force_x, float force_y, float force_z,
-			float rel_pos_x, float rel_pos_y, float rel_pos_z) = 0;
+			                float rel_pos_x, float rel_pos_y, float rel_pos_z) = 0;
 	virtual void applyCentralImpulse(float x, float y, float z) = 0;
     virtual void applyImpulse(float impulse_x, float impulse_y, float impulse_z,
-                            float rel_pos_x, float rel_pos_y, float rel_pos_z) = 0;
+                              float rel_pos_x, float rel_pos_y, float rel_pos_z) = 0;
     virtual void applyTorque(float x, float y, float z) = 0;
     virtual void applyTorqueImpulse(float x, float y, float z) = 0;
 
@@ -58,7 +59,6 @@ public:
 	virtual void setCcdMotionThreshold(float n)  = 0;
 	virtual void setCcdSweptSphereRadius(float n)  = 0;
 	virtual void setContactProcessingThreshold(float n)  = 0;
-
 	virtual void setIgnoreCollisionCheck( PhysicsRigidBody* collisionObj, bool ignore)  = 0;
 
 	virtual void getGravity(float *v3) const = 0;
@@ -67,7 +67,6 @@ public:
 	virtual void getAngularFactor(float *v3) const = 0;
 	virtual void getLinearFactor(float *v3) const = 0;
 	virtual void getDamping(float &angular, float &linear) const = 0;
-
 	virtual float getRestitution() const = 0;
 	virtual float getCcdMotionThreshold() const = 0;
 	virtual float getCcdSweptSphereRadius() const = 0;

@@ -491,6 +491,45 @@ namespace sxr {
         }
     }
 
+    void BulletGeneric6dofConstraint::setParentBody(PhysicsCollidable* body)
+    {
+        PhysicsCollidable* bodyA = mBodyA;
+        btDynamicsWorld* dw;
+        BulletWorld* bw;
+
+        if (body == bodyA)
+        {
+            return;
+        }
+        if (bodyA->getType() == COMPONENT_TYPE_PHYSICS_RIGID_BODY)
+        {
+            BulletRigidBody* rb = static_cast<BulletRigidBody*>(bodyA);
+            dw = rb->getPhysicsWorld();
+
+        }
+        else if (bodyA->getType() == COMPONENT_TYPE_PHYSICS_JOINT)
+        {
+            BulletJoint* j = static_cast<BulletJoint*>(bodyA);
+            dw = j->getPhysicsWorld();
+        }
+        if (dw)
+        {
+            bw = static_cast<BulletWorld*>(dw->getWorldUserInfo());
+        }
+        if (mConstraint)
+        {
+            dw->removeConstraint(mConstraint);
+            delete mConstraint;
+            mConstraint = nullptr;
+            mBodyA = body;
+            sync(bw);
+        }
+        else
+        {
+            mBodyA = body;
+        }
+    }
+
     void BulletGeneric6dofConstraint::sync(PhysicsWorld *world)
     {
         if (mConstraint != nullptr)

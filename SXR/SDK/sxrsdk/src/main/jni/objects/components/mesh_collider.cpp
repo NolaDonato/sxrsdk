@@ -299,7 +299,7 @@ static void populateSurfaceCoords(const Mesh& mesh, ColliderData& colliderData) 
                     data.FaceIndex = iter;
                 }
             });
-            if(pickCoordinates && data.IsHit)
+            if (pickCoordinates && data.IsHit)
             {
                 populateSurfaceCoords(mesh, data);
             }

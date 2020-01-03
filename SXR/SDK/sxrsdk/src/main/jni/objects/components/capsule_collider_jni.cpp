@@ -13,83 +13,71 @@
  * limitations under the License.
  */
 
-
-/***************************************************************************
- * JNI
- ***************************************************************************/
-
 #include "capsule_collider.h"
+#include "glm/gtc/type_ptr.hpp"
 
-namespace sxr {
-extern "C"
+namespace sxr
 {
+    extern "C" {
+
     JNIEXPORT jlong JNICALL
-    Java_com_samsungxr_NativeCapsuleCollider_ctor(JNIEnv *env, jobject obj);
+    Java_com_samsungxr_NativeCapsuleCollider_ctor(JNIEnv* env, jclass obj)
+    {
+        return reinterpret_cast<jlong>(new CapsuleCollider());
+    }
 
     JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeCapsuleCollider_setRadius(JNIEnv * env,
-         jobject obj, jlong jcollider, jfloat radius);
+    Java_com_samsungxr_NativeCapsuleCollider_setRadius(JNIEnv* env, jclass obj, jlong jcollider,
+                                                       jfloat radius)
+    {
+        CapsuleCollider* collider = reinterpret_cast<CapsuleCollider*>(jcollider);
+        collider->setRadius(radius);
+    }
 
     JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeCapsuleCollider_setHeight(JNIEnv * env,
-         jobject obj, jlong jcollider, jfloat height);
+    Java_com_samsungxr_NativeCapsuleCollider_setHeight(JNIEnv* env, jclass obj, jlong jcollider,
+                                                       jfloat height)
+    {
+        CapsuleCollider* collider = reinterpret_cast<CapsuleCollider*>(jcollider);
+        collider->setHeight(height);
+    }
 
     JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeCapsuleCollider_setToXDirection(JNIEnv * env,
-         jobject obj, jlong jcollider);
+    Java_com_samsungxr_NativeCapsuleCollider_setToXDirection(JNIEnv* env, jclass obj,
+                                                             jlong jcollider)
+    {
+        CapsuleCollider* collider = reinterpret_cast<CapsuleCollider*>(jcollider);
+        collider->setToXDirection();
+    }
 
     JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeCapsuleCollider_setToYDirection(JNIEnv * env,
-         jobject obj, jlong jcollider);
+    Java_com_samsungxr_NativeCapsuleCollider_setToYDirection(JNIEnv* env, jclass obj,
+                                                             jlong jcollider)
+    {
+        CapsuleCollider* collider = reinterpret_cast<CapsuleCollider*>(jcollider);
+        collider->setToYDirection();
+    }
 
     JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeCapsuleCollider_setToZDirection(JNIEnv * env,
-         jobject obj, jlong jcollider);
-}
+    Java_com_samsungxr_NativeCapsuleCollider_setToZDirection(JNIEnv* env, jclass obj,
+                                                             jlong jcollider)
+    {
+        CapsuleCollider* collider = reinterpret_cast<CapsuleCollider*>(jcollider);
+        collider->setToZDirection();
+    }
 
-JNIEXPORT jlong JNICALL
-Java_com_samsungxr_NativeCapsuleCollider_ctor(JNIEnv *env, jobject obj)
-{
-    return reinterpret_cast<jlong>(new CapsuleCollider());
-}
+    JNIEXPORT jfloat JNICALL
+    Java_com_samsungxr_NativeCapsuleCollider_getHeight(JNIEnv* env, jclass obj, jlong jcollider)
+    {
+        CapsuleCollider* collider = reinterpret_cast<CapsuleCollider*>(jcollider);
+        return collider->getHeight();
+    }
 
-JNIEXPORT void JNICALL
-Java_com_samsungxr_NativeCapsuleCollider_setRadius(JNIEnv * env,
-        jobject obj, jlong jcollider, jfloat radius)
-{
-    CapsuleCollider *collider = reinterpret_cast<CapsuleCollider *>(jcollider);
-    collider->setRadius(radius);
-}
-
-JNIEXPORT void JNICALL
-Java_com_samsungxr_NativeCapsuleCollider_setHeight(JNIEnv * env,
-        jobject obj, jlong jcollider, jfloat height)
-{
-    CapsuleCollider *collider = reinterpret_cast<CapsuleCollider *>(jcollider);
-    collider->setHeight(height);
-}
-
-JNIEXPORT void JNICALL
-Java_com_samsungxr_NativeCapsuleCollider_setToXDirection(JNIEnv * env,
-        jobject obj, jlong jcollider)
-{
-    CapsuleCollider *collider = reinterpret_cast<CapsuleCollider *>(jcollider);
-    collider->setToXDirection();
-}
-
-JNIEXPORT void JNICALL
-Java_com_samsungxr_NativeCapsuleCollider_setToYDirection(JNIEnv * env,
-        jobject obj, jlong jcollider)
-{
-    CapsuleCollider *collider = reinterpret_cast<CapsuleCollider *>(jcollider);
-    collider->setToYDirection();
-}
-
-JNIEXPORT void JNICALL
-Java_com_samsungxr_NativeCapsuleCollider_setToZDirection(JNIEnv * env,
-        jobject obj, jlong jcollider)
-{
-    CapsuleCollider *collider = reinterpret_cast<CapsuleCollider *>(jcollider);
-    collider->setToZDirection();
-}
+    JNIEXPORT jfloat JNICALL
+    Java_com_samsungxr_NativeCapsuleCollider_getRadius(JNIEnv* env, jclass obj, jlong jcollider)
+    {
+        CapsuleCollider* collider = reinterpret_cast<CapsuleCollider*>(jcollider);
+        return collider->getRadius();
+    }
+    }
 }

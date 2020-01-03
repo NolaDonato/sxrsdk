@@ -39,6 +39,8 @@ public:
     virtual void setPositionTarget(int dof, float p);
     virtual void setPositionTarget(float px, float py, float pz);
     virtual void setPositionTarget(float px, float py, float pz, float pw);
+    virtual void setParentBody(PhysicsCollidable* body) { }
+
     virtual void sync(PhysicsWorld *world);
     virtual int   getConstraintType() const;
     virtual void* getUnderlying();

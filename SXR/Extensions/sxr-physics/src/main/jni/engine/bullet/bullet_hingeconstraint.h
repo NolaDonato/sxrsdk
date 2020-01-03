@@ -41,7 +41,7 @@ namespace sxr {
         BulletHingeConstraint(btHingeConstraint *constraint);
         virtual ~BulletHingeConstraint();
 
-        virtual const glm::vec3& getHingeAxis() { return mHingeAxis; }
+        virtual const glm::vec3& getAxis() { return mAxis; }
         virtual float getLowerLimit() const;
         virtual float getUpperLimit() const;
         virtual float getBreakingImpulse() const;
@@ -51,13 +51,14 @@ namespace sxr {
         virtual void  sync(PhysicsWorld *world);
         virtual void  addToWorld(PhysicsWorld*);
         virtual void  removeFromWorld(PhysicsWorld*);
+        virtual void  setParentBody(PhysicsCollidable* body);
 
     private:
         btHingeConstraint* mConstraint;
         float     mBreakingImpulse;
         float     mTempLower;
         float     mTempUpper;
-        glm::vec3 mHingeAxis;
+        glm::vec3 mAxis;
     };
 }
 #endif //EXTENSIONS_BULLET_HINGECONSTRAINT_H

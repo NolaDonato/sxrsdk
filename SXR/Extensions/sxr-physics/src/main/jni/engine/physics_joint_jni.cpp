@@ -49,6 +49,14 @@ Java_com_samsungxr_physics_NativePhysicsJoint_getCollisionGroup(JNIEnv *env, jcl
 }
 
 JNIEXPORT jint JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_getJointType(JNIEnv *env, jclass obj,
+                                                                jlong jjoint)
+{
+    PhysicsJoint* joint = reinterpret_cast<PhysicsJoint*>(jjoint);
+    return joint->getJointType();
+}
+
+JNIEXPORT jint JNICALL
 Java_com_samsungxr_physics_NativePhysicsJoint_getSimulationType(JNIEnv *env, jclass obj,
                                                              jlong jjoint)
 {
@@ -83,6 +91,17 @@ Java_com_samsungxr_physics_NativePhysicsJoint_getScale(JNIEnv *env, jclass obj, 
 {
     PhysicsJoint* mb = reinterpret_cast<PhysicsJoint *>(jjoint);
     const glm::vec3& v = mb->getScale();
+    jfloatArray result = env->NewFloatArray(3);
+
+    env->SetFloatArrayRegion(result, 0, 3, glm::value_ptr(v));
+    return result;
+}
+
+JNIEXPORT jfloatArray   JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_getAxis(JNIEnv *env, jclass obj, jlong jjoint)
+{
+    PhysicsJoint* mb = reinterpret_cast<PhysicsJoint *>(jjoint);
+    const glm::vec3& v = mb->getAxis();
     jfloatArray result = env->NewFloatArray(3);
 
     env->SetFloatArrayRegion(result, 0, 3, glm::value_ptr(v));
@@ -273,6 +292,16 @@ Java_com_samsungxr_physics_NativePhysicsJoint_sync(JNIEnv* env, jclass obj,
 {
     BulletJoint* joint = reinterpret_cast<BulletJoint*>(jjoint);
     joint->sync(options);
+}
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_copy(JNIEnv * env, jclass obj,
+                                                jlong jdestBody, jlong jsrcBody)
+{
+    BulletJoint* srcBody = reinterpret_cast<BulletJoint*>(jsrcBody);
+    BulletJoint* destBody = reinterpret_cast<BulletJoint*>(jdestBody);
+
+    destBody->copy(srcBody);
 }
 }
 }

@@ -14,29 +14,35 @@
  */
 #include <jni.h>
 #include "box_collider.h"
+#include "glm/gtc/type_ptr.hpp"
 
-namespace sxr {
-extern "C"
+namespace sxr
 {
+    extern "C"
+    {
     JNIEXPORT jlong JNICALL
-    Java_com_samsungxr_NativeBoxCollider_ctor(JNIEnv *env, jobject obj);
+    Java_com_samsungxr_NativeBoxCollider_ctor(JNIEnv* env, jclass obj)
+    {
+        return reinterpret_cast<jlong>(new BoxCollider());
+    }
 
     JNIEXPORT void JNICALL
-    Java_com_samsungxr_NativeBoxCollider_setHalfExtents(JNIEnv * env,
-            jobject obj, jlong jcollider, jfloat x, jfloat y, jfloat z);
-}
+    Java_com_samsungxr_NativeBoxCollider_setHalfExtents(JNIEnv* env, jclass obj, jlong jcollider,
+                                                        jfloat x, jfloat y, jfloat z)
+    {
+        BoxCollider* collider = reinterpret_cast<BoxCollider*>(jcollider);
+        collider->set_half_extents(x, y, z);
+    }
 
-JNIEXPORT jlong JNICALL
-Java_com_samsungxr_NativeBoxCollider_ctor(JNIEnv *env, jobject obj)
-{
-    return reinterpret_cast<jlong>(new BoxCollider());
-}
+    JNIEXPORT jfloatArray JNICALL
+    Java_com_samsungxr_NativeBoxCollider_getHalfExtents(JNIEnv* env, jclass obj, jlong jcollider)
+    {
+        BoxCollider* c = reinterpret_cast<BoxCollider*>(jcollider);
+        const glm::vec3& v = c->get_half_extents();
+        jfloatArray result = env->NewFloatArray(3);
 
-JNIEXPORT void JNICALL
-Java_com_samsungxr_NativeBoxCollider_setHalfExtents(JNIEnv *env,
-        jobject obj, jlong jcollider, jfloat x, jfloat y, jfloat z)
-{
-    BoxCollider *collider = reinterpret_cast<BoxCollider *>(jcollider);
-    collider->set_half_extents(x, y, z);
-}
+        env->SetFloatArrayRegion(result, 0, 3, glm::value_ptr(v));
+        return result;
+    }
+    }
 }

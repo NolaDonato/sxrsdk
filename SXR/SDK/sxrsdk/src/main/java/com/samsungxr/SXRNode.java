@@ -630,12 +630,26 @@ public class SXRNode extends SXRHybridObject implements PrettyPrint, IScriptable
      * @see SXRSphereCollider
      * @see SXRMeshCollider
      */
-    public void setPickingEnabled(boolean enabled) {
-        if (enabled != getPickingEnabled()) {
-            if (enabled) {
-                attachComponent(new SXRSphereCollider(getSXRContext()));
-            } else {
-                detachComponent(SXRCollider.getComponentType());
+    public void setPickingEnabled(boolean enabled)
+    {
+        SXRCollider collider = getCollider();
+
+        if (enabled != getPickingEnabled())
+        {
+            if (enabled)
+            {
+                if (collider != null)
+                {
+                    collider.enable();
+                }
+                else
+                {
+                    attachComponent(new SXRSphereCollider(getSXRContext()));
+                }
+            }
+            else if (collider != null)
+            {
+                collider.disable();
             }
         }
     }
@@ -647,8 +661,10 @@ public class SXRNode extends SXRHybridObject implements PrettyPrint, IScriptable
      *
      * @since 2.0.2
      */
-    public boolean getPickingEnabled() {
-        return getComponent(SXRCollider.getComponentType()) != null;
+    public boolean getPickingEnabled()
+    {
+        SXRCollider collider = getCollider();
+        return  (collider != null) && collider.isEnabled();
     }
 
     /**

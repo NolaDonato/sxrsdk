@@ -30,18 +30,13 @@ namespace sxr {
     public:
         virtual ~PhysicsHingeConstraint() {}
 
-        virtual void setLimits(float lower, float upper) = 0;
-
-        virtual float getLowerLimit() const = 0;
-
-        virtual float getUpperLimit() const = 0;
-
         int getConstraintType() const { return PhysicsConstraint::hingeConstraint; }
-
-        virtual const glm::vec3& getHingeAxis() = 0;
-
+        virtual float getLowerLimit() const = 0;
+        virtual float getUpperLimit() const = 0;
+        virtual const glm::vec3& getAxis() = 0;
         virtual float getBreakingImpulse() const = 0;
 
+        virtual void setLimits(float lower, float upper) = 0;
         virtual void setBreakingImpulse(float impulse) = 0;
     };
 

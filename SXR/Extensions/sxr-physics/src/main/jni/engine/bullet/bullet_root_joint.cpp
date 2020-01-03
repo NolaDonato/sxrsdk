@@ -72,7 +72,7 @@ namespace sxr {
       mMaxAppliedImpulse(1000),
       mNumJoints(multiBody->getNumLinks())
     {
-        mNeedsSync |= SyncOptions::IMPORTED;
+        mNeedsSync |= SyncOptions::IMPORTED | SyncOptions::COLLISION_SHAPE;
         mMultiBody = multiBody;
         mJoints.reserve(mNumJoints);
         mJoints.resize(mNumJoints);
@@ -129,6 +129,15 @@ namespace sxr {
     BulletRootJoint* BulletRootJoint::findRoot()
     {
         return this;
+    }
+
+    void BulletRootJoint::copy(PhysicsJoint* srcJoint)
+    {
+        BulletJoint* src = static_cast<BulletJoint*>(srcJoint);
+        
+        mMaxCoordVelocity = src->getMaxCoordVelocity();
+        mMaxAppliedImpulse = src->getMaxAppliedImpulse();
+        BulletJoint::copy(srcJoint);
     }
 
     Skeleton* BulletRootJoint::getSkeleton() const
@@ -414,8 +423,8 @@ namespace sxr {
     {
         btCollisionShape* curShape = nullptr;
         btCollisionShape* newShape = nullptr;
-        Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
-        btVector3 scale(mScale.x, mScale.y, mScale.z);
+        Collider*         collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
+        btVector3         scale(mScale.x, mScale.y, mScale.z);
 
         if (collider == nullptr)
         {
@@ -515,10 +524,10 @@ namespace sxr {
             return false;
         }
         BulletJoint* bj = static_cast<BulletJoint*>(joint);
-        int linkIndex = joint->getJointIndex();
+        int          linkIndex = joint->getJointIndex();
+        bool         initialized = (++mLinksAdded == numjoints);
 
         LOGD("BULLET: linking joint %s at index %d", joint->getName(), linkIndex);
-        bool initialized = (++mLinksAdded == numjoints);
 
         if (bj->isImported())
         {

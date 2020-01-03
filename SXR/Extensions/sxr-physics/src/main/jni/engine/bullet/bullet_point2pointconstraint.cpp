@@ -77,6 +77,34 @@ namespace sxr {
         return mBreakingImpulse;
     }
 
+    void BulletPoint2PointConstraint::setParentBody(PhysicsCollidable* body)
+    {
+        PhysicsCollidable* bodyA = mBodyA;
+        BulletRigidBody* rb = static_cast<BulletRigidBody*>(bodyA);
+        BulletWorld* bw;
+        btDynamicsWorld* dw = rb->getPhysicsWorld();
+
+        if (body == bodyA)
+        {
+            return;
+        }
+        if (mConstraint)
+        {
+            if (dw)
+            {
+                bw = static_cast<BulletWorld*>(dw->getWorldUserInfo());
+                dw->removeConstraint(mConstraint);
+            }
+            delete mConstraint;
+            mConstraint = nullptr;
+            mBodyA = body;
+            sync(bw);
+        }
+        else
+        {
+            mBodyA = body;
+        }
+    }
 
     void BulletPoint2PointConstraint::sync(PhysicsWorld *world)
     {

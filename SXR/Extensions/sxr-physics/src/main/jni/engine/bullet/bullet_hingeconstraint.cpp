@@ -39,7 +39,7 @@ namespace sxr {
         mBreakingImpulse = SIMD_INFINITY;
         mPivotA = pivotA;
         mPivotB = pivotB;
-        mHingeAxis = axis;
+        mAxis = axis;
 
         // By default angular limit is inactive
         mTempLower = 2.0f;
@@ -119,6 +119,35 @@ namespace sxr {
         }
     }
 
+    void BulletHingeConstraint::setParentBody(PhysicsCollidable* body)
+    {
+        PhysicsCollidable* bodyA = mBodyA;
+        BulletRigidBody* rb = static_cast<BulletRigidBody*>(bodyA);
+        BulletWorld* bw;
+        btDynamicsWorld* dw = rb->getPhysicsWorld();
+
+        if (body == bodyA)
+        {
+            return;
+        }
+        if (mConstraint)
+        {
+            if (dw)
+            {
+                bw = static_cast<BulletWorld*>(dw->getWorldUserInfo());
+                dw->removeConstraint(mConstraint);
+            }
+            delete mConstraint;
+            mConstraint = nullptr;
+            mBodyA = body;
+            sync(bw);
+        }
+        else
+        {
+            mBodyA = body;
+        }
+    }
+
     void BulletHingeConstraint::sync(PhysicsWorld *world)
     {
         if (mConstraint != nullptr)
@@ -132,7 +161,7 @@ namespace sxr {
             btRigidBody* rbA = static_cast<BulletRigidBody*>(mBodyA)->getRigidBody();
             btVector3    pA(mPivotA.x, mPivotA.y, mPivotA.z);
             btVector3    pB(mPivotB.x, mPivotB.y, mPivotB.z);
-            btVector3    axisA(mHingeAxis.x, mHingeAxis.y, mHingeAxis.z);
+            btVector3    axisA(mAxis.x, mAxis.y, mAxis.z);
             btTransform  worldFrameA = convertTransform2btTransform(mBodyA->owner_object()->transform());
             btTransform  worldFrameB = convertTransform2btTransform(owner_object()->transform());
             btTransform  localFrameA = worldFrameB.inverse() * worldFrameA;

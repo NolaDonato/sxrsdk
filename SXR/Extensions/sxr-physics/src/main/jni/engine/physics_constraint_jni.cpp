@@ -93,6 +93,16 @@ namespace sxr {
         PhysicsConstraint *child = reinterpret_cast<PhysicsConstraint *>(jchild);
         parent->removeChildComponent(child);
     }
+
+    JNIEXPORT void JNICALL
+    Java_com_samsungxr_physics_Native3DConstraint_setParentBody(JNIEnv *env, jclass obj,
+                                                                       jlong jconstraint,
+                                                                       jlong jparent)
+    {
+        PhysicsConstraint* constraint = reinterpret_cast<PhysicsConstraint *>(jconstraint);
+        PhysicsCollidable* parent = reinterpret_cast<PhysicsCollidable*>(jparent);
+        constraint->setParentBody(parent);
+    }
     }
 
 }

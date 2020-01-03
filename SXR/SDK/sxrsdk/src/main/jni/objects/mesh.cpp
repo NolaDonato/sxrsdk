@@ -273,7 +273,17 @@ namespace sxr
         const float *V2;
         const float *V3;
         int stride = mVertices->getVertexSize();
-        if (mIndices->getIndexSize() == 2)
+        if (mIndices == nullptr)
+        {
+            for (int i = 0; i < n; i += 3)
+            {
+                V1 = vertData + (stride * i);
+                V2 = vertData + (stride * (i + 1));
+                V3 = vertData + (stride * (i + 2));
+                func(i / 3, V1, V2, V3);
+            }
+        }
+        else if (mIndices->getIndexSize() == 2)
         {
             const unsigned short* intData = reinterpret_cast<const unsigned short*>(mIndices->getIndexData());
             for (int i = 0; i < n; i += 3)

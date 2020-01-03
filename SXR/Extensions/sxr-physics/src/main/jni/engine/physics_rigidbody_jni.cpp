@@ -1,3 +1,4 @@
+
 /* Copyright 2015 Samsung Electronics Co., LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -435,7 +436,7 @@ Java_com_samsungxr_physics_NativeRigidBody_sync(JNIEnv *env, jclass obj,
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_samsungxr_physics_NativeRigidBody_getName(JNIEnv * env, jobject obj, jlong jbody)
+Java_com_samsungxr_physics_NativeRigidBody_getName(JNIEnv * env, jclass obj, jlong jbody)
 {
     BulletRigidBody* body = reinterpret_cast<BulletRigidBody*>(jbody);
     const char* name = body->getName();
@@ -454,6 +455,16 @@ Java_com_samsungxr_physics_NativeRigidBody_setName(JNIEnv * env, jclass obj,
     const char* native_name = env->GetStringUTFChars(name, 0);
     body->setName(native_name);
     env->ReleaseStringUTFChars(name, native_name);
+}
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativeRigidBody_copy(JNIEnv * env, jclass obj,
+                                               jlong jdestBody, jlong jsrcBody)
+{
+    BulletRigidBody* srcBody = reinterpret_cast<BulletRigidBody*>(jsrcBody);
+    BulletRigidBody* destBody = reinterpret_cast<BulletRigidBody*>(jdestBody);
+
+    destBody->copy(srcBody);
 }
 }
 

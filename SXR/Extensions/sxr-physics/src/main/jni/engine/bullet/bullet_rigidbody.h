@@ -17,6 +17,7 @@
 #define BULLET_RIGIDBODY_H_
 
 #include "../physics_rigidbody.h"
+#include "bullet_world.h"
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <LinearMath/btMotionState.h>
 
@@ -26,7 +27,6 @@ class btDynamicsWorld;
 namespace sxr {
 
 class Node;
-class BulletWorld;
 
 class BulletRigidBody : public PhysicsRigidBody, btMotionState
 {
@@ -34,9 +34,10 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
     BulletRigidBody(float mass, int collisionGroup);
     BulletRigidBody(btRigidBody *rigidBody);
     virtual ~BulletRigidBody();
-
+    virtual void copy(PhysicsRigidBody* srcBody);
     virtual void onDisable(Node* owner);
     virtual void onEnable(Node* owner);
+
     virtual void setName(const char*);
     virtual void setSimulationType(SimulationType type);
     virtual void setFriction(float f);
@@ -47,6 +48,7 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
     virtual const glm::vec3& getScale() const { return mScale; }
     virtual const char* getName() const;
     virtual int getCollisionGroup() const { return mCollisionGroup; }
+    virtual int getCollisionMask() const { return mCollisionMask; }
 
     void    applyCentralForce(float x, float y, float z);
 	void    applyForce(float force_x, float force_y, float force_z,
@@ -82,6 +84,13 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
     void    addToWorld(PhysicsWorld* world, int collidesWith);
 
     btRigidBody* getRigidBody() const
+    {
+        return mRigidBody;
+    }
+
+    btDynamicsWorld* getPhysicsWorld() { return mWorld ? mWorld->getPhysicsWorld() : nullptr; }
+
+    virtual void* getUnderlying() const
     {
         return mRigidBody;
     }

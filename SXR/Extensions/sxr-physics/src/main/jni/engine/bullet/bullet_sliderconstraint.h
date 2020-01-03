@@ -40,16 +40,18 @@ namespace sxr {
         virtual ~BulletSliderConstraint();
 
         virtual void* getUnderlying() { return mMBConstraint ? static_cast<void*>(mMBConstraint) : static_cast<void*>(mConstraint); }
-        virtual void  setAngularLowerLimit(float limit);
         virtual float getAngularLowerLimit() const;
-        virtual void  setAngularUpperLimit(float limit);
         virtual float getAngularUpperLimit() const;
-        virtual void  setLinearLowerLimit(float limit);
         virtual float getLinearLowerLimit() const;
-        virtual void  setLinearUpperLimit(float limit);
         virtual float getLinearUpperLimit() const;
-        virtual void  setBreakingImpulse(float impulse);
         virtual float getBreakingImpulse() const;
+
+        virtual void  setAngularLowerLimit(float limit);
+        virtual void  setAngularUpperLimit(float limit);
+        virtual void  setLinearLowerLimit(float limit);
+        virtual void  setLinearUpperLimit(float limit);
+        virtual void  setBreakingImpulse(float impulse);
+        virtual void  setParentBody(PhysicsCollidable* body);
         virtual void  sync(PhysicsWorld *);
         virtual void  addToWorld(PhysicsWorld*);
         virtual void  removeFromWorld(PhysicsWorld*);

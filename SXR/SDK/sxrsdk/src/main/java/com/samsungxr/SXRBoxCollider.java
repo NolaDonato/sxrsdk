@@ -26,10 +26,13 @@ public class SXRBoxCollider extends SXRCollider {
     {
         NativeBoxCollider.setHalfExtents(getNative(), x, y, z);
     }
+
+    public float[] getHalfExtents() { return NativeBoxCollider.getHalfExtents(getNative()); }
 }
 
 class NativeBoxCollider {
     static native long ctor();
 
+    static native float[] getHalfExtents(long jcollider);
     static native void setHalfExtents(long jcollider, float x, float y, float z);
 }
