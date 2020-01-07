@@ -36,15 +36,16 @@
 #include <BulletDynamics/Featherstone/btMultiBodyPoint2Point.h>
 #include <BulletCollision/CollisionShapes/btConvexPolyhedron.h>
 #include <BulletDynamics/ConstraintSolver/btSequentialImpulseConstraintSolver.h>
-#include <Serialize/BulletFileLoader/btBulletFile.h>
 #include <BulletDynamics/Dynamics/btDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
 #include <BulletDynamics/Featherstone/btMultiBody.h>
 #include <BulletDynamics/Featherstone/btMultiBodyDynamicsWorld.h>
+#include <BulletCollision/CollisionShapes/btStridingMeshInterface.h>
 #include <LinearMath/btSerializer.h>
 #include <CommonInterfaces/CommonFileIOInterface.h>
 #include <Utils/b3BulletDefaultFileIO.h>
+#include <Serialize/BulletFileLoader/btBulletFile.h>
 
 #include "URDFConverter.h"
 #include "engine/renderer/renderer.h"
@@ -223,6 +224,7 @@ namespace sxr
                 switch (last)
                 {
                     case 'X': cc->setToXDirection(); break;
+
                     case 'Z': cc->setToZDirection(); break;
                 }
                 cc->setHeight(h);
@@ -275,38 +277,254 @@ namespace sxr
                 return;
             }
 
+            case CONE_SHAPE_PROXYTYPE:
+            {
+                const btConeShape* cshape = dynamic_cast<const btConeShape*>(shape);
+                LOGD("PHYSICS LOADER:    cone collider radius = %f height = %f",
+                      cshape->getRadius(), cshape->getHeight());
+
+                javaObj = CreateInstance(env, "com/samsungxr/nodes/SXRConeNode",
+                                         "(Lcom/samsungxr/SXRContext;ZLcom/samsungxr/SXRMaterial;FFII)V",
+                                         mContext.getObject(), true, nullptr,
+                                         cshape->getRadius(), cshape->getHeight(),
+                                         6, 3);
+                jobject rdObj = CallObjectMethod(env, javaObj,  "com/samsungxr/SXRNode",
+                                                 "getRenderData",
+                                                 "()Lcom/samsungxr/SXRRenderData;");
+                if (rdObj)
+                {
+                    jobject meshObj = CallObjectMethod(env, rdObj, "com/samsungxr/SXRRenderData",
+                                                       "getMesh", "()Lcom/samsungxr/SXRMesh;");
+                    if (meshObj)
+                    {
+                        jlong meshPtr = CallLongMethod(env, meshObj, "com/samsungxr/SXRHybridObject",
+                                                         "getNative", "()J");
+                        if (meshPtr)
+                        {
+                            Mesh* mesh = reinterpret_cast<Mesh*>(meshPtr);
+                            MeshCollider* mc = new MeshCollider(mesh);
+                            javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
+                                                     "(Lcom/samsungxr/SXRContext;J)V",
+                                                     mContext.getObject(), mc);
+                            return;
+                        }
+                    }
+                }
+                LOGE("PHYSICS LOADER: cannot create mesh for cone shape");
+                return;
+            }
+            break;
+
+            case CYLINDER_SHAPE_PROXYTYPE:
+            {
+                const btCylinderShape *cshape = dynamic_cast<const btCylinderShape *>(shape);
+                btVector3 size = cshape->getHalfExtentsWithMargin();
+                float height = size.y();
+                const char *name = cshape->getName();
+                int l = strlen(name);
+                Transform* t = nullptr;
+
+                if (name[l] == 'Z')
+                {
+                    height = size.z();
+                    t = new Transform();
+                    t->rotateByAxis(90, 1, 0, 0);
+                }
+                else if (name[l] == 'X')
+                {
+                    height = size.x();
+                    t = new Transform();
+                    t->rotateByAxis(90, 0, 0, 1);
+                }
+
+                LOGD("PHYSICS LOADER:    cylinder collider radius = %f height = %f",
+                     cshape->getRadius(), height);
+
+                javaObj = CreateInstance(env, "com/samsungxr/nodes/SXRCylinderNode",
+                                         "(Lcom/samsungxr/SXRContext;FFFIIZ)V",
+                                         mContext.getObject(),
+                                         cshape->getRadius(), cshape->getRadius(),
+                                         height, 6, 3, true);
+                jobject rdObj = CallObjectMethod(env, javaObj,  "com/samsungxr/SXRNode",
+                                                 "getRenderData",
+                                                 "()Lcom/samsungxr/SXRRenderData;");
+                if (rdObj)
+                {
+                    jobject meshObj = CallObjectMethod(env, rdObj, "com/samsungxr/SXRRenderData",
+                                                       "getMesh", "()Lcom/samsungxr/SXRMesh;");
+                    if (meshObj)
+                    {
+                        jlong meshPtr = CallLongMethod(env, meshObj, "com/samsungxr/SXRHybridObject",
+                                                       "getNative", "()J");
+                        if (meshPtr)
+                        {
+                            Mesh* mesh = reinterpret_cast<Mesh*>(meshPtr);
+                            VertexBuffer* vb = mesh->getVertexBuffer();
+                            if (t != nullptr)
+                            {
+                                glm::mat4 m(t->getLocalModelMatrix());
+                                vb->transform(m, true);
+                            }
+                            MeshCollider* mc = new MeshCollider(mesh);
+                            javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
+                                                     "(Lcom/samsungxr/SXRContext;J)V",
+                                                     mContext.getObject(), mc);
+                            return;
+                        }
+                    }
+                }
+                LOGE("PHYSICS LOADER: cannot create mesh for cone shape");
+                return;
+            }
+
+            case SCALED_TRIANGLE_MESH_SHAPE_PROXYTYPE:
+            {
+                const btScaledBvhTriangleMeshShape* tshape = dynamic_cast<const btScaledBvhTriangleMeshShape*>(shape);
+                const btBvhTriangleMeshShape* mshape = tshape->getChildShape();
+                const btStridingMeshInterface* imesh = mshape->getMeshInterface();
+
+                javaObj = createMeshCollider(env,imesh);
+                break;
+            }
+
+            case TRIANGLE_MESH_SHAPE_PROXYTYPE:
+            {
+                const btTriangleMeshShape* mshape = dynamic_cast<const btTriangleMeshShape*>(shape);
+                const btStridingMeshInterface* imesh = mshape->getMeshInterface();
+                javaObj = createMeshCollider(env, imesh);
+                break;
+            }
+
             default:
-                if (shape->getShapeType() <= CUSTOM_POLYHEDRAL_SHAPE_TYPE)
-                {
-                    const btPolyhedralConvexShape* polyshape = dynamic_cast<const btPolyhedralConvexShape*>(shape);
-                    const btConvexPolyhedron*      poly = polyshape->getConvexPolyhedron();
-                    int                            numVerts = polyshape->getNumVertices();
-                    const btVector3*               vtxData = &(poly->m_vertices[0]);
-                    VertexBuffer*                  vb = Renderer::getInstance()->
-                                                   createVertexBuffer("float3 a_position", numVerts);
+            if (shape->getShapeType() <= CUSTOM_POLYHEDRAL_SHAPE_TYPE)
+            {
+                const btPolyhedralConvexShape* polyshape = dynamic_cast<const btPolyhedralConvexShape*>(shape);
+                const btConvexPolyhedron*      poly = polyshape->getConvexPolyhedron();
+                int                            numVerts = polyshape->getNumVertices();
+                const btVector3*               vtxData = &(poly->m_vertices[0]);
+                VertexBuffer*                  vb = Renderer::getInstance()->
+                                                    createVertexBuffer("float3 a_position", numVerts);
+                Transform*                     transform = new Transform();
+                glm::mat4 m = transform->getLocalModelMatrix();
+                vb->setFloatVec("a_position", (float*) vtxData, numVerts * 3, 3);
+                vb->transform(m, false);
 
-                    vb->setFloatVec("a_position", (float*) vtxData, numVerts * 3, 3);
+                Mesh*         mesh = new Mesh(*vb);
+                MeshCollider* mc = new MeshCollider(mesh);
 
-                    Mesh*         mesh = new Mesh(*vb);
-                    MeshCollider* mc = new MeshCollider(mesh);
-
-                    LOGD("PHYSICS LOADER:    convex polygon collider %d vertices", numVerts);
-                    javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
-                                             "(Lcom/samsungxr/SXRContext;J)V",
-                                             mContext.getObject(), mc);
-                }
-                else
-                {
-                    MeshCollider* mc = new MeshCollider(nullptr);
-                    javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
-                                             "(Lcom/samsungxr/SXRContext;J)V",
-                                             mContext.getObject(), mc);
-                }
+                LOGD("PHYSICS LOADER:    convex polygon collider %d vertices", numVerts);
+                javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
+                                         "(Lcom/samsungxr/SXRContext;J)V",
+                                         mContext.getObject(), mc);
+            }
         }
     }
 
+    jobject BulletFileLoader::createMeshCollider(JNIEnv& env, const btStridingMeshInterface* imesh)
+    {
+        const unsigned char* verts;
+        const unsigned char* faces;
+        int numverts;
+        int totalverts = 0;
+        int totalfaces = 0;
+        int numfaces;
+        PHY_ScalarType vtype;
+        PHY_ScalarType itype;
+        int vstride;
+        int istride;
+        VertexBuffer* vb = nullptr;
+        IndexBuffer* ib = nullptr;
+        int indexbytes = 4;
+        float* destverts;
+        const float* vsrcptr;
+        float* vdestptr;
+        unsigned char* idestptr;
+        unsigned char* destfaces;
+
+        for (int subpart = 0; subpart < imesh->getNumSubParts(); ++subpart)
+        {
+            imesh->getLockedReadOnlyVertexIndexBase(&verts, numverts, vtype, vstride, &faces, istride, numfaces, itype, subpart);
+            imesh->unLockReadOnlyVertexBase(subpart);
+            totalverts += numverts;
+            totalfaces += numfaces;
+            if (itype == PHY_SHORT)
+            {
+                indexbytes = 2;
+            }
+        }
+        totalfaces *= 3;
+        vdestptr = destverts = new float[totalverts];
+        idestptr = destfaces = (unsigned char*) malloc(totalfaces * indexbytes);
+        vb = Renderer::getInstance()->createVertexBuffer("float3 a_position", totalverts);
+        ib = Renderer::getInstance()->createIndexBuffer(indexbytes, totalfaces);
+
+        for (int subpart = 0; subpart < imesh->getNumSubParts(); ++subpart)
+        {
+            imesh->getLockedReadOnlyVertexIndexBase(&verts, numverts, vtype, vstride, &faces,
+                                                    istride, numfaces, itype, subpart);
+            vsrcptr = (const float*) verts;
+            vstride /= sizeof(float);
+            numfaces *= 3;
+            for (int i = 0; i < numverts; ++i)
+            {
+                *vdestptr++ = vsrcptr[0];
+                *vdestptr++ = vsrcptr[1];
+                *vdestptr++ = vsrcptr[2];
+                vsrcptr += vstride;
+            }
+            if (indexbytes == 2)
+            {
+                const short* isrcptr = (const short*) faces;
+                for (int j = 0; j < numfaces; ++j)
+                {
+                    short* p = (short*) idestptr;
+                    *p++ = *isrcptr++;
+                    idestptr = (unsigned char*) p;
+                }
+            }
+            else
+            {
+                const int* isrcptr = (const int*) faces;
+                for (int j = 0; j < numfaces; ++j)
+                {
+                    int* p = (int*) idestptr;
+                    *p++ = *isrcptr++;
+                    idestptr = (unsigned char*) p;
+                }
+            }
+            imesh->unLockReadOnlyVertexBase(subpart);
+        }
+        vb->setFloatVec("a_position", destverts, totalverts * 3, 0);
+        if (indexbytes == 2)
+        {
+            ib->setShortVec((const unsigned short*) destfaces, totalfaces);
+        }
+        else
+        {
+            ib->setIntVec((const unsigned int*) destfaces, totalfaces);
+        }
+        LOGE("PHYSICS LOADER: vertices");
+        vb->dump("a_position");
+        LOGE("PHYSICS LOADER: faces");
+        ib->dump();
+
+        delete [] destverts;
+        delete destfaces;
+
+        Mesh*         mesh = new Mesh(*vb);
+        MeshCollider* mc = new MeshCollider(mesh);
+
+        mesh->setIndexBuffer(ib);
+        LOGD("PHYSICS LOADER:    triangle mesh collider %d vertices", numverts);
+        jobject javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
+                                 "(Lcom/samsungxr/SXRContext;J)V",
+                                 mContext.getObject(), mc);
+        return javaObj;
+    }
+
     void BulletFileLoader::copyHull(const btConvexHullShape *input,
-                                                  float* outverts, btVector3& dimensions)
+                                    float* outverts,
+                                    btVector3& dimensions)
     {
         const btVector3*   inverts = input->getUnscaledPoints();
         int                numVerts = input->getNumVertices();
@@ -439,8 +657,11 @@ namespace sxr
         mRigidBodies.emplace(s, r);
 
         javaCollider = createCollider(rb);
-        SmartLocalRef  c(mJavaVM, javaCollider);
-        mColliders.emplace(s, c);
+        if (javaCollider)
+        {
+            SmartLocalRef c(mJavaVM, javaCollider);
+            mColliders.emplace(s, c);
+        }
     }
 
 /**
@@ -499,11 +720,15 @@ namespace sxr
             world.removeMultiBody(mb);
             if (btc != nullptr)
             {
-                jobject       javaCollider = createCollider(btc);
-                SmartLocalRef c(mJavaVM, javaCollider);
+                jobject javaCollider = createCollider(btc);
 
-                s = name;
-                mColliders.emplace(s, c);
+                if (javaCollider)
+                {
+                    SmartLocalRef c(mJavaVM, javaCollider);
+
+                    s = name;
+                    mColliders.emplace(s, c);
+                }
                 world.removeCollisionObject(btc);
             }
             for (int i = 0; i < mb->getNumLinks(); ++i)
@@ -533,11 +758,14 @@ namespace sxr
                 nativeJoint->setName(name);
                 if (collider != nullptr)
                 {
-                    jobject       javaCollider = createCollider(collider);
-                    SmartLocalRef r(mJavaVM, javaCollider);
+                    jobject javaCollider = createCollider(collider);
+                    if (javaCollider)
+                    {
+                        SmartLocalRef r(mJavaVM, javaCollider);
 
-                    s = name;
-                    mColliders.emplace(s, r);
+                        s = name;
+                        mColliders.emplace(s, r);
+                    }
                     world.removeCollisionObject(collider);
                 }
             }

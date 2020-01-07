@@ -402,18 +402,21 @@ namespace sxr
             (options & SyncOptions::COLLISION_SHAPE))
         {
             newShape = convertCollider2CollisionShape(collider);
-            mConstructionInfo.m_collisionShape = newShape;
-            newShape->setLocalScaling(scale);
-            newShape->calculateLocalInertia(mConstructionInfo.m_mass,
-                                            mConstructionInfo.m_localInertia);
-            mConstructionInfo.m_collisionShape = newShape;
-            if (mRigidBody)
+            if (newShape)
             {
-                mRigidBody->setCollisionShape(newShape);
-            }
-            if (curShape)
-            {
-                delete curShape;
+                mConstructionInfo.m_collisionShape = newShape;
+                newShape->setLocalScaling(scale);
+                newShape->calculateLocalInertia(mConstructionInfo.m_mass,
+                                                mConstructionInfo.m_localInertia);
+                mConstructionInfo.m_collisionShape = newShape;
+                if (mRigidBody)
+                {
+                    mRigidBody->setCollisionShape(newShape);
+                }
+                if (curShape)
+                {
+                    delete curShape;
+                }
             }
             return true;
         }

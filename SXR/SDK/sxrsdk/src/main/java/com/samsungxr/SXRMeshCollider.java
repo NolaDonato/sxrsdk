@@ -49,7 +49,7 @@ public class SXRMeshCollider extends SXRCollider {
      */
     public SXRMeshCollider(SXRContext gvrContext, SXRMesh mesh)
     {
-        super(gvrContext, NativeMeshCollider.ctorMesh(mesh.getNative()));
+        super(gvrContext, NativeMeshCollider.ctorMesh((mesh !=  null) ? mesh.getNative() : 0L));
         mMesh = mesh;
     }
 
@@ -69,7 +69,6 @@ public class SXRMeshCollider extends SXRCollider {
     public SXRMeshCollider(SXRContext gvrContext, SXRMesh mesh, boolean pickCoordinates)
     {
         super(gvrContext, NativeMeshCollider.ctorMeshPicking((mesh != null) ? mesh.getNative() : 0L, pickCoordinates));
-        long nativeMeshPtr = NativeMeshCollider.getMesh(getNative());
         mMesh = mesh;
     }
 

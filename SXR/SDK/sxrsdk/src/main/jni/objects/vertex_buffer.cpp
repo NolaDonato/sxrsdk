@@ -8,7 +8,7 @@
 #include <sstream>
 #include "glm/gtc/matrix_inverse.hpp"
 
-#define NO_LOGGING
+//#define NO_LOGGING
 #include "util/sxr_log.h"
 
 namespace sxr {

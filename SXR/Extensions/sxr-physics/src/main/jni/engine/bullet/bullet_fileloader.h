@@ -51,6 +51,7 @@ class btSerializer;
 class btVector3;
 class btQuaternion;
 class URDFConverter;
+class btStridingMeshInterface;
 
 
 namespace std
@@ -151,6 +152,8 @@ private:
     const char* getNameForPointer(void* p);
     btVector3&  rotatePoint(btVector3& p);
     void        createCollisionShape(JNIEnv& env, const btCollisionShape* shape, jobject& obj, btVector3& debugColor);
+    jobject     createMeshCollider(JNIEnv& env, const btStridingMeshInterface* imesh);
+
     void        copyHull(const btConvexHullShape *input, float *outVerts, btVector3& dimensions);
 
     std::unordered_map<std::string, SmartGlobalRef>  mRigidBodies;

@@ -684,6 +684,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
             else if (sceneObject == null)
             {
                 Log.w("PHYSICS LOADER", "Didn't find node for joint " + name);
+                return;
             }
             else
             {

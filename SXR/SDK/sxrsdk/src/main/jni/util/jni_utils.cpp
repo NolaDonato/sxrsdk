@@ -318,6 +318,48 @@ void CallVoidMethod(JNIEnv& env, jobject obj,  const char* className, const char
     va_end(args);
 }
 
+jobject CallObjectMethod(JNIEnv& env, jobject obj,  const char* className, const char* methodName, const char* signature, ...)
+{
+    jclass clazz = env.FindClass(className);
+
+    if (NULL == clazz)
+    {
+        return 0;
+    }
+    jmethodID ctr_id = env.GetMethodID(clazz, methodName, signature);
+
+    if (NULL == ctr_id)
+    {
+        return 0;
+    }
+    va_list args;
+    va_start(args, signature);
+    jobject returnObj = env.CallObjectMethodV(obj, ctr_id, args);
+    va_end(args);
+    return returnObj;
+}
+
+jlong CallLongMethod(JNIEnv& env, jobject obj,  const char* className, const char* methodName, const char* signature, ...)
+{
+    jclass clazz = env.FindClass(className);
+
+    if (NULL == clazz)
+    {
+        return 0;
+    }
+    jmethodID ctr_id = env.GetMethodID(clazz, methodName, signature);
+
+    if (NULL == ctr_id)
+    {
+        return 0;
+    }
+    va_list args;
+    va_start(args, signature);
+    jlong v = env.CallLongMethodV(obj, ctr_id, args);
+    va_end(args);
+    return v;
+}
+
 jint throwOutOfMemoryError(JNIEnv* env, const char *message)
 {
     jclass exClass = env->FindClass("java/lang/OutOfMemoryError");

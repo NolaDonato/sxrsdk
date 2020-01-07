@@ -86,4 +86,33 @@ public class SXRConeNode extends SXRCylinderNode {
         super(gvrContext, BASE_RADIUS, TOP_RADIUS, HEIGHT, STACK_NUMBER,
                 SLICE_NUMBER, facingOut, material);
     }
+
+    /**
+     * Constructs a cone node with a height of 1, radius of 0.5, 10
+     * stacks, and 36 slices.
+     *
+     * The cone's triangles and normals are facing either in or out and the same
+     * material will be applied to bottom, and side of the cone.
+     *
+     * @param gvrContext
+     *            current {@link SXRContext}
+     *
+     * @param facingOut
+     *            whether the triangles and normals should be facing in or
+     *            facing out.
+     *
+     * @param material
+     *            the material for the cone.
+     */
+    public SXRConeNode(SXRContext gvrContext,
+                       boolean facingOut,
+                       SXRMaterial material,
+                       float base_radius,
+                       float height,
+                       int stacks,
+                       int slices)
+    {
+        super(gvrContext, base_radius, TOP_RADIUS, height, stacks,
+              slices, facingOut, material);
+    }
 }
