@@ -27,7 +27,12 @@ class URDFExporter
 
         basename = basename.substring(0, basename.lastIndexOf('.'));
         xmldata = convertToURDF(skel, basename);
-        return (xmldata != null);
+        if (xmldata != null)
+        {
+            File file = new File(fileName);
+            return writePhysicsFile(file, xmldata);
+        }
+        return false;
     }
 
     public String convertToURDF(SXRSkeleton skel, String name)
@@ -100,27 +105,28 @@ class URDFExporter
             case SXRPhysicsJoint.PRISMATIC: type = "prismatic"; break;
             case SXRPhysicsJoint.REVOLUTE: type = "revolute"; break;
             case SXRPhysicsJoint.SPHERICAL: type = "floating"; break;
-            default: throw new IllegalArgumentException("Unsupported joint type found");
+            default: type = "unknown"; break;
         }
-        float[] v = joint.getAxis();
-        float friction = joint.getFriction();
-        float damping = joint.getAngularDamping();
+        if (!type.equals("unknown"))
+        {
+            float[] v = joint.getAxis();
+            float friction = joint.getFriction();
+            float damping = joint.getAngularDamping();
 
-        xml += "<joint name=\"" + name + "\" type=\"" + type + "\" >\n";
-        if (parentNode == null)
-        {
-            xml += "    <parent link=\"" + parentNode.getName() + "\" />\n";
+            xml += "<joint name=\"" + name + "\" type=\"" + type + "\" >\n";
+            if (parentNode == null)
+            {
+                xml += "    <parent link=\"" + parentNode.getName() + "\" />\n";
+            }
+            xml += "    <child link=\"" + name + "\"/>\n";
+            xml += String.format("    axis xyz=\"%f %f %f\"/>", v[0], v[1], v[2]);
+            if ((friction != 0) || (damping != 0))
+            {
+                xml += String.format("<dynamics friction=\"%f\" damping=\"%f\" />\n", friction, damping);
+            }
+            xml += String.format("    <origin xyz=\"%f %f %f\" rpy=\"%f %f %f\" />\n", origin.x, origin.y, origin.z, eulerRot.x, eulerRot.y, eulerRot.z);
+            xml += "</joint>\n";
         }
-        xml += "    <child link=\"" + name + "\"/>\n";
-        xml += String.format("    axis xyz=\"%f %f %f\"/>", v[0], v[1], v[2]);
-        if ((friction != 0) || (damping != 0))
-        {
-            xml += String.format("<dynamics friction=\"%f\" damping=\"%f\" />\n", friction, damping);
-        }
-        xml += String.format("    <origin xyz=\"%f %f %f\" rpy=\"%f %f %f\" />\n",
-                origin.x, origin.y, origin.z,
-                eulerRot.x, eulerRot.y, eulerRot.z);
-        xml += "</joint>\n";
         return xml;
     }
 
@@ -149,18 +155,18 @@ class URDFExporter
         {
             return xml;
         }
-        xml += "<joint name=\"joint_" + name + "\" type=\"" + getJointType(constraint) + "\" >\n";
-        xml += "    <parent link=\"" + parentNode.getName() + "\" />\n";
-        xml += "    <child link=\"" + name + "\" />\n";
-        if ((friction != 0) || (damping != null))
-        {
-            xml += String.format("    <dynamics friction=\"%f\" damping=\"%f\" />\n", friction, damping[0]);
-        }
         if (constraint != null)
         {
+            xml += "<joint name=\"joint_" + name + "\" type=\"" + getJointType(constraint) + "\" >\n";
+            xml += "    <parent link=\"" + parentNode.getName() + "\" />\n";
+            xml += "    <child link=\"" + name + "\" />\n";
+            if ((friction != 0) || (damping != null))
+            {
+                xml += String.format("    <dynamics friction=\"%f\" damping=\"%f\" />\n", friction, damping[0]);
+            }
             xml += convertToURDF(constraint);
+            xml += "</joint>\n";
         }
-        xml += "</joint>\n";
         return xml;
     }
 
@@ -259,21 +265,10 @@ class URDFExporter
         {
             return "prismatic";
         }
-        else if (constraint instanceof SXRGenericConstraint)
-        {
-            return "floating";
-        }
-        else if (constraint instanceof SXRUniversalConstraint)
-        {
-            return "floating";
-        }
-        else
-        {
-            return "unknown";
-        }
+        return "floating";
     }
 
-    protected void writePhysicsFile(File file, String data)
+    protected boolean writePhysicsFile(File file, String data)
     {
         try
         {
@@ -285,10 +280,11 @@ class URDFExporter
             writer.append(data);
             writer.flush();
             writer.close();
+            return true;
         }
         catch (IOException e)
         {
-            e.printStackTrace();
+            return false;
         }
     }
 

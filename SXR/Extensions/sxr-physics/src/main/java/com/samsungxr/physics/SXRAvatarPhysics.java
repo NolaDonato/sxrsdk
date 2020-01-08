@@ -1,5 +1,7 @@
 package com.samsungxr.physics;
 
+import android.os.Environment;
+
 import com.samsungxr.SXRAndroidResource;
 import com.samsungxr.SXRBehavior;
 import com.samsungxr.SXRHybridObject;
@@ -148,7 +150,11 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
     {
         Map<String, Object> physicsProps = getPhysicsProperties(filename);
         String attachBone = (physicsProps != null) ? (String) physicsProps.get("AttachBone") : null;
-
+/*
+        String physicsfile = Environment.getExternalStorageDirectory() + "/" +
+                             filename.replace(".avt", ".urdf");
+        mPhysicsLoader.exportPhysics(skel, physicsfile);
+*/
         setPhysicsProperties(filename, null);
         if (mPhysicsSkel == null)
         {
@@ -240,6 +246,7 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
         @Override
         public void onAvatarLoaded(SXRAvatar avatar, SXRNode avatarRoot, String filePath, String errors)
         {
+//            String physicsfile = avatar.getProperty("avt");
             String physicsfile = avatar.getProperty("physics");
 
             physicsfile = (physicsfile != null) ? physicsfile : avatar.getProperty("avt");
@@ -288,6 +295,7 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
             {
                 return;
             }
+//            physicsfile = avatar.getModelProperty(modelType, "avt");
             physicsfile = avatar.getModelProperty(modelType, "physics");
             physicsfile = (physicsfile != null) ? physicsfile : avatar.getModelProperty(modelType, "avt");
             if (physicsfile == null)

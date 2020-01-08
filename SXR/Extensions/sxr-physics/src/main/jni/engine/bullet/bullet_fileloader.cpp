@@ -1464,6 +1464,10 @@ jobject BulletFileLoader::createGenericConstraint(JNIEnv &env, btGeneric6DofSpri
         mSerializer = new btDefaultSerializer();
         mURDFImporter = new URDFConverter(multiBody, &mFileIO);
         worldMB = mURDFImporter->importPhysics(xmldata, worldMB);
+        if (worldMB == nullptr)
+        {
+            return false;
+        }
 //        mURDFImporter->exportPhysics("/storage/emulated/0/temp.bullet", mSerializer);
         mURDFImporter->registerNames(*mSerializer, false);
         bulletWorld->setGravity(gravity);
