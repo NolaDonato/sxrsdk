@@ -32,7 +32,10 @@ package com.samsungxr;
  * If the node that owns the mesh collider does not have a mesh and
  * the mesh collider doesn't have one, the node will not be pickable.
  */
-public class SXRMeshCollider extends SXRCollider {
+public class SXRMeshCollider extends SXRCollider
+{
+    public static int MESH_TYPE_UNKNOWN = 3;
+    public static int MESH_TYPE_CONVEX_HULL = 6;
     private SXRMesh mMesh;
 
     /**
@@ -137,20 +140,24 @@ public class SXRMeshCollider extends SXRCollider {
      *            The {@link SXRMesh} that the picking ray will test against.
      *
      */
-    public void setMesh(SXRMesh mesh) {
+    public void setMesh(SXRMesh mesh)
+    {
         mMesh = mesh;
         NativeMeshCollider.setMesh(getNative(), mesh.getNative());
+    }
+
+    public void setMeshType(int meshtype)
+    {
+        NativeMeshCollider.setMeshType(getNative(), meshtype);
     }
 }
 
 class NativeMeshCollider {
     static native long ctorMesh(long mesh);
-
-    static native long getMesh(long mesh);
-
     static native long ctor(boolean useMeshBounds);
-
     static native long ctorMeshPicking(long mesh, boolean pickCoordinates);
 
+    static native long getMesh(long mesh);
     static native void setMesh(long meshCollider, long mesh);
+    static native void setMeshType(long meshCollider, int meshtype);
 }

@@ -630,35 +630,26 @@ public class SXRVertexBuffer extends SXRHybridObject implements PrettyPrint
     }
 }
 
-class NativeVertexBuffer {
-    static native long ctor(String descriptor, int vertexCount);
-
-    static native String getDescriptor(long vbuf);
-    static native int getVertexCount(long vbuf);
-
+class NativeVertexBuffer
+{
+    static native long    ctor(String descriptor, int vertexCount);
+    static native long    ctorNative(long vbuf);
     static native boolean isSet(long vbuf, String name);
+    static native String  getDescriptor(long vbuf);
+    static native int     getVertexCount(long vbuf);
+    static native int     getAttributeSize(long vbuf, String name);
+    static native int     getBoundingVolume(long vbuf, float[] bv);
 
     static native boolean getIntVec(long vbuf, String name, IntBuffer data, int stride, int offset);
+    static native boolean getFloatVec(long vbuf, String name, FloatBuffer data, int stride, int offset);
+    static native float[] getFloatArray(long vbuf, String name);
+    static native int[]   getIntArray(long vbuf, String name);
 
     static native boolean setIntVec(long vbuf, String name, IntBuffer data, int stride, int offset);
-
-    static native boolean getFloatVec(long vbuf, String name, FloatBuffer data, int stride, int offset);
-
-    static native float[] getFloatArray(long vbuf, String name);
-
-    static native int[] getIntArray(long vbuf, String name);
-
     static native boolean setIntArray(long vbuf, String name, int[] data, int stride, int offset);
-
     static native boolean setFloatVec(long vbuf, String name, FloatBuffer data, int stride, int offset);
-
     static native boolean setFloatArray(long vbuf, String name, float[] data, int stride, int offset);
 
-    static native int  getAttributeSize(long vbuf, String name);
-
-    static native int getBoundingVolume(long vbuf, float[] bv);
-
     static native void transform(long vbuf, float[] trans, boolean doNormals);
-
     static native void dump(long vbuf, String attrName);
 }

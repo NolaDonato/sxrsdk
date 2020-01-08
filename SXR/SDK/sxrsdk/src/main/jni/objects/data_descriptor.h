@@ -71,10 +71,12 @@ namespace sxr {
         }
 
         /*
-         * Get the number of bytes occupied by the vertex or data area.
-         * @return number of bytes
+         * Get the number of bytes occupied by all of the entries
+         * in the layout descriptor. This is not the size of the
+         * entire data area, just the byte size of the layout.
+         * @return number of bytes in layout
          */
-        int getTotalSize() const
+        int getLayoutSize() const
         {
             return mTotalSize;
         }

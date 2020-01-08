@@ -15,14 +15,22 @@
 
 #include "bullet_sxr_utils.h"
 
+#include <contrib/glm/gtc/type_ptr.hpp>
 #include <BulletCollision/CollisionShapes/btShapeHull.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
-#include <contrib/glm/gtc/type_ptr.hpp>
+#include <BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h>
+#include <BulletCollision/CollisionShapes/btScaledBvhTriangleMeshShape.h>
+#include <BulletCollision/CollisionShapes/btConvexPolyhedron.h>
+#include <BulletCollision/CollisionShapes/btPolyhedralConvexShape.h>
+#include <BulletCollision/CollisionShapes/btStaticPlaneShape.h>
 #include <BulletCollision/CollisionShapes/btEmptyShape.h>
+#include <BulletCollision/CollisionShapes/btStridingMeshInterface.h>
 #include "objects/vertex_buffer.h"
 #include "util/sxr_log.h"
 
 namespace sxr {
+
+Mesh* getMeshFromCollider(MeshCollider*);
 
 btCollisionShape *convertCollider2CollisionShape(Collider *collider)
 {
@@ -34,19 +42,19 @@ btCollisionShape *convertCollider2CollisionShape(Collider *collider)
     {
         return convertBoxCollider2CollisionShape(static_cast<BoxCollider *>(collider));
     }
-    else if (collider->shape_type() == COLLIDER_SHAPE_SPHERE)
+    if (collider->shape_type() == COLLIDER_SHAPE_SPHERE)
     {
         return convertSphereCollider2CollisionShape(static_cast<SphereCollider *>(collider));
     }
-    else if (collider->shape_type() == COLLIDER_SHAPE_MESH)
-    {
-        return convertMeshCollider2CollisionShape(static_cast<MeshCollider *>(collider));
-    }
-    else if (collider->shape_type() == COLLIDER_SHAPE_CAPSULE)
+    if (collider->shape_type() == COLLIDER_SHAPE_CAPSULE)
     {
         return convertCapsuleCollider2CollisionShape(static_cast<CapsuleCollider *>(collider));
     }
-    return new btEmptyShape();
+    if (collider->shape_type() == COLLIDER_SHAPE_HULL)
+    {
+        return convertMeshCollider2ConvexHull(static_cast<MeshCollider*>(collider));
+    }
+    return convertMeshCollider2CollisionShape(static_cast<MeshCollider*>(collider));
 }
 
 btCollisionShape *convertSphereCollider2CollisionShape(SphereCollider *collider)
@@ -94,7 +102,6 @@ btCollisionShape *convertCapsuleCollider2CollisionShape(CapsuleCollider *collide
 
 btCollisionShape* convertBoxCollider2CollisionShape(BoxCollider *collider)
 {
-    btCollisionShape *shape = NULL;
     Node* owner = collider->owner_object();
     btVector3 extents(collider->get_half_extents().x,
                       collider->get_half_extents().y,
@@ -120,64 +127,150 @@ btCollisionShape* convertBoxCollider2CollisionShape(BoxCollider *collider)
     return nullptr;
 }
 
-btCollisionShape *convertMeshCollider2CollisionShape(MeshCollider *collider)
+class MeshInterface : public btStridingMeshInterface
 {
-    btCollisionShape *shape = NULL;
+private:
+    const VertexBuffer* mVertexBuffer;
+    const IndexBuffer* mIndexBuffer;
 
-    if (collider != NULL)
+public:
+    MeshInterface(const VertexBuffer* vb, const IndexBuffer* ib)
+    : mVertexBuffer(vb), mIndexBuffer(ib) { }
+
+    virtual void getLockedVertexIndexBase(unsigned char** vertexbase, int& numverts,  PHY_ScalarType& type, int& stride,
+                                          unsigned char** indexbase, int& indexstride, int& numfaces, PHY_ScalarType& indicestype,
+                                          int subpart)
     {
-        Mesh* mesh = collider->mesh();
-        if (mesh == NULL)
+        const btStridingMeshInterface* THIS = (const btStridingMeshInterface*) this;
+        THIS->getLockedReadOnlyVertexIndexBase((const unsigned char**) vertexbase, numverts, type, stride,
+                                               (const unsigned char**) indexbase, indexstride, numfaces, indicestype);
+    }
+
+    virtual void getLockedReadOnlyVertexIndexBase(const unsigned char** vertexbase, int& numverts, PHY_ScalarType& type, int& stride,
+                                                  const unsigned char** indexbase, int& indexstride, int& numfaces, PHY_ScalarType& indicestype,
+                                                  int subpart) const
+    {
+        *vertexbase = (const unsigned char*) mVertexBuffer->getVertexData();
+        numverts = mVertexBuffer->getVertexCount();
+        stride = mVertexBuffer->getLayoutSize();
+        type = PHY_FLOAT;
+        if (mIndexBuffer)
         {
-            Node* owner = collider->owner_object();
-            if (owner == NULL)
+            *indexbase = (const unsigned char*) mIndexBuffer->getIndexData();
+            numfaces = mIndexBuffer->getIndexCount() / 3;
+            indexstride = mIndexBuffer->getIndexSize();
+            if (indexstride == 2)
             {
-                return NULL;
+                indicestype = PHY_SHORT;
             }
-            RenderData* rdata = owner->render_data();
-            if (rdata == NULL)
+            else
             {
-                return NULL;
-            }
-            mesh = rdata->mesh();
-            if (mesh == NULL)
-            {
-                return NULL;
+                indicestype = PHY_INTEGER;
             }
         }
-        shape = createConvexHullShapeFromMesh(mesh);
+        else
+        {
+            *indexbase = nullptr;
+            numfaces = 0;
+            indexstride = 0;
+            indicestype = PHY_INTEGER;
+        }
     }
-    return shape;
+
+    virtual void unLockVertexBase(int subpart)
+    {
+        mVertexBuffer->lock();
+        if (mIndexBuffer)
+        {
+            mIndexBuffer->lock();
+        }
+    }
+
+    virtual void unLockReadOnlyVertexBase(int subpart) const
+    {
+        mVertexBuffer->unlock();
+        if (mIndexBuffer)
+        {
+            mIndexBuffer->unlock();
+        }
+    }
+
+    virtual int getNumSubParts() const { return 1; }
+    virtual void preallocateVertices(int numverts) { }
+    virtual void preallocateIndices(int numindices) { }
+};
+
+btCollisionShape *convertMeshCollider2CollisionShape(MeshCollider *collider)
+{
+    Mesh* mesh = getMeshFromCollider(collider);
+    if (mesh == NULL)
+    {
+        return NULL;
+    }
+    MeshInterface* imesh = new MeshInterface(mesh->getVertexBuffer(), mesh->getIndexBuffer());
+    collider->set_physics_info(imesh);
+    btBvhTriangleMeshShape* cshape = new btBvhTriangleMeshShape(imesh, true);
+    return new btScaledBvhTriangleMeshShape(cshape, btVector3(1, 1, 1));
 }
 
-btConvexHullShape *createConvexHullShapeFromMesh(Mesh *mesh)
+Mesh* getMeshFromCollider(MeshCollider* collider)
 {
-    btConvexHullShape *hull_shape = NULL;
-
-    if (mesh != NULL)
+    if (collider == NULL)
     {
-        btConvexHullShape *initial_hull_shape = NULL;
-        btShapeHull *hull_shape_optimizer = NULL;
-
-        initial_hull_shape = new btConvexHullShape();
-        mesh->getVertexBuffer()->forAllVertices("a_position", [initial_hull_shape](int iter, const float* v)
+        return NULL;
+    }
+    Mesh *mesh = collider->mesh();
+    if (mesh == NULL)
+    {
+        Node *owner = collider->owner_object();
+        if (owner == NULL)
         {
-            btVector3 vertex(v[0], v[1], v[2]);
-            initial_hull_shape->addPoint(vertex);
-        });
-
-        btScalar margin(initial_hull_shape->getMargin());
-        hull_shape_optimizer = new btShapeHull(initial_hull_shape);
-        hull_shape_optimizer->buildHull(margin);
-
-        hull_shape = new btConvexHullShape(
-                (btScalar *) hull_shape_optimizer->getVertexPointer(),
-                hull_shape_optimizer->numVertices());
+            return NULL;
+        }
+        RenderData *rdata = owner->render_data();
+        if (rdata == NULL)
+        {
+            return NULL;
+        }
+        mesh = rdata->mesh();
+        if (mesh == NULL)
+        {
+            return NULL;
+        }
     }
-    else
+    return mesh;
+}
+
+btCollisionShape *convertMeshCollider2ConvexHull(MeshCollider *collider)
+{
+    Mesh *mesh = getMeshFromCollider(collider);
+
+    if (mesh == NULL)
     {
-        LOGE("PHYSICS: createConvexHullShapeFromMesh(): NULL mesh object");
+        return NULL;
     }
+    return createConvexHullShapeFromMesh(mesh);
+}
+
+btConvexHullShape* createConvexHullShapeFromMesh(Mesh *mesh)
+{
+    btConvexHullShape* hull_shape = NULL;
+    btConvexHullShape* initial_hull_shape = NULL;
+    btShapeHull *hull_shape_optimizer = NULL;
+
+    initial_hull_shape = new btConvexHullShape();
+    mesh->getVertexBuffer()->forAllVertices("a_position", [initial_hull_shape](int iter, const float* v)
+    {
+        btVector3 vertex(v[0], v[1], v[2]);
+        initial_hull_shape->addPoint(vertex);
+    });
+
+    btScalar margin(initial_hull_shape->getMargin());
+    hull_shape_optimizer = new btShapeHull(initial_hull_shape);
+    hull_shape_optimizer->buildHull(margin);
+
+    hull_shape = new btConvexHullShape((btScalar*) hull_shape_optimizer->getVertexPointer(),
+                                        hull_shape_optimizer->numVertices());
     return hull_shape;
 }
 

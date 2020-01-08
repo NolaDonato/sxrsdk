@@ -28,19 +28,13 @@
 
 namespace sxr {
     btCollisionShape *convertCollider2CollisionShape(Collider *collider);
-
     btCollisionShape *convertSphereCollider2CollisionShape(SphereCollider *collider);
-
     btCollisionShape *convertCapsuleCollider2CollisionShape(CapsuleCollider *collider);
-
     btCollisionShape *convertBoxCollider2CollisionShape(BoxCollider *collider);
-
     btCollisionShape *convertMeshCollider2CollisionShape(MeshCollider *collider);
-
+    btCollisionShape *convertMeshCollider2ConvexHull(MeshCollider *collider);
     btConvexHullShape *createConvexHullShapeFromMesh(Mesh *mesh);
-
     btTransform convertTransform2btTransform(Transform *t);
-
     btTransform convertTransform2btTransform(const glm::mat4& m);
 
     void convertBtTransform2Transform(btTransform bulletTransform, Transform *transform);

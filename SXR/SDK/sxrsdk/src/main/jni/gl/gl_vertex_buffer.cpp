@@ -75,7 +75,7 @@ namespace sxr {
                     GL(glEnableVertexAttribArray(loc)); // enable this attribute in GL
                     GL(glVertexAttribPointer(loc, entry->Size / sizeof(float),
                                              entry->IsInt ? GL_INT : GL_FLOAT, GL_FALSE,
-                                             getTotalSize(),
+                                             getLayoutSize(),
                                              reinterpret_cast<GLvoid*>(entry->Offset)));
                     LOGV("VertexBuffer: vertex attrib #%d %s ofs %d", e.Index, e.Name, entry->Offset);
                     checkGLError("VertexBuffer::bindToShader");

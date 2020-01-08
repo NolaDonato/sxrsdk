@@ -16,13 +16,15 @@
 #ifndef COLLIDER_SHAPE_TYPES_H
 #define COLLIDER_SHAPE_TYPES_H
 
-namespace sxr {
-    const long COLLIDER_SHAPE_UNKNOWN   = 10000;
-    const long COLLIDER_SHAPE_BOX       = 10001;
-    const long COLLIDER_SHAPE_SPHERE    = 10002;
-    const long COLLIDER_SHAPE_MESH      = 10003;
-    const long COLLIDER_SHAPE_GROUP     = 10004;
-    const long COLLIDER_SHAPE_CAPSULE   = 10005;
+namespace sxr
+{
+    const long COLLIDER_SHAPE_UNKNOWN   = 0;
+    const long COLLIDER_SHAPE_BOX       = 1;
+    const long COLLIDER_SHAPE_SPHERE    = 2;
+    const long COLLIDER_SHAPE_MESH      = 3;
+    const long COLLIDER_SHAPE_GROUP     = 4;
+    const long COLLIDER_SHAPE_CAPSULE   = 5;
+    const long COLLIDER_SHAPE_HULL      = 6;
 }
 
 #endif

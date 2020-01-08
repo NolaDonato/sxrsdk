@@ -27,29 +27,49 @@
 #include "mesh_collider.h"
 #include "render_data.h"
 #include "objects/node.h"
+#include "objects/components/collider_shape_types.h"
 
 namespace sxr
 {
     MeshCollider::MeshCollider(Mesh* mesh) :
-            Collider(getComponentType()), mesh_(mesh), pickCoordinates_(false),
-            useMeshBounds_(false)
+            Collider(getComponentType()),
+            mesh_(mesh),
+            pickCoordinates_(false),
+            useMeshBounds_(false),
+            meshType_(COLLIDER_SHAPE_MESH)
     {
     }
 
     MeshCollider::MeshCollider(Mesh* mesh, bool pickCoordinates) :
-            Collider(getComponentType()), mesh_(mesh), pickCoordinates_(pickCoordinates),
-            useMeshBounds_(false)
+            Collider(getComponentType()),
+            mesh_(mesh),
+            pickCoordinates_(pickCoordinates),
+            useMeshBounds_(false),
+            meshType_(COLLIDER_SHAPE_MESH)
     {
     }
 
     MeshCollider::MeshCollider(bool useMeshBounds) :
-            Collider(getComponentType()), mesh_(NULL), pickCoordinates_(false),
-            useMeshBounds_(useMeshBounds)
+            Collider(getComponentType()),
+            mesh_(NULL),
+            pickCoordinates_(false),
+            useMeshBounds_(useMeshBounds),
+            meshType_(COLLIDER_SHAPE_MESH)
     {
     }
 
     MeshCollider::~MeshCollider()
     {}
+
+    void MeshCollider::set_mesh_type(int meshtype)
+    {
+        if ((meshtype != COLLIDER_SHAPE_HULL) &&
+            (meshtype != COLLIDER_SHAPE_MESH))
+        {
+            meshtype = COLLIDER_SHAPE_MESH;
+        }
+        meshType_ = meshtype;
+    }
 
 /*
  * Hit test the triangles in the mesh against the input ray.

@@ -100,7 +100,7 @@ namespace sxr
                 stream << entry.Type << " " << entry.Name << ";" << std::endl;
         });
         layout = stream.str();
-        return uniforms().uniforms().getTotalSize();
+        return uniforms().uniforms().getLayoutSize();
     }
 
     void Light::updateLayout()

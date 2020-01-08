@@ -19,6 +19,14 @@
 namespace sxr {
 extern "C" {
 
+
+JNIEXPORT jlong JNICALL
+Java_com_samsungxr_NativeMeshCollider_ctor(JNIEnv *env,
+                                           jclass obj, jboolean useBounds)
+{
+    return reinterpret_cast<jlong>(new MeshCollider(useBounds));
+}
+
 JNIEXPORT jlong JNICALL
 Java_com_samsungxr_NativeMeshCollider_ctorMesh(JNIEnv *env, jclass obj, jlong jmesh)
 {
@@ -35,8 +43,7 @@ Java_com_samsungxr_NativeMeshCollider_ctorMeshPicking(JNIEnv *env, jclass obj,
 }
 
 JNIEXPORT long JNICALL
-Java_com_samsungxr_NativeMeshCollider_getMesh(JNIEnv *env,
-                                              jclass obj, jlong jmesh_collider)
+Java_com_samsungxr_NativeMeshCollider_getMesh(JNIEnv *env, jclass obj, jlong jmesh_collider)
 {
     MeshCollider *meshcollider = reinterpret_cast<MeshCollider *>(jmesh_collider);
     return reinterpret_cast<long>(meshcollider->mesh());
@@ -44,19 +51,20 @@ Java_com_samsungxr_NativeMeshCollider_getMesh(JNIEnv *env,
 
 
 JNIEXPORT void JNICALL
-Java_com_samsungxr_NativeMeshCollider_setMesh(JNIEnv *env,
-                                              jclass obj, jlong jmesh_collider, jlong jmesh)
+Java_com_samsungxr_NativeMeshCollider_setMesh(JNIEnv *env, jclass obj,
+                                              jlong jmesh_collider, jlong jmesh)
 {
     MeshCollider *meshcollider = reinterpret_cast<MeshCollider *>(jmesh_collider);
     Mesh *mesh = reinterpret_cast<Mesh *>(jmesh);
     meshcollider->set_mesh(mesh);
 }
 
-JNIEXPORT jlong JNICALL
-Java_com_samsungxr_NativeMeshCollider_ctor(JNIEnv *env,
-                                           jclass obj, jboolean useBounds)
+JNIEXPORT void JNICALL
+Java_com_samsungxr_NativeMeshCollider_setMeshType(JNIEnv *env, jclass obj,
+                                                  jlong jmesh_collider, jint meshtype)
 {
-    return reinterpret_cast<jlong>(new MeshCollider(useBounds));
+    MeshCollider *meshcollider = reinterpret_cast<MeshCollider *>(jmesh_collider);
+    meshcollider->set_mesh_type(meshtype);
 }
 }
 }

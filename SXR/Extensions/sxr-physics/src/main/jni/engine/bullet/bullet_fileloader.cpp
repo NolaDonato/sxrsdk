@@ -252,6 +252,7 @@ namespace sxr
 
                 Mesh*         mesh = new Mesh(*vb);
                 MeshCollider* mc = new MeshCollider(mesh);
+                mc->set_mesh_type(COLLIDER_SHAPE_HULL);
                 LOGD("PHYSICS LOADER:    convex hull collider %d vertices dimensions = (%0.3f, %0.3f, %0.3f)",
                      numVerts, dimensions.x(), dimensions.y(), dimensions.z());
                 javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
@@ -303,6 +304,8 @@ namespace sxr
                         {
                             Mesh* mesh = reinterpret_cast<Mesh*>(meshPtr);
                             MeshCollider* mc = new MeshCollider(mesh);
+
+                            mc->set_mesh_type(COLLIDER_SHAPE_HULL);
                             javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
                                                      "(Lcom/samsungxr/SXRContext;J)V",
                                                      mContext.getObject(), mc);
@@ -360,12 +363,9 @@ namespace sxr
                         {
                             Mesh* mesh = reinterpret_cast<Mesh*>(meshPtr);
                             VertexBuffer* vb = mesh->getVertexBuffer();
-                            if (t != nullptr)
-                            {
-                                glm::mat4 m(t->getLocalModelMatrix());
-                                vb->transform(m, true);
-                            }
                             MeshCollider* mc = new MeshCollider(mesh);
+
+                            mc->set_mesh_type(COLLIDER_SHAPE_HULL);
                             javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
                                                      "(Lcom/samsungxr/SXRContext;J)V",
                                                      mContext.getObject(), mc);
@@ -383,7 +383,7 @@ namespace sxr
                 const btBvhTriangleMeshShape* mshape = tshape->getChildShape();
                 const btStridingMeshInterface* imesh = mshape->getMeshInterface();
 
-                javaObj = createMeshCollider(env,imesh);
+                javaObj = createMeshCollider(env, imesh, COLLIDER_SHAPE_MESH);
                 break;
             }
 
@@ -391,7 +391,7 @@ namespace sxr
             {
                 const btTriangleMeshShape* mshape = dynamic_cast<const btTriangleMeshShape*>(shape);
                 const btStridingMeshInterface* imesh = mshape->getMeshInterface();
-                javaObj = createMeshCollider(env, imesh);
+                javaObj = createMeshCollider(env, imesh, COLLIDER_SHAPE_MESH);
                 break;
             }
 
@@ -404,14 +404,12 @@ namespace sxr
                 const btVector3*               vtxData = &(poly->m_vertices[0]);
                 VertexBuffer*                  vb = Renderer::getInstance()->
                                                     createVertexBuffer("float3 a_position", numVerts);
-                Transform*                     transform = new Transform();
-                glm::mat4 m = transform->getLocalModelMatrix();
+
                 vb->setFloatVec("a_position", (float*) vtxData, numVerts * 3, 3);
-                vb->transform(m, false);
 
                 Mesh*         mesh = new Mesh(*vb);
                 MeshCollider* mc = new MeshCollider(mesh);
-
+                mc->set_mesh_type(COLLIDER_SHAPE_HULL);
                 LOGD("PHYSICS LOADER:    convex polygon collider %d vertices", numVerts);
                 javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",
                                          "(Lcom/samsungxr/SXRContext;J)V",
@@ -420,9 +418,9 @@ namespace sxr
         }
     }
 
-    jobject BulletFileLoader::createMeshCollider(JNIEnv& env, const btStridingMeshInterface* imesh)
+    jobject BulletFileLoader::createMeshCollider(JNIEnv& env, const btStridingMeshInterface* imesh, int shapetype)
     {
-        const unsigned char* verts;
+        const unsigned char* vdata;
         const unsigned char* faces;
         int numverts;
         int totalverts = 0;
@@ -443,8 +441,26 @@ namespace sxr
 
         for (int subpart = 0; subpart < imesh->getNumSubParts(); ++subpart)
         {
-            imesh->getLockedReadOnlyVertexIndexBase(&verts, numverts, vtype, vstride, &faces, istride, numfaces, itype, subpart);
+            imesh->getLockedReadOnlyVertexIndexBase(&vdata, numverts, vtype, vstride, &faces, istride, numfaces, itype, subpart);
             imesh->unLockReadOnlyVertexBase(subpart);
+            if (numverts == 4)
+            {
+                btVector3 v1(vdata[0], vdata[1], vdata[2]);
+                btVector3 v2(vdata[3], vdata[4], vdata[5]);
+                btVector3 v3(vdata[6], vdata[7], vdata[8]);
+                btVector3 v4(vdata[9], vdata[10], vdata[11]);
+
+                btVector3 edge1(v1 - v2);
+                btVector3 edge2(v3 - v2);
+                btVector3 normal(edge1.cross(edge2));
+
+                normal.normalize();
+                if (normal.dot(v4) == 0) // it is a plane
+                {
+//                   shapetype = COLLIDER_SHAPE_HULL;
+                }
+            }
+
             totalverts += numverts;
             totalfaces += numfaces;
             if (itype == PHY_SHORT)
@@ -453,16 +469,16 @@ namespace sxr
             }
         }
         totalfaces *= 3;
-        vdestptr = destverts = new float[totalverts];
+        vdestptr = destverts = new float[totalverts * 3];
         idestptr = destfaces = (unsigned char*) malloc(totalfaces * indexbytes);
         vb = Renderer::getInstance()->createVertexBuffer("float3 a_position", totalverts);
         ib = Renderer::getInstance()->createIndexBuffer(indexbytes, totalfaces);
 
         for (int subpart = 0; subpart < imesh->getNumSubParts(); ++subpart)
         {
-            imesh->getLockedReadOnlyVertexIndexBase(&verts, numverts, vtype, vstride, &faces,
+            imesh->getLockedReadOnlyVertexIndexBase(&vdata, numverts, vtype, vstride, &faces,
                                                     istride, numfaces, itype, subpart);
-            vsrcptr = (const float*) verts;
+            vsrcptr = (const float*) vdata;
             vstride /= sizeof(float);
             numfaces *= 3;
             for (int i = 0; i < numverts; ++i)
@@ -514,6 +530,7 @@ namespace sxr
         Mesh*         mesh = new Mesh(*vb);
         MeshCollider* mc = new MeshCollider(mesh);
 
+        mc->set_mesh_type(shapetype);
         mesh->setIndexBuffer(ib);
         LOGD("PHYSICS LOADER:    triangle mesh collider %d vertices", numverts);
         jobject javaObj = CreateInstance(env, "com/samsungxr/SXRMeshCollider",

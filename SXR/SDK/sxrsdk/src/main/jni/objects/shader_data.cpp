@@ -99,7 +99,7 @@ std::string ShaderData::makeShaderLayout()
 int ShaderData::getTotalSize() const
 {
     std::lock_guard<std::mutex> lock(mLock);
-    return uniforms().getTotalSize();
+    return uniforms().getLayoutSize();
 }
 
 int ShaderData::getByteSize(const char* name) const

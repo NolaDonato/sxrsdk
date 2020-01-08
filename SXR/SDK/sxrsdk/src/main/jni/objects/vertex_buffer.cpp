@@ -153,7 +153,7 @@ namespace sxr {
             }
         }
         dest = reinterpret_cast<float*>(mVertexData) + attr->Offset / sizeof(float);
-        dstStride = getTotalSize() / sizeof(float);
+        dstStride = getLayoutSize() / sizeof(float);
         srcend = src + srcSize;
         markDirty();
         for (int i = 0; i < mVertexCount; ++i)
@@ -288,7 +288,7 @@ namespace sxr {
         }
         markDirty();
         dest = reinterpret_cast<int*>(mVertexData) + attr->Offset / sizeof(int);
-        dstStride = getTotalSize() / sizeof(int);
+        dstStride = getLayoutSize() / sizeof(int);
         srcend = src + srcSize;
 
         for (int i = 0; i < mVertexCount; ++i)
@@ -317,7 +317,7 @@ namespace sxr {
         const int*      dstend;
         const int*      src = reinterpret_cast<int*>(mVertexData);
         int             attrSize = attr->Size / sizeof(int);
-        int             srcStride = getTotalSize() / sizeof(int);
+        int             srcStride = getLayoutSize() / sizeof(int);
 
         if ((attr == NULL) || !attr->IsSet)
         {
@@ -378,7 +378,7 @@ namespace sxr {
         }
         if (count > 0)
         {
-            int vsize = getTotalSize();
+            int vsize = getLayoutSize();
             int datasize = vsize * count;
             LOGV("VertexBuffer: allocating vertex buffer of %d bytes with %d vertices\n", datasize, count);
             mVertexData = (char*) malloc(datasize);

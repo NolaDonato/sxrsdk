@@ -482,6 +482,8 @@ namespace sxr {
         options |= mNeedsSync;
         mNeedsSync = 0;
         updateCollider(owner_object(), options);
+        link.m_collider = mCollider;
+        link.m_inertiaLocal = btVector3(mLocalInertia.x, mLocalInertia.y, mLocalInertia.z);
         if (options & SyncOptions::TRANSFORM)
         {
             setPhysicsTransform();
@@ -492,8 +494,6 @@ namespace sxr {
             link.m_mass = mMass;
             link.m_jointFriction = mFriction;
             link.m_userPtr = this;
-            link.m_collider = mCollider;
-            link.m_inertiaLocal = btVector3(mLocalInertia.x, mLocalInertia.y, mLocalInertia.z);
             switch (mJointType)
             {
                 case JointType::fixedJoint: setupFixed(); break;
@@ -506,8 +506,6 @@ namespace sxr {
         {
             link.m_mass = mMass;
             link.m_jointFriction = mFriction;
-            link.m_collider = mCollider;
-            link.m_inertiaLocal = btVector3(mLocalInertia.x, mLocalInertia.y, mLocalInertia.z);
             switch (mJointType)
             {
                 case JointType::fixedJoint: updateFixed(); break;
@@ -532,37 +530,31 @@ namespace sxr {
         if (mCollider == nullptr)
         {
             mCollider = new btMultiBodyLinkCollider(mMultiBody, mJointIndex);
-            LOGV("BULLET: creating link collider %s", getName());
-            curShape = newShape = convertCollider2CollisionShape(collider);
-            mCollider->setCollisionShape(newShape);
             mCollider->m_link = getJointIndex();
             mCollider->setUserPointer(this);
             options |= SyncOptions::PROPERTIES;
         }
-        else
+        curShape = mCollider->getCollisionShape();
+        if ((curShape == nullptr) || (options & SyncOptions::COLLISION_SHAPE) != 0)
         {
-            curShape = mCollider->getCollisionShape();
-            if ((options & SyncOptions::COLLISION_SHAPE) != 0)
+            newShape = convertCollider2CollisionShape(collider);
+            options |= SyncOptions::PROPERTIES;
+            if (mWorld)
             {
-                newShape = convertCollider2CollisionShape(collider);
-                options |= SyncOptions::PROPERTIES;
-                if (mWorld)
-                {
-                    btDynamicsWorld* bw = mWorld->getPhysicsWorld();
+                btDynamicsWorld* bw = mWorld->getPhysicsWorld();
 
-                    mCollider->setCollisionShape(newShape);
-                    bw->refreshBroadphaseProxy(mCollider);
-                }
-                else
-                {
-                    mCollider->setCollisionShape(newShape);
-                }
-                if (curShape)
-                {
-                    delete curShape;
-                    curShape = newShape;
-                }
+                mCollider->setCollisionShape(newShape);
+                bw->refreshBroadphaseProxy(mCollider);
             }
+            else
+            {
+                mCollider->setCollisionShape(newShape);
+            }
+            if (curShape)
+            {
+                delete curShape;
+            }
+            curShape = newShape;
         }
         if (options & SyncOptions::PROPERTIES)
         {
@@ -662,8 +654,19 @@ namespace sxr {
         }
         link->m_linkName = mName.c_str();
         link->m_jointName = mName.c_str();
+        if (mNeedsSync & SyncOptions::IMPORTED)
+        {
+            getPhysicsTransform();
+            updateCollider(owner_object(), mNeedsSync);
+            mNeedsSync = 0;
+        }
+        else
+        {
+            sync(SyncOptions::TRANSFORM);
+        }
         mWorld = bw;
-        bw->getPhysicsWorld()->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
+        btCollisionWorld* cw = bw->getPhysicsWorld();
+        cw->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
         LOGD("BULLET: attaching joint %s to world", getName());
     }
 

@@ -86,6 +86,17 @@ namespace sxr {
         */
         bool    getShortVec(unsigned short* dest, int destSize) const;
 
+
+        /**
+         * Lock the index buffer to allow write access to it.
+         */
+        virtual void lock() const { mUpdateLock.lock(); }
+
+        /**
+        * Lock the index buffer to allow write access to vertices.
+        */
+        virtual void unlock() const { mUpdateLock.unlock(); }
+
         bool            isDirty() const { return mIsDirty; }
         virtual bool    bindBuffer(Shader*) = 0;
         virtual bool    updateGPU(Renderer*) = 0;

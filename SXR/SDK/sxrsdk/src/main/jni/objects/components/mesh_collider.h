@@ -37,7 +37,7 @@ public:
     virtual ~MeshCollider();
 
     long shape_type() {
-        return COLLIDER_SHAPE_MESH;
+        return meshType_;
     }
 
     Mesh* mesh() const {
@@ -51,6 +51,15 @@ public:
     bool pickCoordinatesEnabled(){
         return pickCoordinates_;
     }
+
+    void set_mesh_type(int type);
+
+    void set_physics_info(void* physicsptr)
+    {
+        physics_ = physicsptr;
+    }
+
+    void* get_physics_info() { return physics_; }
 
     ColliderData isHit(Node* owner, const float sphere[]);
     ColliderData isHit(Node* owner, const glm::vec3& rayStart, const glm::vec3& rayDir);
@@ -69,7 +78,9 @@ private:
 private:
     bool useMeshBounds_;
     bool pickCoordinates_;
+    int meshType_;
     Mesh* mesh_;
+    void* physics_;
 };
 }
 #endif

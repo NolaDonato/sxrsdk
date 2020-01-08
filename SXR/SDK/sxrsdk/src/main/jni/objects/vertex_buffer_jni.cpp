@@ -38,7 +38,6 @@ namespace sxr
         return reinterpret_cast<jlong>(vbuf);
     }
 
-
     JNIEXPORT jstring JNICALL
     Java_com_samsungxr_NativeVertexBuffer_getDescriptor(JNIEnv *env, jclass obj, jlong jvbuf)
     {

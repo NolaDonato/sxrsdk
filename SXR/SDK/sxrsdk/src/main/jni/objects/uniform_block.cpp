@@ -306,7 +306,7 @@ namespace sxr
         const float* ptr = (const float*) mUniformData;
         int n = 16;
         int offset = 0;
-        int totalsize = getTotalSize() / sizeof(float);
+        int totalsize = getLayoutSize() / sizeof(float);
         while (offset < totalsize)
         {
             os << *ptr++ << " ";
@@ -386,7 +386,7 @@ namespace sxr
 
     bool UniformBlock::setAt(int elemIndex, const UniformBlock& srcBlock)
     {
-        int nelems = srcBlock.getTotalSize() / mElemSize;
+        int nelems = srcBlock.getLayoutSize() / mElemSize;
         if ((elemIndex >= 0) &&
             (elemIndex + nelems <= mMaxElems))
         {
@@ -408,8 +408,8 @@ namespace sxr
 
     bool UniformBlock::updateGPU(Renderer* r, int elemIndex, const UniformBlock& srcBlock)
     {
-        int len = srcBlock.getTotalSize();
-        int nelems = srcBlock.getTotalSize() / mElemSize;
+        int len = srcBlock.getLayoutSize();
+        int nelems = srcBlock.getLayoutSize() / mElemSize;
         if ((elemIndex >= 0) &&
             (elemIndex + nelems <= mMaxElems))
         {

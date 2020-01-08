@@ -784,12 +784,6 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
 
         for (SXRPhysicsJoint joint : joints)
         {
-            String name = joint.getName();
-
-            if (sceneRoot.getNodeByName(name) == null)
-            {
-                Log.w("PHYSICS LOADER", "Didn't find node for joint " + name);
-            }
             skelJoints[joint.getJointIndex()] = joint;
         }
         if (skelJoints.length == 0)

@@ -421,10 +421,7 @@ namespace sxr {
 
     void BulletRootJoint::updateCollider(Node* owner, int options)
     {
-        btCollisionShape* curShape = nullptr;
-        btCollisionShape* newShape = nullptr;
-        Collider*         collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
-        btVector3         scale(mScale.x, mScale.y, mScale.z);
+        Collider* collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
 
         if (collider == nullptr)
         {
@@ -434,85 +431,11 @@ namespace sxr {
         {
             mCollider = new btMultiBodyLinkCollider(mMultiBody, mJointIndex);
             LOGV("BULLET: creating link collider %s", getName());
-            curShape = newShape = convertCollider2CollisionShape(collider);
-            mCollider->setCollisionShape(newShape);
             mMultiBody->setBaseCollider(mCollider);
             mCollider->setUserPointer(this);
             options |= SyncOptions::PROPERTIES;
         }
-        else
-        {
-            curShape = mCollider->getCollisionShape();
-            if ((options & SyncOptions::COLLISION_SHAPE) != 0)
-            {
-                newShape = convertCollider2CollisionShape(collider);
-                options |= SyncOptions::PROPERTIES;
-                if (mWorld)
-                {
-                    btDynamicsWorld *bw = mWorld->getPhysicsWorld();
-                    bw->removeCollisionObject(mCollider);
-                    mCollider->setCollisionShape(newShape);
-                    bw->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
-                }
-                else
-                {
-                    mCollider->setCollisionShape(newShape);
-                }
-                if (curShape)
-                {
-                    scale = curShape->getLocalScaling();
-                    delete curShape;
-                    curShape = newShape;
-                }
-            }
-        }
-        if (options & SyncOptions::PROPERTIES)
-        {
-            btVector3 localInertia;
-
-            mMultiBody->setBaseMass(mMass);
-            curShape->setLocalScaling(scale);
-            curShape->calculateLocalInertia(mMass, localInertia);
-            mMultiBody->setBaseInertia(localInertia);
-            int collisionFlags = mCollider->getCollisionFlags();
-
-            switch (mSimType)
-            {
-                case SimulationType::DYNAMIC:
-                    mCollisionGroup &=
-                            ~(btBroadphaseProxy::StaticFilter | btBroadphaseProxy::KinematicFilter);
-                    mCollisionMask = btBroadphaseProxy::AllFilter;
-                    mCollider->setCollisionFlags(collisionFlags &
-                                                 ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
-                                                   btCollisionObject::CollisionFlags::CF_STATIC_OBJECT));
-                    mCollider->setActivationState(enabled() ? ACTIVE_TAG : WANTS_DEACTIVATION);
-                    break;
-
-                case SimulationType::STATIC:
-                    mCollisionGroup |= btBroadphaseProxy::StaticFilter;
-                    mCollisionGroup &= ~(btBroadphaseProxy::KinematicFilter |
-                                         btBroadphaseProxy::DefaultFilter);
-                    mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
-                    mCollider->setCollisionFlags(
-                            (collisionFlags | btCollisionObject::CollisionFlags::CF_STATIC_OBJECT) &
-                            ~btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT);
-                    mCollider->setActivationState(enabled() ? ISLAND_SLEEPING : WANTS_DEACTIVATION);
-                    break;
-
-                case SimulationType::KINEMATIC:
-                    mCollisionGroup |= btBroadphaseProxy::KinematicFilter;
-                    mCollisionGroup &=
-                            ~(btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter);
-                    mCollisionMask =
-                            btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::KinematicFilter;
-                    mCollider->setCollisionFlags((collisionFlags |
-                                                  btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT) &
-                                                 ~btCollisionObject::CollisionFlags::CF_STATIC_OBJECT);
-                    mCollider->setActivationState(enabled() ? ISLAND_SLEEPING : WANTS_DEACTIVATION);
-                    break;
-            }
-
-        }
+        BulletJoint::updateCollider(owner, options);
     }
 
     bool BulletRootJoint::addJointToWorld(PhysicsJoint* joint, PhysicsWorld* world)
@@ -531,7 +454,6 @@ namespace sxr {
 
         if (bj->isImported())
         {
-            bj->getPhysicsTransform();
             if (joint != this)
             {
                 bj->attachToWorld(world);
@@ -590,19 +512,28 @@ namespace sxr {
             mMultiBody->setMaxAppliedImpulse(mMaxAppliedImpulse);
             mMultiBody->setMaxCoordinateVelocity(mMaxCoordVelocity);
         }
-        sync(SyncOptions::PROPERTIES | SyncOptions::TRANSFORM);
-        for (int i = 0; i < mNumJoints; ++i)
+        if (mNeedsSync & SyncOptions::IMPORTED)
         {
-            BulletJoint* joint = mJoints[i];
-            if (joint != nullptr)
-            {
-                joint->sync(SyncOptions::PROPERTIES | SyncOptions::TRANSFORM);
-                joint->attachToWorld(world);
-            }
+            getPhysicsTransform();
+            updateCollider(owner_object(), mNeedsSync);
+            mNeedsSync = 0;
         }
-        if (createMB)
+        else
         {
-            mMultiBody->finalizeMultiDof();
+            sync(SyncOptions::PROPERTIES | SyncOptions::TRANSFORM);
+            for (int i = 0; i < mNumJoints; ++i)
+            {
+                BulletJoint *joint = mJoints[i];
+                if (joint != nullptr)
+                {
+                    joint->sync(SyncOptions::PROPERTIES | SyncOptions::TRANSFORM);
+                    joint->attachToWorld(world);
+                }
+            }
+            if (createMB)
+            {
+                mMultiBody->finalizeMultiDof();
+            }
         }
         mWorld = static_cast<BulletWorld*>(world);
         btMultiBodyDynamicsWorld* bw = dynamic_cast<btMultiBodyDynamicsWorld*>(mWorld->getPhysicsWorld());

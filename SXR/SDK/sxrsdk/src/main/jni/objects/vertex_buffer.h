@@ -43,7 +43,7 @@ namespace sxr {
         /**
          * Return the number of floats in a vertex.
          */
-        int getVertexSize() const   { return getTotalSize() / sizeof(float); }
+        int getVertexSize() const   { return getLayoutSize() / sizeof(float); }
 
         /**
          * Return the number of vertices currently in this buffer.
@@ -56,7 +56,7 @@ namespace sxr {
         /**
          * Return the number of bytes in the vertex data buffer.
          */
-        int getDataSize() const     { return getTotalSize() * mVertexCount; }
+        int getDataSize() const     { return getLayoutSize() * mVertexCount; }
 
         /**
          * Set all the values for an float vertex attribute.
@@ -141,6 +141,16 @@ namespace sxr {
          * @param doNormals Transform the normals of the mesh by the inverse transpose of the matrix
          */
         void            transform(glm::mat4& trans, bool doNormals);
+
+        /**
+         * Lock the vertex buffer to allow write access to vertices.
+         */
+         virtual void lock() const { mLock.lock(); }
+
+        /**
+        * Lock the vertex buffer to allow write access to vertices.
+        */
+        virtual void unlock() const { mLock.unlock(); }
 
         /**
          * Copy the vertices to the GPU if they have changed.

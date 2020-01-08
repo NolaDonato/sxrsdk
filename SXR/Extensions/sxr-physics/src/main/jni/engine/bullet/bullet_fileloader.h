@@ -152,7 +152,7 @@ private:
     const char* getNameForPointer(void* p);
     btVector3&  rotatePoint(btVector3& p);
     void        createCollisionShape(JNIEnv& env, const btCollisionShape* shape, jobject& obj, btVector3& debugColor);
-    jobject     createMeshCollider(JNIEnv& env, const btStridingMeshInterface* imesh);
+    jobject     createMeshCollider(JNIEnv& env, const btStridingMeshInterface* imesh, int meshtype);
 
     void        copyHull(const btConvexHullShape *input, float *outVerts, btVector3& dimensions);
 

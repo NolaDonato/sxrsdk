@@ -41,7 +41,7 @@ public:
 
     void CopyHit(const ColliderData& src);
 
-    Node*    ObjectHit;
+    Node*           ObjectHit;
     Collider*       ColliderHit;
     bool            IsHit;
     glm::vec3       HitPosition;
