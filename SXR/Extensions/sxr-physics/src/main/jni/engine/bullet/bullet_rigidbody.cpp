@@ -236,8 +236,6 @@ namespace sxr
             bw->removeRigidBody(mRigidBody);
         }
         mScale = src->getScale();
-        mCollisionGroup = src->getCollisionGroup();
-        mCollisionMask = src->getCollisionMask();
         mSimType = src->getSimulationType();
         mConstructionInfo.m_mass = src->getMass();
         mRigidBody->setRestitution(mConstructionInfo.m_restitution = src->getRestitution());
@@ -257,7 +255,7 @@ namespace sxr
                                                   srcRB->getContactDamping());
         mRigidBody->setGravity(srcRB->getGravity());
         mRigidBody->setCollisionFlags(srcRB->getCollisionFlags());
-        updateCollider(owner_object(), SyncOptions::COLLISION_SHAPE);
+        sync(SyncOptions::COLLISION_SHAPE | SyncOptions::PROPERTIES);
         if (mWorld)
         {
             btDynamicsWorld* bw = mWorld->getPhysicsWorld();
@@ -292,22 +290,27 @@ namespace sxr
         }
         if (updated || (options & SyncOptions::PROPERTIES))
         {
-            int collisionFlags = mRigidBody->getCollisionFlags();
-
-            if (mSimType != DYNAMIC)
+            updateSimType();
+            if (mWorld)
             {
-                mConstructionInfo.m_localInertia.setValue(0, 0, 0);
+                mWorld->getPhysicsWorld()->refreshBroadphaseProxy(mRigidBody);
             }
-            mRigidBody->setMassProps(mConstructionInfo.m_mass,
-                                     mConstructionInfo.m_localInertia);
-            switch (mSimType)
-            {
-                case SimulationType::DYNAMIC:
-                mCollisionGroup &= ~(btBroadphaseProxy::StaticFilter |  btBroadphaseProxy::KinematicFilter);
+        }
+    }
+
+    void BulletRigidBody::updateSimType()
+    {
+        int collisionFlags = mRigidBody->getCollisionFlags();
+
+        switch (mSimType)
+        {
+            case SimulationType::DYNAMIC:
+                mCollisionGroup &=
+                        ~(btBroadphaseProxy::StaticFilter | btBroadphaseProxy::KinematicFilter);
                 mCollisionMask = btBroadphaseProxy::AllFilter;
                 mRigidBody->setCollisionFlags(collisionFlags &
-                                          ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
-                                            btCollisionObject::CollisionFlags::CF_STATIC_OBJECT));
+                                              ~(btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT |
+                                                btCollisionObject::CollisionFlags::CF_STATIC_OBJECT));
                 if (enabled())
                 {
                     mRigidBody->activate();
@@ -316,25 +319,29 @@ namespace sxr
                 {
                     mRigidBody->setActivationState(WANTS_DEACTIVATION);
                 }
-                break;
+                return;
 
-                case SimulationType::STATIC:
+            case SimulationType::STATIC:
                 mCollisionGroup |= btBroadphaseProxy::StaticFilter;
-                mCollisionGroup &= ~(btBroadphaseProxy::KinematicFilter | btBroadphaseProxy::DefaultFilter);
+                mCollisionGroup &=
+                        ~(btBroadphaseProxy::KinematicFilter | btBroadphaseProxy::DefaultFilter);
                 mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::StaticFilter;
                 mRigidBody->setCollisionFlags(
                         (collisionFlags | btCollisionObject::CollisionFlags::CF_STATIC_OBJECT) &
                         ~btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT);
                 mRigidBody->setActivationState(enabled() ? ISLAND_SLEEPING : WANTS_DEACTIVATION);
+                mConstructionInfo.m_localInertia.setValue(0, 0, 0);
                 break;
 
-                case SimulationType::KINEMATIC:
+            case SimulationType::KINEMATIC:
                 mCollisionGroup |= btBroadphaseProxy::KinematicFilter;
-                mCollisionGroup &= ~(btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter);
+                mCollisionGroup &=
+                        ~(btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter);
                 mCollisionMask = btBroadphaseProxy::AllFilter ^ btBroadphaseProxy::KinematicFilter;
                 mRigidBody->setCollisionFlags(
                         (collisionFlags | btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT) &
                         ~btCollisionObject::CollisionFlags::CF_STATIC_OBJECT);
+                mConstructionInfo.m_localInertia.setValue(0, 0, 0);
                 if (enabled())
                 {
                     mRigidBody->setActivationState(DISABLE_DEACTIVATION);
@@ -344,11 +351,6 @@ namespace sxr
                     mRigidBody->forceActivationState(WANTS_DEACTIVATION);
                 }
                 break;
-            }
-            if (mWorld)
-            {
-                mWorld->getPhysicsWorld()->refreshBroadphaseProxy(mRigidBody);
-            }
         }
     }
 
@@ -358,29 +360,10 @@ namespace sxr
         if (mNeedsSync & SyncOptions::IMPORTED)
         {
             updateCollider(owner_object(), mNeedsSync);
+            updateSimType();
             mNeedsSync = 0;
             mRigidBody->setMotionState(this);
-            mRigidBody->activate();
-            setWorldTransform(mRigidBody->getWorldTransform());
-        }
-        else
-        {
-            sync(SyncOptions::TRANSFORM);
-            mWorld = static_cast<BulletWorld*>(world);
-            mWorld->getPhysicsWorld()->addRigidBody(mRigidBody, mCollisionGroup, mCollisionMask);
-            LOGD("BULLET: rigid body %s added to world", getName());
-        }
-    }
-
-    void BulletRigidBody::addToWorld(PhysicsWorld* world)
-    {
-        if (mNeedsSync & SyncOptions::IMPORTED)
-        {
-            updateCollider(owner_object(), mNeedsSync);
-            mNeedsSync = 0;
-            mRigidBody->setMotionState(this);
-            mRigidBody->activate();
-            setWorldTransform(mRigidBody->getWorldTransform());
+            setWorldTransform(mConstructionInfo.m_startWorldTransform);
         }
         else
         {
@@ -389,6 +372,11 @@ namespace sxr
         mWorld = static_cast<BulletWorld*>(world);
         mWorld->getPhysicsWorld()->addRigidBody(mRigidBody, mCollisionGroup, mCollisionMask);
         LOGD("BULLET: rigid body %s added to world", getName());
+    }
+
+    void BulletRigidBody::addToWorld(PhysicsWorld* world)
+    {
+        addToWorld(world, mCollisionMask);
     }
 
     bool BulletRigidBody::updateCollider(Node* owner, int options)
@@ -459,7 +447,7 @@ namespace sxr
              trans->position_z());
     }
 
-    void BulletRigidBody::setWorldTransform(const btTransform &centerOfMassWorldTrans)
+    void BulletRigidBody::setWorldTransform(const btTransform& centerOfMassWorldTrans)
     {
         Node* owner = owner_object();
 

@@ -512,21 +512,26 @@ namespace sxr {
             BulletJoint* j = static_cast<BulletJoint*>(bodyA);
             dw = j->getPhysicsWorld();
         }
-        if (dw)
-        {
-            bw = static_cast<BulletWorld*>(dw->getWorldUserInfo());
-        }
+        mBodyA = body;
         if (mConstraint)
         {
-            dw->removeConstraint(mConstraint);
-            delete mConstraint;
-            mConstraint = nullptr;
             mBodyA = body;
-            sync(bw);
-        }
-        else
-        {
-            mBodyA = body;
+            if (dw)
+            {
+                bw = static_cast<BulletWorld*>(dw->getWorldUserInfo());
+                dw->removeConstraint(mConstraint);
+                delete mConstraint;
+                mConstraint = nullptr;
+                if (owner_object() != nullptr)
+                {
+                    sync(bw);
+                }
+            }
+            else
+            {
+                delete mConstraint;
+                mConstraint = nullptr;
+            }
         }
     }
 

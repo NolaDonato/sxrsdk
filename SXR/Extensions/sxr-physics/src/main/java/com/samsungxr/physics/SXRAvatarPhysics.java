@@ -33,6 +33,7 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
     protected SXRPhysicsLoader mPhysicsLoader;
     protected SXRPoseMapper mPhysicsToAvatar = null;
     protected final Map<String, Map<String, Object>> mPhysicsProperties = new HashMap<String, Map<String, Object>>();
+    private boolean mUseAVT = false;
 
     public SXRAvatarPhysics(SXRAvatar avatar, SXRWorld physicsWorld)
     {
@@ -150,14 +151,15 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
     {
         Map<String, Object> physicsProps = getPhysicsProperties(filename);
         String attachBone = (physicsProps != null) ? (String) physicsProps.get("AttachBone") : null;
-/*
-        String physicsfile = Environment.getExternalStorageDirectory() + "/" +
-                             filename.replace(".avt", ".urdf");
-        mPhysicsLoader.exportPhysics(skel, physicsfile);
-*/
+
         setPhysicsProperties(filename, null);
         if (mPhysicsSkel == null)
         {
+            if (mUseAVT)
+            {
+                String physicsfile = Environment.getExternalStorageDirectory() + "/" + filename.replace(".avt", ".urdf");
+                mPhysicsLoader.exportPhysics(skel, physicsfile);
+            }
             if (mPhysicsRoot == null)
             {
                 mPhysicsRoot = world.getOwnerObject();
@@ -196,6 +198,11 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
                 attachNode2.getComponent(SXRPhysicsJoint.getComponentType()) : null);
 
             mPhysicsSkel.poseFromBones();
+            if (mUseAVT)
+            {
+                String physicsfile = Environment.getExternalStorageDirectory() + "/" + filename.replace(".avt", ".urdf");
+                mPhysicsLoader.exportPhysics(skel, physicsfile, attachBone);
+            }
             if (mPhysicsWorld != world)
             {
                 mPhysicsWorld.merge(world);
@@ -246,10 +253,17 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
         @Override
         public void onAvatarLoaded(SXRAvatar avatar, SXRNode avatarRoot, String filePath, String errors)
         {
-//            String physicsfile = avatar.getProperty("avt");
-            String physicsfile = avatar.getProperty("physics");
+            String physicsfile;
 
-            physicsfile = (physicsfile != null) ? physicsfile : avatar.getProperty("avt");
+            if (mUseAVT)
+            {
+                physicsfile = avatar.getProperty("avt");
+            }
+            else
+            {
+                physicsfile = avatar.getProperty("physics");
+                physicsfile = (physicsfile != null) ? physicsfile : avatar.getProperty("avt");
+            }
             avatar.getSkeleton().disable();
             if (physicsfile != null)
             {
@@ -295,9 +309,15 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
             {
                 return;
             }
-//            physicsfile = avatar.getModelProperty(modelType, "avt");
-            physicsfile = avatar.getModelProperty(modelType, "physics");
-            physicsfile = (physicsfile != null) ? physicsfile : avatar.getModelProperty(modelType, "avt");
+            if (mUseAVT)
+            {
+                physicsfile = avatar.getProperty("avt");
+            }
+            else
+            {
+                physicsfile = avatar.getProperty("physics");
+                physicsfile = (physicsfile != null) ? physicsfile : avatar.getProperty("avt");
+            }
             if (physicsfile == null)
             {
                 return;

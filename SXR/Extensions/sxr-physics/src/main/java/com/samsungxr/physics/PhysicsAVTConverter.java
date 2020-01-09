@@ -246,7 +246,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         }
         SXRNode root = mSkeleton.getBone(mAttachBoneIndex);
         SXRCollider collider = mColliders.get(mAttachBoneIndex);
-        SXRRigidBody body = mBodies.get(mAttachBoneIndex);;
+        SXRRigidBody body = mBodies.get(mAttachBoneIndex);
         int boneoptions = (mSimType == SXRRigidBody.DYNAMIC) ? SXRSkeleton.BONE_PHYSICS :
                            SXRSkeleton.BONE_ANIMATE;
 

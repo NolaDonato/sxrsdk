@@ -1468,13 +1468,14 @@ jobject BulletFileLoader::createGenericConstraint(JNIEnv &env, btGeneric6DofSpri
         {
             return false;
         }
-//        mURDFImporter->exportPhysics("/storage/emulated/0/temp.bullet", mSerializer);
         mURDFImporter->registerNames(*mSerializer, false);
+//        mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };
+        mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f };
+
         bulletWorld->setGravity(gravity);
         mNeedRotate = !ignoreUpAxis;    // URDF is Z up
         if (mNeedRotate)
         {
-            mRotateCoords = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f};
             mTransformCoords.setBasis(mRotateCoords);
             mTransformCoords.setOrigin(btVector3(0, 0, 0));
         }

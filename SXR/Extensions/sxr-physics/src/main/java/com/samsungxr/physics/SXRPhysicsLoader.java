@@ -353,6 +353,26 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         return exporter.exportAsURDF(skeleton, fileName);
     }
 
+    /***
+     * Export the given physics world as URDF (ASCII XML format).
+     * <p>
+     * URDF requires a connected hierarchy of joints. SXR represents this
+     * as a {@SXRSkeleton skeleton} with bone nodes which have {@link SXRRigidBody rigid bodies}
+     * or {@link SXRPhysicsJoint joints} attached. The skeleton describes the hierarchy
+     * and the physics information is contained in the physics components.
+     * @param skeleton     {@link SXRSkeleton skeleton} with {@link SXRRigidBody rigid bodies}
+     *                      or {@link SXRPhysicsJoint joints} attached to the bone nodes.
+     * @param fileName      name of file to get physics world
+     * @param firstBoneName name of first bone in skeleton to export, it need not be the root bone.
+     *                      if null is specified, export starts at the root bone.
+     * @return true if export successful, false if not
+     */
+    public boolean exportPhysics(SXRSkeleton skeleton, String fileName, String firstBoneName)
+    {
+        URDFExporter exporter = new URDFExporter();
+        return exporter.exportAsURDF(skeleton, fileName, firstBoneName);
+    }
+
     private void loadBulletFile(byte[] inputData, SXRNode sceneRoot, Map<String, Object> loaderProperties, final String fname)
     {
         /*
@@ -575,6 +595,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         int attachBoneIndex = -1;
         int simtype = SXRRigidBody.DYNAMIC;
         SXRNode physicsRoot = sceneRoot;
+        int boneoptions = 0;
 
         if (loaderProperties != null)
         {
@@ -597,6 +618,14 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
             if (loaderProperties.containsKey("SimulationType"))
             {
                 simtype = (int) loaderProperties.get("SimulationType");
+                if (simtype == SXRRigidBody.DYNAMIC)
+                {
+                    boneoptions = SXRSkeleton.BONE_PHYSICS;
+                }
+                else if (simtype == SXRRigidBody.KINEMATIC)
+                {
+                    boneoptions = SXRSkeleton.BONE_ANIMATE;
+                }
             }
         }
         if (linkRigidBodies ||(joints.length > 0))
@@ -613,12 +642,13 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
             if (linkRigidBodies)
             {
                 physicsRoot = new SXRNode(getSXRContext());
+                physicsRoot.setName("PhysicsRoot");
                 sceneRoot.addChildObject(physicsRoot);
                 attachRigidBodies(physicsRoot, bodies, loaderProperties);
                 attachConstraints(physicsRoot, constraints, loaderProperties);
                 if (srcSkel == null)
                 {
-                    srcSkel = linkRigidBodies(bodies, sceneRoot, simtype);
+                    srcSkel = linkRigidBodies(bodies, physicsRoot, boneoptions);
                 }
                 if (destSkel != null)
                 {
@@ -653,12 +683,17 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
     {
         int simtype = SXRRigidBody.DYNAMIC;
         boolean linkRigidBodies = false;
+        String attachBone = null;
 
         if (loaderProperties != null)
         {
             if (loaderProperties.containsKey("SimulationType"))
             {
                 simtype = (int) loaderProperties.get("SimulationType");
+            }
+            if (loaderProperties.containsKey("LinkRigidBodies"))
+            {
+                linkRigidBodies = (boolean) loaderProperties.get("LinkRigidBodies");
             }
             if (loaderProperties.containsKey("LinkRigidBodies"))
             {
@@ -892,11 +927,13 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
         SXRSkeleton skel = new SXRSkeleton(rootNode, boneNames);
 
         skel.setBone(0, rootNode);
+        skel.setBoneOptions(0, boneoptions);
         for (int i = 1; i < numbones; ++i)
         {
             skel.setBoneOptions(i, boneoptions);
             skel.setBone(i, nodes.get(i));
         }
+        skel.poseFromBones();
         return skel;
     }
 
@@ -960,6 +997,10 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                 srcBone.detachComponent(SXRPhysicsJoint.getComponentType());
                 if (destBody != null)
                 {
+                    if (destIndex == attachBone)
+                    {
+                        srcBody.setSimulationType(destBody.getSimulationType());
+                    }
                     destBody.copy(srcBody);
                 }
                 else
@@ -979,6 +1020,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                     {
                         srcConstraint.setParentBody(parentBody);
                     }
+                    destBone.attachComponent(srcConstraint);
                 }
             }
             /**
@@ -1056,8 +1098,6 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
             SXRNode srcBone = srcSkel.getBone(i);
             SXRPhysicsJoint srcJoint = (SXRPhysicsJoint) srcBone.getComponent(SXRPhysicsJoint.getComponentType());
             int destIndex = destSkel.getBoneIndex(srcName);
-            SXRNode destParent = null;
-            SXRNode srcParent = null;
             SXRPhysicsJoint destJoint = null;
             SXRPhysicsJoint parentJoint = null;
 

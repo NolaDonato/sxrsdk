@@ -118,6 +118,7 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
 protected:
     bool updateCollider(Node* owner, int options);
     void finalize();
+    void updateSimType();
 
 private:
     btRigidBody::btRigidBodyConstructionInfo mConstructionInfo;
