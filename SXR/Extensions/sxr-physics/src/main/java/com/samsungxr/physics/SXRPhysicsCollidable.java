@@ -34,14 +34,12 @@ abstract public class SXRPhysicsCollidable extends SXRPhysicsWorldObject
 
     abstract public int getCollisionGroup();
     abstract public String getName();
-    abstract public void getScale(Vector3f v);
-    abstract public float[] getScale();
+    abstract public float[] getColliderTransform();
     abstract public int getSimulationType();
 
     abstract public void setName(String s);
-    abstract public void setScale(float x, float y, float z);
-    abstract public void setScale(Vector3f v);
     abstract public void setSimulationType(int t);
+    abstract public void setColliderTransform(float[] matrix);
 
     abstract public void sync(int syncOptions);
 }

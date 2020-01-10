@@ -163,36 +163,6 @@ public class SXRRigidBody extends SXRPhysicsCollidable
         NativeRigidBody.setName(getNative(), name);
     }
 
-    public void setScale(final float x, final float y, final float z)
-    {
-        mPhysicsContext.runOnPhysicsThread(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                NativeRigidBody.setScale(getNative(), x, y, z);
-            }
-        });
-    }
-
-    public void setScale(Vector3f v)
-    {
-        setScale(v.x, v.y, v.z);
-    }
-
-    public void getScale(Vector3f v)
-    {
-        float[] scale = getScale();
-        v.x = scale[0];
-        v.y = scale[1];
-        v.z = scale[2];
-    }
-
-    public float[] getScale()
-    {
-        return NativeRigidBody.getScale(getNative());
-    }
-
     /**
      * Establishes how this rigid body will behave in the simulation.
      *
@@ -597,6 +567,34 @@ public class SXRRigidBody extends SXRPhysicsCollidable
     }
 
     /**
+     * Sets the transform used to position and orient the collider
+     * with respect to the rigid body.
+     *
+     * @param matrix float array with 16 elements containing a 4x4 matrix
+     */
+    public void setColliderTransform(final float[] matrix)
+    {
+        mPhysicsContext.runOnPhysicsThread(new Runnable()
+        {
+            public void run()
+            {
+                NativeRigidBody.setColliderTransform(getNative(), matrix);
+            }
+        });
+    }
+
+    /**
+     * Returns the transform used to position and orient the collider
+     * with respect to the rigid body.
+     *
+     * @return float array with 16 elements containing a 4x4 matrix
+     */
+    public float[] getColliderTransform()
+    {
+        return NativeRigidBody.getColliderTransform(getNative());
+    }
+
+    /**
      * Returns the gravity acceleration float array [x,y,z] on this {@linkplain SXRRigidBody rigid body}.
      *
      * @return The gravity acceleration vector as a float array
@@ -768,9 +766,9 @@ class NativeRigidBody
     static native float   getCcdMotionThreshold(long jrigid_body);
     static native float   getCcdSweptSphereRadius(long jrigid_body);
     static native float   getContactProcessingThreshold(long jrigid_body);
-    static native int     getSimulationType(long jrigid_body);
-    static native float[] getScale(long jrigid_body);
+    static native int     getSimulationType(long jrigid_body);static native float[] getScale(long jrigid_body);
     static native int     getCollisionGroup(long jrigid_body);
+    static native float[] getColliderTransform(long jjoint);
 
     static native void setGravity(long jrigid_body, float x, float y, float z);
     static native void setDamping(long jrigid_body, float linear, float angular);
@@ -785,9 +783,9 @@ class NativeRigidBody
     static native void setCcdSweptSphereRadius(long jrigid_body, float n);
     static native void setContactProcessingThreshold(long jrigid_body, float n);
     static native void setIgnoreCollisionCheck(long jrigid_body, long jcollision_object, boolean ignore);
-    static native void setScale(long jrigid_body, float x, float y, float z);
     static native void setName(long jrigid_body, String name);
     static native void setSimulationType(long jrigid_body, int jtype);
+    static native void setColliderTransform(long jbody, float[] matrix);
 
     static native void applyCentralForce(long jrigid_body, float x, float y, float z);
     static native void applyForce(long jrigid_body, float force_x, float force_y, float force_z,

@@ -38,6 +38,7 @@ static btScalar gUrdfDefaultCollisionMargin = 0.001;
 #include <iostream>
 #include <fstream>
 #include <list>
+#include <BulletCollision/CollisionDispatch/btCollisionObject.h>
 #include "UrdfParser.h"
 
 
@@ -597,8 +598,32 @@ btCollisionShape* BulletURDFImporter::convertURDFToCollisionShape(const UrdfColl
 		{
 			btScalar radius = collision->m_geometry.m_capsuleRadius;
 			btScalar height = collision->m_geometry.m_capsuleHeight;
-			btCapsuleShapeZ* capsuleShape = new btCapsuleShapeZ(radius, height);
-			shape = capsuleShape;
+            btScalar yaw;
+            btScalar pitch;
+            btScalar roll;
+            btTransform t = collision->m_linkLocalFrame;
+            btCollisionShape* child;
+            btCompoundShape* cshape;
+
+            cshape = new btCompoundShape(false, 1);
+            t.getBasis().getEulerZYX(yaw, pitch, roll);
+/*
+            if (fabs((yaw - M_PI_2) < 0.001f) && (roll == 0) && (pitch == 0))
+            {
+                child = new btCapsuleShape(radius, height);
+            }
+            else if ((yaw == 0) && fabs((pitch - M_PI_2) < 0.001f) && (roll == 0))
+            {
+                child = new btCapsuleShapeX(radius, height);
+            }
+            else
+            {
+                child = new btCapsuleShapeZ(radius, height);
+            }
+ */
+            child = new btCapsuleShape(radius, height);
+            cshape->addChildShape(t, child);
+            shape = cshape;
 			shape->setMargin(gUrdfDefaultCollisionMargin);
 			break;
 		}
@@ -607,11 +632,29 @@ btCollisionShape* BulletURDFImporter::convertURDFToCollisionShape(const UrdfColl
 		{
 			btScalar cylRadius = collision->m_geometry.m_capsuleRadius;
 			btScalar cylHalfLength = 0.5 * collision->m_geometry.m_capsuleHeight;
+			btTransform t = collision->m_linkLocalFrame;
+			btScalar yaw;
+			btScalar pitch;
+			btScalar roll;
+			t.getBasis().getEulerZYX(yaw, pitch, roll);
+
 			if (m_data->m_flags & CUF_USE_IMPLICIT_CYLINDER)
 			{
-				btVector3 halfExtents(cylRadius, cylRadius, cylHalfLength);
-				btCylinderShapeZ* cylZShape = new btCylinderShapeZ(halfExtents);
-				shape = cylZShape;
+				if (fabs((yaw - M_PI_2) < 0.001f) && (roll == 0) && (pitch == 0))
+				{
+					btVector3 halfExtents(cylHalfLength, cylRadius, cylRadius);
+					shape = new btCylinderShapeX(halfExtents);
+				}
+				else if ((yaw == 0) && fabs((pitch - M_PI_2) < 0.001f) && (roll == 0))
+				{
+					btVector3 halfExtents(cylRadius, cylHalfLength, cylRadius);
+					shape = new btCylinderShape(halfExtents);
+				}
+				else
+				{
+					btVector3 halfExtents(cylRadius, cylRadius, cylHalfLength);
+					shape = new btCylinderShapeZ(halfExtents);
+				}
 			}
 			else
 			{
@@ -890,7 +933,7 @@ void BulletURDFImporter::convertURDFToVisualShapeInternal(const UrdfVisual* visu
 	{
         case URDF_GEOM_CAPSULE:
         {
-           btScalar radius = visual->m_geometry.m_capsuleRadius;
+            btScalar radius = visual->m_geometry.m_capsuleRadius;
 			btScalar height = visual->m_geometry.m_capsuleHeight;
 			btCapsuleShapeZ* capsuleShape = new btCapsuleShapeZ(radius, height);
 			convexColShape = capsuleShape;

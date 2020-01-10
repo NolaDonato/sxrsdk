@@ -27,7 +27,7 @@
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 
 namespace sxr {
-    btCollisionShape *convertCollider2CollisionShape(Collider *collider);
+    btCollisionShape *convertCollider2CollisionShape(Collider *collider, btTransform& t);
     btCollisionShape *convertSphereCollider2CollisionShape(SphereCollider *collider);
     btCollisionShape *convertCapsuleCollider2CollisionShape(CapsuleCollider *collider);
     btCollisionShape *convertBoxCollider2CollisionShape(BoxCollider *collider);
@@ -36,6 +36,9 @@ namespace sxr {
     btConvexHullShape *createConvexHullShapeFromMesh(Mesh *mesh);
     btTransform convertTransform2btTransform(Transform *t);
     btTransform convertTransform2btTransform(const glm::mat4& m);
+    void convertbtTransformToMatrix(const btTransform& t, glm::mat4 &m);
+    void decomposeMatrix(glm::mat4& m, glm::vec3& scale, glm::quat& rotation, glm::vec3& translation);
+
 
     void convertBtTransform2Transform(btTransform bulletTransform, Transform *transform);
 

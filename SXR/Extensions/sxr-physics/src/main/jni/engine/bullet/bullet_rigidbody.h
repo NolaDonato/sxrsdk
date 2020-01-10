@@ -38,18 +38,19 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
     virtual void onDisable(Node* owner);
     virtual void onEnable(Node* owner);
 
-    virtual void setName(const char*);
-    virtual void setSimulationType(SimulationType type);
-    virtual void setFriction(float f);
-    virtual void sync(int options = 0);
-    virtual void getWorldTransform(btTransform &worldTrans) const;
-    virtual void setWorldTransform(const btTransform &worldTrans);
-    virtual void setScale(const glm::vec3& v);
-    virtual const glm::vec3& getScale() const { return mScale; }
+    virtual const glm::mat4& getColliderTransform() const { return mColliderTransform; }
     virtual const char* getName() const;
     virtual int getCollisionGroup() const { return mCollisionGroup; }
     virtual int getCollisionMask() const { return mCollisionMask; }
 
+    void    getGravity(float *v3) const;
+    void    getLinearVelocity(float *v3) const;
+    void    getAngularVelocity(float *v3) const;
+    void    getAngularFactor(float *v3) const;
+    void    getLinearFactor(float *v3) const;
+    void    getDamping(float &angular, float &linear) const;
+    float   getCcdMotionThreshold() const;
+    float   getContactProcessingThreshold() const;
     void    applyCentralForce(float x, float y, float z);
 	void    applyForce(float force_x, float force_y, float force_z,
 			           float rel_pos_x, float rel_pos_y, float rel_pos_z);
@@ -58,6 +59,15 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
                          float rel_pos_x, float rel_pos_y, float rel_pos_z);
     void    applyTorque(float x, float y, float z);
     void    applyTorqueImpulse(float x, float y, float z);
+
+    virtual void setName(const char*);
+    virtual void setSimulationType(SimulationType type);
+    virtual void setFriction(float f);
+    virtual void sync(int options = 0);
+    virtual void getWorldTransform(btTransform &worldTrans) const;
+    virtual void setWorldTransform(const btTransform &worldTrans);
+    virtual void setColliderTransform(const glm::mat4& m);
+
     void    setGravity(float x, float y, float z);
     void    setDamping(float linear, float angular);
     void    setLinearVelocity(float x, float y, float z);
@@ -71,14 +81,8 @@ class BulletRigidBody : public PhysicsRigidBody, btMotionState
     void    setCcdSweptSphereRadius(float n);
     void    setContactProcessingThreshold(float n);
     void    setIgnoreCollisionCheck(PhysicsRigidBody *collisionObj, bool ignore);
-    void    getGravity(float *v3) const;
-    void    getLinearVelocity(float *v3) const;
-    void    getAngularVelocity(float *v3) const;
-    void    getAngularFactor(float *v3) const;
-    void    getLinearFactor(float *v3) const;
-    void    getDamping(float &angular, float &linear) const;
-    float   getCcdMotionThreshold() const;
-    float   getContactProcessingThreshold() const;
+
+
     float   getCcdSweptSphereRadius() const;
     void    addToWorld(PhysicsWorld* world);
     void    addToWorld(PhysicsWorld* world, int collidesWith);
@@ -125,7 +129,7 @@ private:
     btRigidBody*        mRigidBody;
     SimulationType      mSimType;
     BulletWorld*        mWorld;
-    glm::vec3           mScale;
+    glm::mat4           mColliderTransform;
     int                 mNeedsSync;
     int 				mCollisionGroup;
     int 				mCollisionMask;

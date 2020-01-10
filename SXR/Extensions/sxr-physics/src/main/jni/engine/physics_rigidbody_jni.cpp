@@ -49,6 +49,30 @@ Java_com_samsungxr_physics_NativeRigidBody_getCollisionGroup(JNIEnv *env, jclass
     return rigid_body->getCollisionGroup();
 }
 
+JNIEXPORT jfloatArray JNICALL
+Java_com_samsungxr_physics_NativeRigidBody_getColliderTransform(JNIEnv *env, jclass obj, jlong jbody)
+{
+    PhysicsRigidBody* body  = reinterpret_cast<PhysicsRigidBody *>(jbody);
+    jfloatArray      arr = env->NewFloatArray(16);
+    float*           data = (float*) env->GetFloatArrayElements(arr, 0);
+    const glm::mat4& t = body->getColliderTransform();
+
+    memcpy(data, glm::value_ptr(t), sizeof(t));
+    env->ReleaseFloatArrayElements(arr, data, 0);
+    return arr;
+}
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativeRigidBody_setColliderTransform(JNIEnv* env, jobject obj, jlong jbody, jfloatArray mat)
+{
+    PhysicsRigidBody* body  = reinterpret_cast<PhysicsRigidBody *>(jbody);
+    jfloat*           data = env->GetFloatArrayElements(mat, 0);
+
+    glm::mat4 matrix = glm::make_mat4x4(data);
+    body->setColliderTransform(matrix);
+    env->ReleaseFloatArrayElements(mat, data, 0);
+}
+
 JNIEXPORT void JNICALL
 Java_com_samsungxr_physics_NativeRigidBody_setSimulationType(JNIEnv *env, jclass obj,
                                                              jlong jrigid_body, jint jtype)
@@ -141,15 +165,6 @@ Java_com_samsungxr_physics_NativeRigidBody_setGravity(JNIEnv *env, jclass obj,
     rigid_body->setGravity(x, y, z);
 }
 
-JNIEXPORT void   JNICALL
-Java_com_samsungxr_physics_NativeRigidBody_setScale(JNIEnv *env, jclass obj,
-                                                      jlong jrigid_body, jfloat x, jfloat y,
-                                                      jfloat z)
-{
-    PhysicsRigidBody *rigid_body = reinterpret_cast<PhysicsRigidBody *>(jrigid_body);
-
-    rigid_body->setScale(glm::vec3(x, y, z));
-}
 
 JNIEXPORT void   JNICALL
 Java_com_samsungxr_physics_NativeRigidBody_setDamping(JNIEnv *env, jclass obj,
@@ -282,18 +297,6 @@ Java_com_samsungxr_physics_NativeRigidBody_getGravity(JNIEnv *env, jclass obj,
 
     env->SetFloatArrayRegion(result, 0, 3, temp);
 
-    return result;
-}
-
-JNIEXPORT jfloatArray   JNICALL
-Java_com_samsungxr_physics_NativeRigidBody_getScale(JNIEnv *env, jclass obj,
-                                                      jlong jrigid_body)
-{
-    PhysicsRigidBody *rigid_body = reinterpret_cast<PhysicsRigidBody *>(jrigid_body);
-    const glm::vec3& v = rigid_body->getScale();
-    jfloatArray result = env->NewFloatArray(3);
-
-    env->SetFloatArrayRegion(result, 0, 3, glm::value_ptr(v));
     return result;
 }
 

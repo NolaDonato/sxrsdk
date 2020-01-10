@@ -45,6 +45,8 @@ public class SXRCapsuleCollider extends SXRCollider {
         Z_AXIS,
     }
 
+    protected CapsuleDirection mDirection = CapsuleDirection.Y_AXIS;
+
     /**
      * Constructor to make capsule collider.
      *
@@ -63,6 +65,8 @@ public class SXRCapsuleCollider extends SXRCollider {
     public float getHeight() { return NativeCapsuleCollider.getHeight(getNative()); }
 
     public float getRadius() { return NativeCapsuleCollider.getRadius(getNative()); }
+
+    public CapsuleDirection getDirection() { return mDirection; }
 
     /**
      * Set the radius of the collision capsule.
@@ -107,6 +111,7 @@ public class SXRCapsuleCollider extends SXRCollider {
      * @see SXRPicker
      */
     public void setDirection(CapsuleDirection direction) {
+        mDirection = direction;
         switch (direction) {
             case X_AXIS:
                 NativeCapsuleCollider.setToXDirection(getNative());

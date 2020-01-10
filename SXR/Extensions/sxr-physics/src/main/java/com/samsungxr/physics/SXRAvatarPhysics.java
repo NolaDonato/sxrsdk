@@ -155,11 +155,6 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
         setPhysicsProperties(filename, null);
         if (mPhysicsSkel == null)
         {
-            if (mUseAVT)
-            {
-                String physicsfile = Environment.getExternalStorageDirectory() + "/" + filename.replace(".avt", ".urdf");
-                mPhysicsLoader.exportPhysics(skel, physicsfile);
-            }
             if (mPhysicsRoot == null)
             {
                 mPhysicsRoot = world.getOwnerObject();
@@ -178,6 +173,11 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
                     mPhysicsRoot.addChildObject(skelRoot);
                     mPhysicsSkel = skel;
                     mPhysicsSkel.poseFromBones();
+                    if (mUseAVT)
+                    {
+                        String physicsfile = Environment.getExternalStorageDirectory() + "/" + filename.replace(".avt", ".urdf");
+                        mPhysicsLoader.exportPhysics(skel, physicsfile);
+                    }
                 }
                 if (mPhysicsWorld != world)
                 {

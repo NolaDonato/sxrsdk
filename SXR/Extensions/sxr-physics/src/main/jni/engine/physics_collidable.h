@@ -17,6 +17,8 @@
 #ifndef PHYSICS_COLLIDABLE_H
 #define PHYSICS_COLLIDABLE_H
 
+#include "glm/mat4x4.hpp"
+#include "glm/gtc/type_ptr.hpp"
 
 namespace sxr {
     class PhysicsWorld;
@@ -46,14 +48,14 @@ namespace sxr {
         virtual float getFriction() const = 0;
         virtual int   getCollisionGroup() const = 0;
         virtual void* getUnderlying() const = 0;
-        virtual const glm::vec3& getScale() const = 0;
+        virtual const glm::mat4& getColliderTransform() const = 0;
         virtual SimulationType getSimulationType() const = 0;
 
         virtual void setName(const char*) = 0;
         virtual void setMass(float mass) = 0;
         virtual void setFriction(float n)  = 0;
-        virtual void setScale(const glm::vec3& v) = 0;
         virtual void setSimulationType(SimulationType t) = 0;
+        virtual void setColliderTransform(const glm::mat4& matrix) = 0;
 
         virtual void applyTorque(float x, float y, float z) = 0;
         virtual void sync(int options = 0) = 0;

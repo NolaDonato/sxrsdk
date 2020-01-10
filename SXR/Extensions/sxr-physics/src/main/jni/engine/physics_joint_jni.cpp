@@ -41,6 +41,30 @@ Java_com_samsungxr_physics_NativePhysicsJoint_getComponentType(JNIEnv *env, jcla
     return PhysicsJoint::getComponentType();
 }
 
+JNIEXPORT jfloatArray JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_getColliderTransform(JNIEnv *env, jclass obj, jlong jjoint)
+{
+    PhysicsJoint*    j = reinterpret_cast<PhysicsJoint *>(jjoint);
+    jfloatArray      arr = env->NewFloatArray(16);
+    float*           data = (float*) env->GetFloatArrayElements(arr, 0);
+    const glm::mat4& t = j->getColliderTransform();
+
+    memcpy(data, glm::value_ptr(t), sizeof(t));
+    env->ReleaseFloatArrayElements(arr, data, 0);
+    return arr;
+}
+
+JNIEXPORT void JNICALL
+Java_com_samsungxr_physics_NativePhysicsJoint_setColliderTransform(JNIEnv* env, jobject obj, jlong jjoint, jfloatArray mat)
+{
+    PhysicsJoint*    j = reinterpret_cast<PhysicsJoint *>(jjoint);
+    jfloat*          arr = env->GetFloatArrayElements(mat, 0);
+
+    glm::mat4 matrix = glm::make_mat4x4(arr);
+    j->setColliderTransform(matrix);
+    env->ReleaseFloatArrayElements(mat, arr, 0);
+}
+
 JNIEXPORT jint JNICALL
 Java_com_samsungxr_physics_NativePhysicsJoint_getCollisionGroup(JNIEnv *env, jclass obj, jlong jjoint)
 {
@@ -86,16 +110,6 @@ Java_com_samsungxr_physics_NativePhysicsJoint_setMass(JNIEnv *env, jclass obj, j
     mb->setMass(mass);
 }
 
-JNIEXPORT jfloatArray   JNICALL
-Java_com_samsungxr_physics_NativePhysicsJoint_getScale(JNIEnv *env, jclass obj, jlong jjoint)
-{
-    PhysicsJoint* mb = reinterpret_cast<PhysicsJoint *>(jjoint);
-    const glm::vec3& v = mb->getScale();
-    jfloatArray result = env->NewFloatArray(3);
-
-    env->SetFloatArrayRegion(result, 0, 3, glm::value_ptr(v));
-    return result;
-}
 
 JNIEXPORT jfloatArray   JNICALL
 Java_com_samsungxr_physics_NativePhysicsJoint_getAxis(JNIEnv *env, jclass obj, jlong jjoint)
@@ -106,15 +120,6 @@ Java_com_samsungxr_physics_NativePhysicsJoint_getAxis(JNIEnv *env, jclass obj, j
 
     env->SetFloatArrayRegion(result, 0, 3, glm::value_ptr(v));
     return result;
-}
-
-JNIEXPORT void   JNICALL
-Java_com_samsungxr_physics_NativePhysicsJoint_setScale(JNIEnv *env, jclass obj, jlong jjoint,
-                                                       jfloat x, jfloat y, jfloat z)
-{
-    PhysicsJoint* mb = reinterpret_cast<PhysicsJoint *>(jjoint);
-
-    mb->setScale(glm::vec3(x, y, z));
 }
 
 JNIEXPORT jfloat JNICALL

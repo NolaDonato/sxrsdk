@@ -10,6 +10,10 @@ import com.samsungxr.SXRTransform;
 import com.samsungxr.animation.SXRSkeleton;
 import com.samsungxr.utility.FileNameUtils;
 
+import org.joml.AxisAngle4f;
+import org.joml.Matrix4f;
+import org.joml.Quaterniond;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.io.File;
@@ -111,14 +115,17 @@ class URDFExporter
         SXRCollider collider = joint.getOwnerObject().getCollider();
         String xml;
         String type;
-        float[] scale = joint.getScale();
         SXRTransform transChild = joint.getOwnerObject().getTransform();
-        Vector3f origin = new Vector3f(transChild.getPositionX(),
-                                       transChild.getPositionY(),
-                                       transChild.getPositionZ());
-        Vector3f eulerRot = new Vector3f(transChild.getRotationRoll(),
-                                         transChild.getRotationPitch(),
-                                         transChild.getRotationYaw());
+        Matrix4f m = transChild.getLocalModelMatrix4f();
+        Vector3f origin = new Vector3f();
+        Quaternionf q = new Quaternionf();
+        Vector3f euler = new Vector3f();
+
+//        rot.rotate((float) -(Math.PI / 2), 1, 0, 0);
+//        m.mul(rot, m);
+        m.getTranslation(origin);
+        m.getNormalizedRotation(q);
+        q.getEulerAnglesXYZ(euler);
 
         if (collider == null)
         {
@@ -129,7 +136,7 @@ class URDFExporter
         xml += "        <mass value=\"" + ((Float) joint.getMass()).toString() + "\" />\n";
         // TODO inertia matrix
         xml += "   </interial>\n";
-        xml += convertToURDF(collider, scale, origin);
+        xml += convertToURDF(collider, joint.getColliderTransform());
         xml += "</link>\n";
         switch (joint.getJointType())
         {
@@ -156,7 +163,8 @@ class URDFExporter
             {
                 xml += String.format("<dynamics friction=\"%f\" damping=\"%f\" />\n", friction, damping);
             }
-            xml += String.format("    <origin xyz=\"%f %f %f\" rpy=\"%f %f %f\" />\n", origin.x, origin.y, origin.z, eulerRot.x, eulerRot.y, eulerRot.z);
+            xml += String.format("    <origin xyz=\"%f %f %f\" rpy=\"%f %f %f\" />\n",
+                                 origin.x, origin.y, origin.z, euler.x, euler.y, euler.z);
             xml += "</joint>\n";
         }
         return xml;
@@ -168,23 +176,27 @@ class URDFExporter
         SXRCollider collider = body.getOwnerObject().getCollider();
         SXRConstraint constraint = (SXRConstraint) body.getOwnerObject().getComponent(SXRConstraint.getComponentType());
         String xml;
-        float[] scale = body.getScale();
         float friction = body.getFriction();
         float[] damping = body.getDamping();
         SXRTransform transChild = body.getTransform();
-        Vector3f offset = new Vector3f(transChild.getPositionX(),
-                                       transChild.getPositionY(),
-                                       transChild.getPositionZ());
+        Matrix4f m = transChild.getLocalModelMatrix4f();
+        Vector3f offset = new Vector3f();
+        Quaternionf q = new Quaternionf();
+        Vector3f euler = new Vector3f();
+
         if (collider == null)
         {
             throw new IllegalArgumentException("collider for body " + name + " missing");
         }
+        m.getTranslation(offset);
+        m.getNormalizedRotation(q);
+        q.getEulerAnglesXYZ(euler);
         xml = "<link name=\"" + name + "\">\n";
         xml += "   <interial>\n";
         xml += "       <mass value=\"" + ((Float) body.getMass()).toString() + "\" />\n";
         // TODO inertia matrix
         xml += "   </interial>\n";
-        xml += convertToURDF(collider, scale, offset);
+        xml += convertToURDF(collider, body.getColliderTransform());
         xml += "</link>\n";
         if (parentNode == null)
         {
@@ -205,21 +217,27 @@ class URDFExporter
         return xml;
     }
 
-    protected String convertToURDF(SXRCollider collider, float[] scale, Vector3f offset)
+    protected String convertToURDF(SXRCollider collider, float[] colliderTransform)
     {
         String xml = "    <collision>\n";
+        Vector3f rot = new Vector3f(0, 0, 0);
+        Matrix4f m = new Matrix4f();
+        Vector3f scale = new Vector3f();
+        Vector3f offset = new Vector3f();
+        Quaternionf q = new Quaternionf();
 
-        xml += String.format("        <origin xyz=\"%f %f %f\" rpy=\"%f %f %f\" />\n",
-                -offset.x / 2,
-                -offset.y / 2,
-                -offset.z / 2,
-                0.0f, 0.0f, 0.0f);
+        m.set(colliderTransform);
+        m.getScale(scale);
+        m.getTranslation(offset);
+        m.getNormalizedRotation(q);
+        q.getEulerAnglesXYZ(rot);
+
         xml += "        <geometry>\n";
         if (collider instanceof SXRSphereCollider)
         {
             SXRSphereCollider c = (SXRSphereCollider) collider;
 
-            xml += String.format("            <sphere radius=\"%f\" />\n", scale[1] * c.getRadius());
+            xml += String.format("            <sphere radius=\"%f\" />\n", scale.y * c.getRadius());
         }
         else if (collider instanceof SXRBoxCollider)
         {
@@ -227,7 +245,7 @@ class URDFExporter
             float[] size = c.getHalfExtents();
 
             xml += String.format("           <box size=\"%f %f %f\" />\n",
-                    size[0] * 2 * scale[0], size[1] * 2 * scale[1], size[2] * 2 * scale[2]);
+                    size[0] * 2 * scale.x, size[1] * 2 * scale.y, size[2] * 2 * scale.z);
         }
         else if (collider instanceof SXRCapsuleCollider)
         {
@@ -237,28 +255,37 @@ class URDFExporter
 
             if (c.getDirection() == SXRCapsuleCollider.CapsuleDirection.X_AXIS)
             {
-                r *= scale[1];
-                h *= scale[0];
+                r *= scale.y;
+                h *= scale.x;
+                rot.y = (float) (Math.PI / 2);
             }
-            else if (c.getDirection() == SXRCapsuleCollider.CapsuleDirection.Y_AXIS)
+            else if (c.getDirection() == SXRCapsuleCollider.CapsuleDirection.Z_AXIS)
             {
-                r *= scale[1];
-                h *= scale[2];
+                r *= scale.y;
+                h *= scale.z;
             }
             else
             {
-                r *= scale[0];
-                h *= scale[1];
+                r *= scale.x;
+                h *= scale.y;
+                rot.x = (float) (Math.PI / 2);
             }
-            xml += String.format("            <cylinder radius=\"%f\" length=\"%f\" />\n", r, h);
+            xml += String.format("            <capsule radius=\"%f\" length=\"%f\" />\n", r, h);
         }
         else if (collider instanceof SXRMeshCollider)
         {
             SXRMeshCollider c = (SXRMeshCollider) collider;
 
-            xml += String.format("            <mesh filename=\"ownernode\" scale=\"%f\" />\n", scale[1]);
+            xml += String.format("            <mesh filename=\"ownernode\" scale=\"%f\" />\n", scale.y);
         }
-        xml += "        </geometry>\n    </collision>\n";
+        xml += "        </geometry>\n";
+        xml += String.format("        <origin xyz=\"%f %f %f\" rpy=\"%f %f %f\" />\n",
+                             -offset.x / 2,
+                             -offset.y / 2,
+                             -offset.z / 2,
+                             rot.x, rot.y, rot.z);
+        xml += "    </collision>\n";
+
         return xml;
     }
 
@@ -327,10 +354,11 @@ class URDFExporter
     {
         try
         {
-            if (!file.exists())
+            if (file.exists())
             {
-                file.createNewFile();
+                file.delete();
             }
+            file.createNewFile();
             FileWriter writer = new FileWriter(file);
             writer.append(data);
             writer.flush();
