@@ -223,7 +223,7 @@ class URDFExporter
         Vector3f rot = new Vector3f(0, 0, 0);
         Matrix4f m = new Matrix4f();
         Vector3f scale = new Vector3f();
-        Vector3f offset = new Vector3f();
+        Vector3f offset = new Vector3f(0, 0, 0);
         Quaternionf q = new Quaternionf();
 
         m.set(colliderTransform);
@@ -280,9 +280,9 @@ class URDFExporter
         }
         xml += "        </geometry>\n";
         xml += String.format("        <origin xyz=\"%f %f %f\" rpy=\"%f %f %f\" />\n",
-                             -offset.x / 2,
-                             -offset.y / 2,
-                             -offset.z / 2,
+                             offset.x / 2,
+                             offset.y / 2,
+                             offset.z / 2,
                              rot.x, rot.y, rot.z);
         xml += "    </collision>\n";
 
@@ -296,12 +296,12 @@ class URDFExporter
         Vector3f eulerRot = new Vector3f(childLocalTrans.getRotationRoll(),
                                          childLocalTrans.getRotationPitch(),
                                          childLocalTrans.getRotationYaw());
-
-        String xml = String.format("    <origin xyz=\"%f %f %f\" rpy=\"%f %f %f\" />\n",
-                     origin.x, origin.y, origin.z,
-                     Math.toRadians(eulerRot.x),
-                     Math.toRadians(eulerRot.y),
-                     Math.toRadians(eulerRot.z));
+        String xml = "";
+        xml = String.format("    <origin xyz=\"%f %f %f\" rpy=\"%f %f %f\" />\n",
+                            origin.x, origin.y, origin.z,
+                            Math.toRadians(eulerRot.x),
+                            Math.toRadians(eulerRot.y),
+                            Math.toRadians(eulerRot.z));
         if (constraint instanceof SXRSliderConstraint)
         {
             SXRSliderConstraint c = (SXRSliderConstraint) constraint;

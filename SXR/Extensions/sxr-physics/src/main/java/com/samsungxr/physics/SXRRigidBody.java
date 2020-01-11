@@ -23,6 +23,8 @@ import com.samsungxr.SXRNode;
 import com.samsungxr.animation.SXRSkeleton;
 
 import org.joml.Vector3f;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 
 import java.lang.annotation.Native;
 
@@ -592,6 +594,63 @@ public class SXRRigidBody extends SXRPhysicsCollidable
     public float[] getColliderTransform()
     {
         return NativeRigidBody.getColliderTransform(getNative());
+    }
+
+    /***
+     * Returns the scale factor for the collider associated with this body.
+     * <p>
+     * This scale factor is the scaling in the collider transform.
+     * @see #getColliderTransform()
+     */
+    public Vector3f getScale()
+    {
+        float[] data = getColliderTransform();
+        Matrix4f matrix = new Matrix4f();
+        Vector3f scale = new Vector3f();
+
+        matrix.set(data);
+        matrix.getScale(scale);
+        return scale;
+    }
+
+    /***
+     * Set the scale factor for the collider associated with this body.
+     * <p>
+     * This scale factor is the scaling in the collider transform.
+     * @param scale vector with scale factors.
+     * @see #setColliderTransform()
+     */
+    public void setScale(Vector3f scale)
+    {
+        float[] data = getColliderTransform();
+        Matrix4f matrix = new Matrix4f();
+        Quaternionf rot = new Quaternionf();
+        Vector3f pos = new Vector3f();
+
+        matrix.set(data);
+        matrix.getTranslation(pos);
+        matrix.getNormalizedRotation(rot);
+        matrix.set(rot);
+        matrix.scale(scale);
+        matrix.setTranslation(pos);
+        matrix.get(data);
+        setColliderTransform(data);
+    }
+
+    /***
+     * Set the scale factor for the collider associated with this joint.
+     * <p>
+     * This scale factor is the scaling in the collider transform.
+     * @param x X scale factor
+     * @param y Y scale factor
+     * @param z Z scale factor
+     * @see #setColliderTransform()
+     */
+    public void setScale(float x, float y, float z)
+    {
+        Vector3f scale = new Vector3f(x, y, z);
+
+        setScale(scale);
     }
 
     /**

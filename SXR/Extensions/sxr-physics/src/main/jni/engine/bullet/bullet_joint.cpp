@@ -126,8 +126,11 @@ namespace sxr {
         mWorld(nullptr)
     {
         btMultibodyLink& link = mMultiBody->getLink(jointIndex);
+        btCollisionShape* shape;
+
         link.m_userPtr = this;
         mCollider = link.m_collider;
+        shape = mCollider->getCollisionShape();
         mJointType = (JointType) link.m_jointType;
         mMass = link.m_mass;
         mLinearDamping = mMultiBody->getLinearDamping();

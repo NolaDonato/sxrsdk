@@ -105,9 +105,9 @@ namespace sxr
         {
             btVector3 scale = shape->getLocalScaling();
 
-            mColliderTransform[3][0] = scale.x();
-            mColliderTransform[3][1] = scale.y();
-            mColliderTransform[3][2] = scale.z();
+            mColliderTransform[0][0] = scale.x();
+            mColliderTransform[1][1] = scale.y();
+            mColliderTransform[2][2] = scale.z();
         }
         if (rigidBody->isStaticObject())
         {

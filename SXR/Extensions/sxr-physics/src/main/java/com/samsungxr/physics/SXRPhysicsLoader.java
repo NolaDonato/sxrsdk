@@ -37,6 +37,7 @@ import com.samsungxr.utility.FileNameUtils;
 import com.samsungxr.utility.Log;
 
 import org.joml.Vector3f;
+import org.joml.Matrix4f;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -901,8 +902,13 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
             c = (SXRConstraint) parentOwner.getComponent(SXRConstraint.getComponentType());
             if (owner.getParent() == sceneRoot)
             {
+                Matrix4f parentMtx = parentOwner.getTransform().getModelMatrix4f();
+                Matrix4f childMtx = owner.getTransform().getModelMatrix4f();
+
+                childMtx.mul(parentMtx.invert(), childMtx);
                 sceneRoot.removeChildObject(owner);
                 parentOwner.addChildObject(owner);
+                owner.getTransform().setModelMatrix(childMtx);
             }
             if (c == null)
             {
