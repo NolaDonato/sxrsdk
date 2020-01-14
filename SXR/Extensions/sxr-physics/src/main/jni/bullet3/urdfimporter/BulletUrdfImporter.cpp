@@ -602,28 +602,18 @@ btCollisionShape* BulletURDFImporter::convertURDFToCollisionShape(const UrdfColl
             btScalar pitch;
             btScalar roll;
             btTransform t = collision->m_linkLocalFrame;
-            btCollisionShape* child;
-            btCompoundShape* cshape;
+            btQuaternion rot = t.getRotation();
+            btVector3 trans = t.getOrigin();
+            btTransform childTrans(rot, trans);
 
-            cshape = new btCompoundShape(false, 1);
-            t.getBasis().getEulerZYX(yaw, pitch, roll);
-/*
-            if (fabs((yaw - M_PI_2) < 0.001f) && (roll == 0) && (pitch == 0))
+            shape = new btCapsuleShape(radius, height);
+            if ((fabs(rot.length() - 1) > 0.0001f) ||
+                (fabs(trans.length() > 0.0001f)))
             {
-                child = new btCapsuleShape(radius, height);
+                btCompoundShape* cshape = new btCompoundShape(false, 1);
+                cshape->addChildShape(childTrans, shape);
+                shape = cshape;
             }
-            else if ((yaw == 0) && fabs((pitch - M_PI_2) < 0.001f) && (roll == 0))
-            {
-                child = new btCapsuleShapeX(radius, height);
-            }
-            else
-            {
-                child = new btCapsuleShapeZ(radius, height);
-            }
- */
-            child = new btCapsuleShape(radius, height);
-            cshape->addChildShape(t, child);
-            shape = cshape;
 			shape->setMargin(gUrdfDefaultCollisionMargin);
 			break;
 		}
@@ -636,25 +626,12 @@ btCollisionShape* BulletURDFImporter::convertURDFToCollisionShape(const UrdfColl
 			btScalar yaw;
 			btScalar pitch;
 			btScalar roll;
-			t.getBasis().getEulerZYX(yaw, pitch, roll);
+			t.getBasis().getEulerZYX(roll, yaw, pitch);
 
 			if (m_data->m_flags & CUF_USE_IMPLICIT_CYLINDER)
 			{
-				if (fabs((yaw - M_PI_2) < 0.001f) && (roll == 0) && (pitch == 0))
-				{
-					btVector3 halfExtents(cylHalfLength, cylRadius, cylRadius);
-					shape = new btCylinderShapeX(halfExtents);
-				}
-				else if ((yaw == 0) && fabs((pitch - M_PI_2) < 0.001f) && (roll == 0))
-				{
-					btVector3 halfExtents(cylRadius, cylHalfLength, cylRadius);
-					shape = new btCylinderShape(halfExtents);
-				}
-				else
-				{
-					btVector3 halfExtents(cylRadius, cylRadius, cylHalfLength);
-					shape = new btCylinderShapeZ(halfExtents);
-				}
+                btVector3 halfExtents(cylRadius, cylHalfLength, cylRadius);
+                shape = new btCylinderShape(halfExtents);
 			}
 			else
 			{

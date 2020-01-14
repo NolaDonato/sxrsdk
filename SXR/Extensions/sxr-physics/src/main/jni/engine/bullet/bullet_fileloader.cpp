@@ -225,8 +225,8 @@ namespace sxr
             {
                 const btCapsuleShape* capsule = dynamic_cast<const btCapsuleShape *>(shape);
                 CapsuleCollider*      cc = new CapsuleCollider();
-                float                 r = cc->getRadius();
-                float                 h = cc->getHeight();
+                float                 r = capsule->getRadius();
+                float                 h = capsule->getHalfHeight() * 2;
                 const char*           name = capsule->getName();
                 char                  last = name[strlen(name) - 1];
 
@@ -1429,7 +1429,7 @@ jobject BulletFileLoader::createGenericConstraint(JNIEnv &env, btGeneric6DofSpri
                             ->m_dynamicsWorldInfo[0]);
             float *gravity = reinterpret_cast<float *>(&fdata->m_gravity);
             mNeedRotate = gravity[2] != 0.f;
-            mRotateCoords = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f};
+            mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f };
             mTransformCoords.setBasis(mRotateCoords);
             mTransformCoords.setOrigin(btVector3(0, 0, 0));
         }
@@ -1481,8 +1481,8 @@ jobject BulletFileLoader::createGenericConstraint(JNIEnv &env, btGeneric6DofSpri
             return false;
         }
         mURDFImporter->registerNames(*mSerializer, false);
-//        mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };
-        mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f };
+        mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f };
+//        mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f };
 
         bulletWorld->setGravity(gravity);
         mNeedRotate = !ignoreUpAxis;    // URDF is Z up

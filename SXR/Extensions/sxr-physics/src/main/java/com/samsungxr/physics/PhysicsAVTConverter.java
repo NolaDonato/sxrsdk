@@ -893,9 +893,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         SXRRigidBody parentBody = findParentBody(link.optString("Parent", null));
         SXRRigidBody body = (SXRRigidBody) node.getComponent(SXRRigidBody.getComponentType());
         JSONObject props = link.getJSONObject("Physic Material");
-        float[] matrixData = new float[16];
-
-        Arrays.fill(matrixData, 0.0f);
 
         if (body == null)
         {
@@ -914,11 +911,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         {
             return null;
         }
-        matrixData[0] = scale.x;
-        matrixData[4] = scale.y;
-        matrixData[8] = scale.z;
-        matrixData[15] = 1.0f;
-        body.setColliderTransform(matrixData);
+        body.setScale(new Vector3f(scale.x, scale.y, scale.z));
         parseConstraint(link, parentBody, node, boneIndex);
         return body;
     }

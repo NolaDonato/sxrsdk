@@ -49,7 +49,12 @@ namespace sxr {
     BulletHingeConstraint::BulletHingeConstraint(btHingeConstraint *constraint)
     {
         mConstraint = constraint;
+        btTransform transA = constraint->getAFrame();
+        btVector3 axis = transA.getBasis().getColumn(0);
         mBodyA = static_cast<PhysicsCollidable*>(constraint->getRigidBodyA().getUserPointer());
+        mAxis.x = axis.x();
+        mAxis.y = axis.y();
+        mAxis.z = axis.z();
         constraint->setUserConstraintPtr(this);
     }
 
