@@ -1037,6 +1037,7 @@ public class SXRSkeleton extends SXRComponent implements PrettyPrint
                 {
                     if (j > startBoneId)
                     {
+                        setBoneOptions(boneId, newSkel.getBoneOptions(j));
                         matrices.set(boneId, m);
                     }
                 }
