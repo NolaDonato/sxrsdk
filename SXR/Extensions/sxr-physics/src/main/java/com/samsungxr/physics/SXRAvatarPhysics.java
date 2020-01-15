@@ -175,7 +175,7 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
                     mPhysicsSkel.poseFromBones();
                     if (mUseAVT)
                     {
-                        String physicsfile = Environment.getExternalStorageDirectory() + "/" + filename.replace(".avt", ".urdf");
+                        String physicsfile =  filename.replace(".avt", ".urdf");
                         mPhysicsLoader.exportPhysics(skel, physicsfile);
                     }
                 }
@@ -200,7 +200,7 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
             mPhysicsSkel.poseFromBones();
             if (mUseAVT)
             {
-                String physicsfile = Environment.getExternalStorageDirectory() + "/" + filename.replace(".avt", ".urdf");
+                String physicsfile =  filename.replace(".avt", ".urdf");
                 mPhysicsLoader.exportPhysics(skel, physicsfile, attachBone);
             }
             if (mPhysicsWorld != world)

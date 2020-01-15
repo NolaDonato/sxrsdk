@@ -218,8 +218,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         makeRoom(mSkeleton.getNumBones());
         if (mAttachBoneIndex < 0)
         {
-            SXRRigidBody body = parseRigidBody(basebone);
-            body.setSimulationType(mSimType);
+            parseRigidBody(basebone);
         }
         for (int i = 0; i < childbones.length(); ++i)
         {
@@ -229,11 +228,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
 
             if ((boneIndex < 0) || (boneIndex >= mAttachBoneIndex))
             {
-                SXRRigidBody body = parseRigidBody(link);
-                if (boneIndex > mAttachBoneIndex)
-                {
-                    body.setSimulationType(mSimType);
-                }
+                parseRigidBody(link);
             }
         }
         attachBodies();
@@ -245,29 +240,19 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         {
             mAttachBoneIndex = 0;
         }
-        SXRNode root = mSkeleton.getBone(mAttachBoneIndex);
-        SXRCollider collider = mColliders.get(mAttachBoneIndex);
-        SXRRigidBody body = mBodies.get(mAttachBoneIndex);
         int boneoptions = (mSimType == SXRRigidBody.DYNAMIC) ? SXRSkeleton.BONE_PHYSICS :
                            SXRSkeleton.BONE_ANIMATE;
 
-        if (collider != null)
-        {
-            root.attachComponent(collider);
-        }
-        if (body != null)
-        {
-            root.attachComponent(body);
-        }
-        for (int i = mAttachBoneIndex + 1; i < mSkeleton.getNumBones(); ++i)
+        for (int i = mAttachBoneIndex; i < mSkeleton.getNumBones(); ++i)
         {
             SXRNode node = mSkeleton.getBone(i);
             SXRPhysicsJoint joint = (SXRPhysicsJoint) node.getComponent(SXRPhysicsJoint.getComponentType());
             SXRConstraint constraint = mConstraints.get(i);
             SXRRigidBody oldBody = (SXRRigidBody) node.getComponent(SXRRigidBody.getComponentType());
+            SXRRigidBody body = mBodies.get(i);
+            SXRCollider collider = mColliders.get(i);
+            boolean isNewBone = isAttachedTo(mSkeleton, i, mAttachBoneIndex);
 
-            body = mBodies.get(i);
-            collider = mColliders.get(i);
             if (collider != null)
             {
                 node.attachComponent(collider);
@@ -281,12 +266,9 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 }
                 node.attachComponent(body);
             }
-            else if (oldBody == null)
-            {
-                continue;
-            }
             if (constraint != null)
             {
+                node.detachComponent(SXRConstraint.getComponentType());
                 node.attachComponent(constraint);
             }
             else if ((mAttachBoneIndex > 0) && (mSkeleton.getParentBoneIndex(i) == mAttachBoneIndex))
@@ -296,6 +278,22 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 node.attachComponent(constraint);
             }
         }
+    }
+
+    boolean isAttachedTo(SXRSkeleton skel, int boneIndex, int attachIndex)
+    {
+        int parentIndex = 0;
+        do
+        {
+            parentIndex = skel.getParentBoneIndex(boneIndex);
+            if (parentIndex == attachIndex)
+            {
+                return true;
+            }
+            boneIndex = parentIndex;
+        }
+        while (parentIndex > 0);
+        return false;
     }
 
     private SXRSkeleton parseSkeleton(JSONObject basebone, JSONArray bonelist) throws JSONException
@@ -363,7 +361,6 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                             boneparents[i] = -1;
                         }
                         boneNodes[i] = mSkeleton.getBone(boneIndex);
-                        ++numInputBones;
                     }
                     if (boneIndex <= attachBone)
                     {
@@ -402,7 +399,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
                 mSkeleton.getBone(0).attachComponent(skel);
                 mRoot.addChildObject(mSkeleton.getBone(0));
                 mWorldOffset.set(0, 0, 0);
-                updateSkeletonPose(mSkeleton, 0, basebone, bonelist);
+                updateSkeletonPose(mSkeleton, 0, numInputBones, basebone, bonelist);
             }
             else
             {
@@ -412,24 +409,23 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
 
                 worldMtx.getTranslation(mWorldOffset);
                 mWorldOffset.sub(newPos);
-                updateSkeletonPose(skel, firstNewBone, basebone, bonelist);
+                updateSkeletonPose(skel, firstNewBone, numInputBones, basebone, bonelist);
                 mSkeleton.merge(skel, mAttachBoneName);
             }
         }
         else
         {
-            updateSkeletonPose(mSkeleton, 0, basebone, bonelist);
+            updateSkeletonPose(mSkeleton, 0, numInputBones, basebone, bonelist);
         }
         return mSkeleton;
     }
 
-    private void updateSkeletonPose(SXRSkeleton skel, int firstBoneAdded, JSONObject basebone, JSONArray bonelist) throws JSONException
+    private void updateSkeletonPose(SXRSkeleton skel, int firstBoneAdded, int numbones, JSONObject basebone, JSONArray bonelist) throws JSONException
     {
         SXRPose worldPose = new SXRPose(skel.getPose());
         Matrix4f worldMtx = new Matrix4f();
-        int numInputBones = bonelist.length() + 1;
 
-        for (int i = firstBoneAdded; i < numInputBones; ++i)
+        for (int i = firstBoneAdded; i < numbones; ++i)
         {
             JSONObject bone = (i == 0) ? basebone : bonelist.getJSONObject(i - 1).getJSONObject("value");
             JSONObject xform = bone.getJSONObject("Transform");
@@ -879,6 +875,7 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
     {
         String nodeName = link.getString("Target Bone");
         int boneIndex = mSkeleton.getBoneIndex(nodeName);
+        int attachIndex = mSkeleton.getBoneIndex(mAttachBoneName);
         SXRNode node = mSkeleton.getBone(boneIndex);
         Vector3f scale = new Vector3f(1, 1, 1);
 
@@ -898,6 +895,11 @@ public class PhysicsAVTConverter extends SXRPhysicsLoader
         {
             body = new SXRRigidBody(ctx, mass, mCollisionGroup);
             mBodies.set(boneIndex, body);
+            body.setSimulationType(mSimType);
+        }
+        else if (isAttachedTo(mSkeleton, boneIndex, attachIndex))
+        {
+            body.setSimulationType(mSimType);
         }
         body.setFriction((float) props.getDouble("Friction"));
         body.setDamping(mLinearDamping, mAngularDamping);

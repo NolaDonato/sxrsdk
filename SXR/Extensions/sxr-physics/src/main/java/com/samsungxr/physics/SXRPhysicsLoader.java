@@ -706,10 +706,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
             String name = body.getName();
             SXRNode sceneObject = sceneRoot.getNodeByName(name);
 
-            if (simtype != SXRRigidBody.DYNAMIC)
-            {
-                body.setSimulationType(simtype);
-            }
+            body.setSimulationType(simtype);
             if (linkRigidBodies)
             {
                 sceneObject = new SXRNode(getSXRContext());
@@ -1007,8 +1004,12 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                     {
                         srcBody.setSimulationType(destBody.getSimulationType());
                     }
-                    destBody.copy(srcBody);
-                }
+                    else if (isAttachedTo(destSkel, destIndex, attachBone))
+                    {
+                        destBody.setSimulationType(srcBody.getSimulationType());
+                        destBody.copy(srcBody);
+                    }
+               }
                 else
                 {
                     destBone.attachComponent(srcBody);
@@ -1072,6 +1073,22 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
             }
         }
         destSkel.merge(srcSkel, destSkel.getBoneName(attachBone));
+    }
+
+    boolean isAttachedTo(SXRSkeleton skel, int boneIndex, int attachIndex)
+    {
+        int parentIndex = 0;
+        do
+        {
+            parentIndex = skel.getParentBoneIndex(boneIndex);
+            if (parentIndex == attachIndex)
+            {
+                return true;
+            }
+            boneIndex = parentIndex;
+        }
+        while (parentIndex > 0);
+        return false;
     }
 
     /**

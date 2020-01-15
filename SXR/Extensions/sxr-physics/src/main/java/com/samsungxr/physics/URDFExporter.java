@@ -13,6 +13,7 @@ import com.samsungxr.utility.FileNameUtils;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import org.joml.Vector4f;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -21,8 +22,15 @@ import java.io.IOException;
 class URDFExporter
 {
     protected String mFirstBoneName = null;
+    protected Matrix4f mSXR2URDF = new Matrix4f(0, -1, 0, 0,
+                                                0, 0, 1, 0,
+                                                1, 0, 0, 0,
+                                                0, 0, 0, 1);
 
-    public URDFExporter() { }
+    public URDFExporter()
+    {
+        mSXR2URDF.identity();
+    }
 
     public boolean exportAsURDF(SXRSkeleton skel, String fileName)
     {
@@ -124,7 +132,7 @@ class URDFExporter
         m.m00(m.m00() / scale.x);
         m.m11(m.m11() / scale.y);
         m.m22(m.m22() / scale.z);
-        m.rotate((float) (Math.PI / 2), 1, 0, 0);
+        m.mul(mSXR2URDF, m);
         m.getTranslation(origin);
         m.getNormalizedRotation(rot);
         rot.getEulerAnglesXYZ(euler);
@@ -187,7 +195,7 @@ class URDFExporter
         m.m00(m.m00() / scale.x);
         m.m11(m.m11() / scale.y);
         m.m22(m.m22() / scale.z);
-        m.rotate((float) (Math.PI / 2), 1, 0, 0);
+        m.mul(mSXR2URDF);
 
         if (collider == null)
         {
@@ -233,7 +241,7 @@ class URDFExporter
         m.m00(m.m00() / scale.x);
         m.m11(m.m11() / scale.y);
         m.m22(m.m22() / scale.z);
-        m.rotate((float) (Math.PI / 2), 1, 0, 0);
+        m.mul(mSXR2URDF, m);
         m.getTranslation(offset);
         m.getNormalizedRotation(rot);
 
@@ -264,31 +272,23 @@ class URDFExporter
             {
                 r *= scale.y;
                 h *= scale.x;
-                size.x = h;
-                size.z = size.y = r;
-//                offset.z = h / 2;
-//                rot.rotateAxis((float) -(Math.PI / 2), 0, 1, 0);
+                offset.z = h / 2;
+                rot.rotateAxis((float) (Math.PI / 2), 0, 1, 0);
             }
             else if (c.getDirection() == SXRCapsuleCollider.CapsuleDirection.Z_AXIS)
             {
                 r *= scale.x;
                 h *= scale.z;
-                size.z = h;
-                size.x = size.y = r;
-//                offset.z = h / 2;
+                offset.z = h / 2;
             }
             else
             {
                 r *= scale.x;
                 h *= scale.y;
-                size.y = h;
-                size.x = size.z = r;
-//                offset.z = h / 2;
-//                rot.rotateAxis((float) -(Math.PI / 2), 1, 0, 0);
+                offset.z = h / 2;
+                rot.rotateAxis((float) -(Math.PI / 2), 1, 0, 0);
            }
-            xml += String.format("           <box size=\"%f %f %f\" />\n", size.x, size.y, size.z);
-
-//            xml += String.format("            <capsule radius=\"%f\" length=\"%f\" />\n", r, h);
+           xml += String.format("            <capsule radius=\"%f\" length=\"%f\" />\n", r, h);
         }
         else if (collider instanceof SXRMeshCollider)
         {
@@ -307,7 +307,6 @@ class URDFExporter
 
     protected String convertToURDF(SXRConstraint constraint, Matrix4f m)
     {
-        SXRNode child = constraint.getOwnerObject();
         Vector3f origin = new Vector3f();
         Vector3f euler = new Vector3f();
         Quaternionf q = new Quaternionf();
@@ -318,14 +317,11 @@ class URDFExporter
 
         String xml = "";
         xml = String.format("    <origin xyz=\"%f %f %f\" rpy=\"%f %f %f\" />\n",
-                            origin.x, origin.y, origin.z,
-                            Math.toRadians(euler.z),
-                            Math.toRadians(euler.x),
-                            Math.toRadians(euler.y));
+                            origin.x, origin.y, origin.z, euler.z, euler.x, euler.y);
         if (constraint instanceof SXRSliderConstraint)
         {
             SXRSliderConstraint c = (SXRSliderConstraint) constraint;
-            Vector3f axis = new Vector3f();
+            Vector4f axis = new Vector4f();
             float lowerLimit = c.getAngularLowerLimit();
             float upperLimit = c.getAngularUpperLimit();
 
@@ -334,7 +330,11 @@ class URDFExporter
                 xml += String.format("    <limit lower=\"%f\" upper=\"%f\" />\n", lowerLimit, upperLimit);
             }
 
-            origin.normalize(axis);
+            origin.normalize();
+            axis.x = origin.x;
+            axis.y = origin.y;
+            axis.z = origin.z;
+            mSXR2URDF.transformAffine(axis, axis);
             xml += String.format("    <axis xyz=\"%f %f %f\" />\n", axis.x, axis.y, axis.z);
         }
         else if (constraint instanceof SXRHingeConstraint)
@@ -343,7 +343,10 @@ class URDFExporter
             float[] axis = c.getAxis();
             float lowerLimit = c.getLowerLimit();
             float upperLimit = c.getUpperLimit();
+            Vector4f axis4 = new Vector4f(axis[0], axis[1], axis[0], 1);
 
+            axis4.normalize();
+            mSXR2URDF.transformAffine(axis4, axis4);
             if (lowerLimit != upperLimit)
             {
                 xml += String.format("    <limit lower=\"%f\" upper=\"%f\" />\n", lowerLimit, upperLimit);
