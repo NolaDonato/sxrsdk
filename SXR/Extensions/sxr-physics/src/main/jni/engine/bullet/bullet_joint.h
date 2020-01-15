@@ -56,7 +56,7 @@ class BulletJoint : public PhysicsJoint
 	virtual float 			 getAngularDamping() const { return mAngularDamping; }
 	virtual float            getFriction() const { return mFriction; }
 	virtual int              getCollisionGroup() const { return mCollisionGroup; }
-	virtual const glm::vec3& getScale() const { return mScale; }
+	virtual const glm::mat4& getColliderTransform() const { return mColliderTransform; }
 	virtual SimulationType   getSimulationType() const { return mSimType; }
     virtual float            getMaxAppliedImpulse() const { return 0; }
     virtual float            getMaxCoordVelocity() const { return 0; }
@@ -67,9 +67,10 @@ class BulletJoint : public PhysicsJoint
 	virtual void  setAngularDamping(float ad);
 	virtual void  setMaxAppliedImpulse(float v);
 	virtual void  setMaxCoordVelocity(float v);
-	virtual void  setScale(const glm::vec3& v);
 	virtual void  setFriction(float f);
 	virtual void  setSimulationType(SimulationType type);
+	virtual void  setColliderTransform(const glm::mat4& m);
+	void          setCollisionMask(int collidesWith);
 
 	virtual void  applyCentralForce(float x, float y, float z);
 	virtual void  applyTorque(float x, float y, float z);
@@ -86,7 +87,6 @@ class BulletJoint : public PhysicsJoint
     virtual void  onDisable(Node* owner);
     virtual void  onEnable(Node* owner);
 
-    void          setCollisionMask(int collidesWith);
     void          update(int jointIndex, BulletJoint* parent);
     bool 		  isImported() const { return mNeedsSync & SyncOptions::IMPORTED; }
 
@@ -125,7 +125,7 @@ protected:
     SimulationType			 mSimType;
     glm::vec3                mAxis;
     glm::vec3                mPivot;
-	glm::vec3				 mScale;
+	glm::mat4				 mColliderTransform;
 	glm::vec3				 mLocalInertia;
 	short 				     mNeedsSync;
 	short                    mJointIndex;

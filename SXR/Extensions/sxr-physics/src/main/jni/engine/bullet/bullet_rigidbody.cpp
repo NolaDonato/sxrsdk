@@ -16,6 +16,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_inverse.hpp"
 #include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 #include <contrib/glm/gtc/type_ptr.hpp>
 
 #include "bullet_world.h"
@@ -40,8 +41,8 @@ namespace sxr
     :   mConstructionInfo(mass, nullptr, nullptr),
         mRigidBody(nullptr),
         mCollisionGroup(collisionGroup),
-        mNeedsSync(SyncOptions::ALL),
-        mScale(1, 1, 1)
+        mColliderTransform(1.0f),
+        mNeedsSync(SyncOptions::ALL)
     {
         mWorld = nullptr;
         mConstructionInfo.m_linearDamping = 0;
@@ -74,7 +75,7 @@ namespace sxr
     :   mConstructionInfo(rigidBody->isStaticObject() ? 0.f : 1.f / rigidBody->getInvMass(),
                           this, nullptr),
         mRigidBody(rigidBody),
-        mScale(1, 1, 1),
+        mColliderTransform(1.0f),
         mWorld(nullptr),
         mNeedsSync(SyncOptions::IMPORTED | SyncOptions::COLLISION_SHAPE),
         mCollisionGroup(btBroadphaseProxy::DefaultFilter),
@@ -103,9 +104,10 @@ namespace sxr
         if (shape)
         {
             btVector3 scale = shape->getLocalScaling();
-            mScale.x = scale.x();
-            mScale.y = scale.y();
-            mScale.z = scale.z();
+
+            mColliderTransform[0][0] = scale.x();
+            mColliderTransform[1][1] = scale.y();
+            mColliderTransform[2][2] = scale.z();
         }
         if (rigidBody->isStaticObject())
         {
@@ -175,16 +177,13 @@ namespace sxr
         }
     }
 
-    void BulletRigidBody::setScale(const glm::vec3& s)
+    void BulletRigidBody::setColliderTransform(const glm::mat4& m)
     {
-        if (s != mScale)
+        mColliderTransform = m;
+        mNeedsSync |= SyncOptions::COLLISION_SHAPE;
+        if (mRigidBody && owner_object())
         {
-            mScale = s;
-            mNeedsSync |= SyncOptions::PROPERTIES;
-            if (mRigidBody)
-            {
-                sync();
-            }
+            sync();
         }
     }
 
@@ -235,7 +234,7 @@ namespace sxr
             btDynamicsWorld* bw = mWorld->getPhysicsWorld();
             bw->removeRigidBody(mRigidBody);
         }
-        mScale = src->getScale();
+        mColliderTransform = src->getColliderTransform();
         mSimType = src->getSimulationType();
         mConstructionInfo.m_mass = src->getMass();
         mRigidBody->setRestitution(mConstructionInfo.m_restitution = src->getRestitution());
@@ -384,12 +383,14 @@ namespace sxr
         btCollisionShape* curShape = mConstructionInfo.m_collisionShape;
         btCollisionShape* newShape = nullptr;
         Collider*         collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
-        btVector3         scale(mScale.x, mScale.y, mScale.z);
-
+        btVector3         scale(mColliderTransform[0][0],
+                                mColliderTransform[1][1],
+                                mColliderTransform[2][2]);
+        btTransform       t = convertTransform2btTransform(mColliderTransform);
         if ((curShape == nullptr) ||
             (options & SyncOptions::COLLISION_SHAPE))
         {
-            newShape = convertCollider2CollisionShape(collider);
+            newShape = convertCollider2CollisionShape(collider, t);
             if (newShape)
             {
                 mConstructionInfo.m_collisionShape = newShape;

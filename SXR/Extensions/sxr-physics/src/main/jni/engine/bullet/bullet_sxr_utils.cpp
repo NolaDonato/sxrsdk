@@ -15,7 +15,11 @@
 
 #include "bullet_sxr_utils.h"
 
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_inverse.hpp"
+#include <glm/gtx/quaternion.hpp>
 #include <contrib/glm/gtc/type_ptr.hpp>
+
 #include <BulletCollision/CollisionShapes/btShapeHull.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h>
@@ -25,6 +29,8 @@
 #include <BulletCollision/CollisionShapes/btStaticPlaneShape.h>
 #include <BulletCollision/CollisionShapes/btEmptyShape.h>
 #include <BulletCollision/CollisionShapes/btStridingMeshInterface.h>
+#include <BulletCollision/CollisionShapes/btCompoundShape.h>
+#include <contrib/glm/gtx/matrix_decompose.hpp>
 #include "objects/vertex_buffer.h"
 #include "util/sxr_log.h"
 
@@ -32,11 +38,31 @@ namespace sxr {
 
 Mesh* getMeshFromCollider(MeshCollider*);
 
-btCollisionShape *convertCollider2CollisionShape(Collider *collider)
+btCollisionShape* convertCollider2CollisionShape(Collider *collider, btTransform& t)
 {
+    btQuaternion rot = t.getRotation();
+    btVector3    pos = t.getOrigin();
+
     if (collider == nullptr)
     {
         return nullptr;
+    }
+    /*
+     * If a transform was set on this shape, use a compound shape type to apply it.
+     */
+    rot.normalize();
+    if ((fabs(pos.length()) > 0.0001f) ||
+        (fabs(btVector3(rot.x(), rot.y(), rot.z()).length()) > 0.0001f))
+    {
+       btTransform identity;
+       btCompoundShape* cshape;
+       btCollisionShape* child;
+
+       identity.setIdentity();
+       child = convertCollider2CollisionShape(collider, identity);
+       cshape = new btCompoundShape(0, 1);
+       cshape->addChildShape(t, child);
+       return cshape;
     }
     if (collider->shape_type() == COLLIDER_SHAPE_BOX)
     {
@@ -295,6 +321,26 @@ btTransform convertTransform2btTransform(const glm::mat4& m)
     btVector3 pos(p.x, p.y, p.z);
     btQuaternion rot(q.x, q.y, q.z, q.w);
     return btTransform(rot, pos);
+}
+
+void convertbtTransformToMatrix(const btTransform& t, glm::mat4 &m)
+{
+    btQuaternion q(t.getRotation());
+    btVector3    p(t.getOrigin());
+    glm::quat    rot(q.x(), q.y(), q.z(), q.w());
+
+    m = glm::mat4_cast(rot);
+    m[3][0] = p.x();
+    m[3][1] = p.y();
+    m[3][2] = p.x();
+}
+
+void decomposeMatrix(glm::mat4& m, glm::vec3& scale, glm::quat& rotation, glm::vec3& translation)
+{
+    glm::vec3 skew;
+    glm::vec4 perspective;
+
+    glm::decompose(m, scale, rotation, translation, skew, perspective);
 }
 
 }

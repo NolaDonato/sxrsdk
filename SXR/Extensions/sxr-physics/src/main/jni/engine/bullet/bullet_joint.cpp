@@ -42,6 +42,7 @@
 
 #include "BulletCollision/CollisionDispatch/btCollisionObject.h"
 #include "BulletCollision/CollisionShapes/btEmptyShape.h"
+#include "BulletCollision/CollisionShapes/btCompoundShape.h"
 #include "BulletCollision/BroadphaseCollision/btBroadphaseProxy.h"
 #include "LinearMath/btDefaultMotionState.h"
 #include "LinearMath/btScalar.h"
@@ -63,7 +64,7 @@ namespace sxr {
       mWorld(nullptr),
       mMass(mass),
       mFriction(0),
-      mScale(1, 1, 1),
+      mColliderTransform(1.0f),
       mNeedsSync(SyncOptions::ALL),
       mLinearDamping(0),
       mAngularDamping(0),
@@ -91,7 +92,7 @@ namespace sxr {
       mJointIndex(jointIndex - 1),
       mLocalInertia(0, 0, 0),
       mAxis(1, 0, 0),
-      mScale(1, 1, 1),
+      mColliderTransform(1.0),
       mMass(mass),
       mFriction(0),
       mNeedsSync(SyncOptions::ALL),
@@ -121,12 +122,15 @@ namespace sxr {
         mMultiBody(parent->getMultiBody()),
         mJointIndex(jointIndex),
         mFriction(0),
-        mScale(1, 1, 1),
+        mColliderTransform(1.0f),
         mWorld(nullptr)
     {
         btMultibodyLink& link = mMultiBody->getLink(jointIndex);
+        btCollisionShape* shape;
+
         link.m_userPtr = this;
         mCollider = link.m_collider;
+        shape = mCollider->getCollisionShape();
         mJointType = (JointType) link.m_jointType;
         mMass = link.m_mass;
         mLinearDamping = mMultiBody->getLinearDamping();
@@ -149,9 +153,13 @@ namespace sxr {
             if (shape)
             {
                 btVector3 v = shape->getLocalScaling();
-                mScale.x = v.x();
-                mScale.y = v.y();
-                mScale.z = v.z();
+                if (shape->getShapeType() == COMPOUND_SHAPE_PROXYTYPE)
+                {
+                    btCompoundShape* cshape = dynamic_cast<btCompoundShape*>(shape);
+                    btTransform      t = cshape->getChildTransform(0);
+                    convertbtTransformToMatrix(t, mColliderTransform);
+                }
+                glm::scale(mColliderTransform, glm::vec3(v.x(), v.y(), v.z()));
             }
             mCollider->setUserPointer(this);
         }
@@ -170,7 +178,7 @@ namespace sxr {
         mFriction = srcJoint->getFriction();
         mPivot = srcJoint->getPivot();
         mAxis = srcJoint->getAxis();
-        mScale = srcJoint->getScale();
+        mColliderTransform = srcJoint->getColliderTransform();
         mMass = srcJoint->getMass();
         mSimType = srcJoint->getSimulationType();
         sync(COLLISION_SHAPE | PROPERTIES);
@@ -448,17 +456,6 @@ namespace sxr {
         }
     }
 
-    void BulletJoint::setScale(const glm::vec3& s)
-    {
-        if (s != mScale)
-        {
-            LOGV("BULLET: joint %s scale (%3f, %3f, %3f) to (%3f, %3f, %3f)",
-                 getName(), mScale.x, mScale.y, mScale.z, s.x, s.y, s.z);
-            mScale = s;
-            mNeedsSync |= SyncOptions::PROPERTIES;
-        }
-    }
-
     void BulletJoint::setSimulationType(PhysicsCollidable::SimulationType type)
     {
         if (type != mSimType)
@@ -469,6 +466,16 @@ namespace sxr {
             {
                 sync();
             }
+        }
+    }
+
+    void BulletJoint::setColliderTransform(const glm::mat4& m)
+    {
+        mColliderTransform = m;
+        mNeedsSync |= SyncOptions::COLLISION_SHAPE;
+        if (mMultiBody && owner_object())
+        {
+            sync();
         }
     }
 
@@ -522,6 +529,10 @@ namespace sxr {
         btCollisionShape* curShape = nullptr;
         btCollisionShape* newShape = nullptr;
         Collider*         collider = (Collider*) owner->getComponent(COMPONENT_TYPE_COLLIDER);
+        btVector3         scale(mColliderTransform[0][0],
+                                mColliderTransform[1][1],
+                                mColliderTransform[2][2]);
+        btTransform       t = convertTransform2btTransform(mColliderTransform);
 
         if (collider == nullptr)
         {
@@ -537,7 +548,7 @@ namespace sxr {
         curShape = mCollider->getCollisionShape();
         if ((curShape == nullptr) || (options & SyncOptions::COLLISION_SHAPE) != 0)
         {
-            newShape = convertCollider2CollisionShape(collider);
+            newShape = convertCollider2CollisionShape(collider, t);
             options |= SyncOptions::PROPERTIES;
             if (mWorld)
             {
@@ -559,7 +570,9 @@ namespace sxr {
         if (options & SyncOptions::PROPERTIES)
         {
             btVector3 localInertia;
-            btVector3 scale(mScale.x, mScale.y, mScale.z);
+            btVector3   scale(mColliderTransform[0][0],
+                              mColliderTransform[1][1],
+                              mColliderTransform[2][2]);
 
             curShape->setLocalScaling(scale);
             curShape->calculateLocalInertia(getMass(), localInertia);

@@ -145,13 +145,16 @@ private:
     void        createConstraints(btBulletWorldImporter&);
     void        createConstraints(btDynamicsWorld&);
     void        createMultiBodyConstraints(btMultiBodyDynamicsWorld&);
-    jobject     createCollider(btCollisionObject*);
+    jobject     createCollider(btCollisionObject*, glm::mat4& colliderTransform);
     void        createConstraint(JNIEnv& env, btTypedConstraint* constraint);
     void        createMultiBodyConstraint(JNIEnv& env, btMultiBodyConstraint* c);
     void        registerNames(btDynamicsWorld* world, btSerializer* s);
     const char* getNameForPointer(void* p);
     btVector3&  rotatePoint(btVector3& p);
-    void        createCollisionShape(JNIEnv& env, const btCollisionShape* shape, jobject& obj, btVector3& debugColor);
+    void        createCollisionShape(JNIEnv& env, const btCollisionShape* shape,
+                                     jobject& obj,
+                                     btVector3& debugColor,
+                                     btTransform& colliderTransform);
     jobject     createMeshCollider(JNIEnv& env, const btStridingMeshInterface* imesh, int meshtype);
 
     void        copyHull(const btConvexHullShape *input, float *outVerts, btVector3& dimensions);

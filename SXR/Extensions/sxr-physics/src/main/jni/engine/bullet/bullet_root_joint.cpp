@@ -88,10 +88,14 @@ namespace sxr {
             btCollisionShape* shape = mCollider->getCollisionShape();
             if (shape)
             {
-                btVector3 scale = shape->getLocalScaling();
-                mScale.x = scale.x();
-                mScale.y = scale.y();
-                mScale.z = scale.z();
+                btVector3 newScale = shape->getLocalScaling();
+                glm::vec3 oldScale;
+                glm::quat oldRot;
+                glm::vec3 oldPos;
+                decomposeMatrix(mColliderTransform, oldScale, oldRot, oldPos);
+                mColliderTransform = glm::mat4_cast(oldRot);
+                glm::scale(mColliderTransform, glm::vec3(newScale.x(), newScale.y(), newScale.z()));
+                glm::translate(mColliderTransform, oldPos);
             }
             mCollider->setUserPointer(this);
             mCollisionGroup = mCollider->getBroadphaseHandle()->m_collisionFilterGroup;

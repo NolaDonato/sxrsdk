@@ -322,7 +322,7 @@ btMultiBodyDynamicsWorld* URDFConverter::importPhysics(const char* urdfXMLData, 
 void URDFConverter::initPhysics()
 {
 	DummyGUIHelper gui;
-	BulletURDFImporter u2b(&gui, 0, m_fileIO, 1, 0);
+	BulletURDFImporter u2b(&gui, 0, m_fileIO, 1, CUF_USE_IMPLICIT_CYLINDER);
 	bool loadOk = u2b.loadURDFString(m_urdfData.c_str());
 
 	if (loadOk)

@@ -66,6 +66,8 @@ public class SXRCapsuleCollider extends SXRCollider {
 
     public float getRadius() { return NativeCapsuleCollider.getRadius(getNative()); }
 
+    public CapsuleDirection getDirection() { return mDirection; }
+
     /**
      * Set the radius of the collision capsule.
      *

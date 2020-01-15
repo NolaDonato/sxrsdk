@@ -54,7 +54,6 @@ public:
 	virtual void setAngularFactor(float x, float y, float z)  = 0;
 	virtual void setLinearFactor(float x, float y, float z)  = 0;
 	virtual void setRestitution(float n)  = 0;
-
 	virtual void setSleepingThresholds(float linear, float angular)  = 0;
 	virtual void setCcdMotionThreshold(float n)  = 0;
 	virtual void setCcdSweptSphereRadius(float n)  = 0;
@@ -71,7 +70,6 @@ public:
 	virtual float getCcdMotionThreshold() const = 0;
 	virtual float getCcdSweptSphereRadius() const = 0;
 	virtual float getContactProcessingThreshold() const = 0;
-
 };
 
 }

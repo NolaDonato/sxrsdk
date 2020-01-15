@@ -54,6 +54,7 @@
 #include "objects/components/sphere_collider.h"
 #include "objects/components/capsule_collider.h"
 #include "util/sxr_log.h"
+#include "bullet_sxr_utils.h"
 #include "bullet_fileloader.h"
 #include "bullet_world.h"
 #include "bullet_rigidbody.h"
@@ -65,8 +66,8 @@
 #include "bullet_point2pointconstraint.h"
 #include "bullet_sliderconstraint.h"
 #include "bullet_jointmotor.h"
-#include "../../bullet3/include/BulletDynamics/Featherstone/btMultiBodyLink.h"
-#include "../../bullet3/include/BulletDynamics/Featherstone/btMultiBodyLinkCollider.h"
+#include <BulletDynamics/Featherstone/btMultiBodyLink.h>
+#include <BulletDynamics/Featherstone/btMultiBodyLinkCollider.h>
 
 
 namespace sxr
@@ -162,15 +163,22 @@ namespace sxr
  * @param collider Bullet collider
  * @return Java SXRCollider object
  */
-    jobject BulletFileLoader::createCollider(btCollisionObject* collider)
+    jobject BulletFileLoader::createCollider(btCollisionObject* collider, glm::mat4& colliderTransform)
     {
         jobject o = 0;
         JNIEnv* env;
         btVector3 color(1, 1, 1);
+        btTransform t;
+        btVector3 scale;
+
+        t.setIdentity();
         mJavaVM.GetEnv((void**) &env, SUPPORTED_JNI_VERSION);
 
         const btCollisionShape* inshape = collider->getCollisionShape();
-        createCollisionShape(*env, inshape, o, color);
+        createCollisionShape(*env, inshape, o, color, t);
+        scale = inshape->getLocalScaling();
+        convertbtTransformToMatrix(t, colliderTransform);
+        glm::scale(colliderTransform, glm::vec3(scale.x(), scale.y(), scale.z()));
         collider->setCustomDebugColor(color);
         collider->setCollisionShape(nullptr);
         delete inshape;
@@ -178,7 +186,8 @@ namespace sxr
     }
 
     void BulletFileLoader::createCollisionShape(JNIEnv& env, const btCollisionShape* shape,
-                                                jobject& javaObj, btVector3 &debugColor)
+                                                jobject& javaObj, btVector3 &debugColor,
+                                                btTransform& colliderTransform)
     {
         switch (shape->getShapeType())
         {
@@ -216,8 +225,8 @@ namespace sxr
             {
                 const btCapsuleShape* capsule = dynamic_cast<const btCapsuleShape *>(shape);
                 CapsuleCollider*      cc = new CapsuleCollider();
-                float                 r = cc->getRadius();
-                float                 h = cc->getHeight();
+                float                 r = capsule->getRadius();
+                float                 h = capsule->getHalfHeight() * 2;
                 const char*           name = capsule->getName();
                 char                  last = name[strlen(name) - 1];
 
@@ -229,7 +238,7 @@ namespace sxr
                 }
                 cc->setHeight(h);
                 cc->setRadius(r);
-                LOGD("PHYSICS LOADER:    box collider height = %0.3f, radius = %0.3f", h, r);
+                LOGD("PHYSICS LOADER:    capsule collider height = %0.3f, radius = %0.3f", h, r);
                 javaObj = CreateInstance(env, "com/samsungxr/SXRCapsuleCollider",
                                          "(Lcom/samsungxr/SXRContext;J)V",
                                          mContext.getObject(), cc);
@@ -266,14 +275,13 @@ namespace sxr
             {
                 const btCompoundShape*  cshape = dynamic_cast<const btCompoundShape*>(shape);
                 const btCollisionShape* childShape = cshape->getChildShape(0);
-                btTransform             t = mTransformCoords * cshape->getChildTransform(0);
+                colliderTransform = mTransformCoords * cshape->getChildTransform(0);
 
-                createCollisionShape(env, childShape, javaObj, debugColor);
+                createCollisionShape(env, childShape, javaObj, debugColor, colliderTransform);
                 {
-                    const btVector3 &pos = t.getOrigin();
+                    const btVector3& pos = colliderTransform.getOrigin();
                     LOGD("PHYSICS LOADER:    compound collider pos = (%0.3f, %0.3f, %0.3f)",
-                         pos.x(),
-                         pos.y(), pos.z());
+                         pos.x(), pos.y(), pos.z());
                 }
                 return;
             }
@@ -362,7 +370,6 @@ namespace sxr
                         if (meshPtr)
                         {
                             Mesh* mesh = reinterpret_cast<Mesh*>(meshPtr);
-                            VertexBuffer* vb = mesh->getVertexBuffer();
                             MeshCollider* mc = new MeshCollider(mesh);
 
                             mc->set_mesh_type(COLLIDER_SHAPE_HULL);
@@ -671,9 +678,11 @@ namespace sxr
                                   mContext.getObject(),
                                   reinterpret_cast<jlong>(nativeBody));
         SmartLocalRef r(mJavaVM, javaBody);
+        glm::mat4 colliderTransform;
         mRigidBodies.emplace(s, r);
 
-        javaCollider = createCollider(rb);
+        javaCollider = createCollider(rb, colliderTransform);
+        nativeBody->setColliderTransform(colliderTransform);
         if (javaCollider)
         {
             SmartLocalRef c(mJavaVM, javaCollider);
@@ -724,6 +733,7 @@ namespace sxr
                      name, p.x(), p.y(), p.z());
             }
             BulletJoint* rootJoint = new BulletRootJoint(mb);
+            glm::mat4    colliderTransform;
             jobject javaJoint = CreateInstance(*env, "com/samsungxr/physics/SXRPhysicsJoint",
                                                "(Lcom/samsungxr/SXRContext;J)V",
                                                mContext.getObject(),
@@ -737,13 +747,14 @@ namespace sxr
             world.removeMultiBody(mb);
             if (btc != nullptr)
             {
-                jobject javaCollider = createCollider(btc);
+                jobject javaCollider = createCollider(btc, colliderTransform);
 
                 if (javaCollider)
                 {
                     SmartLocalRef c(mJavaVM, javaCollider);
 
                     s = name;
+                    rootJoint->setColliderTransform(colliderTransform);
                     mColliders.emplace(s, c);
                 }
                 world.removeCollisionObject(btc);
@@ -775,12 +786,13 @@ namespace sxr
                 nativeJoint->setName(name);
                 if (collider != nullptr)
                 {
-                    jobject javaCollider = createCollider(collider);
+                    jobject javaCollider = createCollider(collider, colliderTransform);
                     if (javaCollider)
                     {
                         SmartLocalRef r(mJavaVM, javaCollider);
 
                         s = name;
+                        nativeJoint->setColliderTransform(colliderTransform);
                         mColliders.emplace(s, r);
                     }
                     world.removeCollisionObject(collider);
@@ -1406,7 +1418,8 @@ jobject BulletFileLoader::createGenericConstraint(JNIEnv &env, btGeneric6DofSpri
                             ->m_dynamicsWorldInfo[0]);
             double *gravity = reinterpret_cast<double *>(&ddata->m_gravity);
             mNeedRotate = gravity[2] != 0.0;
-            mRotateCoords = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f};
+            mRotateCoords = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+//            mRotateCoords = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f};
             mTransformCoords.setBasis(mRotateCoords);
             mTransformCoords.setOrigin(btVector3(0, 0, 0));
         }
@@ -1417,7 +1430,7 @@ jobject BulletFileLoader::createGenericConstraint(JNIEnv &env, btGeneric6DofSpri
                             ->m_dynamicsWorldInfo[0]);
             float *gravity = reinterpret_cast<float *>(&fdata->m_gravity);
             mNeedRotate = gravity[2] != 0.f;
-            mRotateCoords = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f};
+            mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f };
             mTransformCoords.setBasis(mRotateCoords);
             mTransformCoords.setOrigin(btVector3(0, 0, 0));
         }
@@ -1469,7 +1482,7 @@ jobject BulletFileLoader::createGenericConstraint(JNIEnv &env, btGeneric6DofSpri
             return false;
         }
         mURDFImporter->registerNames(*mSerializer, false);
-//        mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };
+//        mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 0.0f };
         mRotateCoords = { 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f };
 
         bulletWorld->setGravity(gravity);
