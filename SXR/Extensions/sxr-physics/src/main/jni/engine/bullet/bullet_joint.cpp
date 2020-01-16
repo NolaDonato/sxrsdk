@@ -609,14 +609,7 @@ namespace sxr {
                 mCollider->setCollisionFlags((collisionFlags |
                                                btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT) &
                                               ~btCollisionObject::CollisionFlags::CF_STATIC_OBJECT);
-                if (enabled())
-                {
-                    mCollider->setActivationState(DISABLE_DEACTIVATION);
-                }
-                else
-                {
-                    mCollider->forceActivationState(WANTS_DEACTIVATION);
-                }
+                mCollider->setActivationState(enabled() ? DISABLE_DEACTIVATION : WANTS_DEACTIVATION);
                 break;
             }
         }

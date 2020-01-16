@@ -124,8 +124,6 @@ public class SXRCapsuleCollider extends SXRCollider {
                 break;
         }
     }
-
-    public CapsuleDirection getDirection() { return mDirection; }
 }
 
 class NativeCapsuleCollider {
