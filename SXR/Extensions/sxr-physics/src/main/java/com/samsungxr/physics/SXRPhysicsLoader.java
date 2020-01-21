@@ -629,7 +629,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                 }
             }
         }
-        if (linkRigidBodies ||(joints.length > 0))
+        if (linkRigidBodies || (joints.length > 0))
         {
             physicsRoot = new SXRNode(getSXRContext());
             sceneRoot.addChildObject(physicsRoot);
@@ -1006,6 +1006,7 @@ public class SXRPhysicsLoader extends SXRHybridObject implements IEventReceiver
                     }
                     else if (isAttachedTo(destSkel, destIndex, attachBone))
                     {
+                        destSkel.setBoneOptions(destIndex, srcSkel.getBoneOptions(i));
                         destBody.setSimulationType(srcBody.getSimulationType());
                         destBody.copy(srcBody);
                     }

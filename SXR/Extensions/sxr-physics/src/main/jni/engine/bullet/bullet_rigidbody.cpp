@@ -292,7 +292,8 @@ namespace sxr
             updateSimType();
             if (mWorld)
             {
-                mWorld->getPhysicsWorld()->refreshBroadphaseProxy(mRigidBody);
+                mWorld->getPhysicsWorld()->removeCollisionObject(mRigidBody);
+                mWorld->getPhysicsWorld()->addCollisionObject(mRigidBody, mCollisionGroup, mCollisionMask);
             }
         }
     }
@@ -341,14 +342,7 @@ namespace sxr
                         (collisionFlags | btCollisionObject::CollisionFlags::CF_KINEMATIC_OBJECT) &
                         ~btCollisionObject::CollisionFlags::CF_STATIC_OBJECT);
                 mConstructionInfo.m_localInertia.setValue(0, 0, 0);
-                if (enabled())
-                {
-                    mRigidBody->setActivationState(DISABLE_DEACTIVATION);
-                }
-                else
-                {
-                    mRigidBody->forceActivationState(WANTS_DEACTIVATION);
-                }
+                mRigidBody->setActivationState(enabled() ? DISABLE_DEACTIVATION : WANTS_DEACTIVATION);
                 break;
         }
     }

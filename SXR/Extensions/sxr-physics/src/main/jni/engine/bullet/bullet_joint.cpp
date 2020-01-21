@@ -554,8 +554,9 @@ namespace sxr {
             {
                 btDynamicsWorld* bw = mWorld->getPhysicsWorld();
 
+                bw->addCollisionObject(mCollider);
                 mCollider->setCollisionShape(newShape);
-                bw->refreshBroadphaseProxy(mCollider);
+                bw->addCollisionObject(mCollider, mCollisionGroup, mCollisionMask);
             }
             else
             {

@@ -1033,14 +1033,6 @@ public class SXRSkeleton extends SXRComponent implements PrettyPrint
                     parentBoneIds[numNewBones] = parentId;
                     ++numNewBones;
                 }
-                else if (startBone != null)
-                {
-                    if (j > startBoneId)
-                    {
-                        setBoneOptions(boneId, newSkel.getBoneOptions(j));
-                        matrices.set(boneId, m);
-                    }
-                }
             }
 
             int n = numBones + numNewBones;

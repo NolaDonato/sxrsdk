@@ -311,12 +311,12 @@ public class SXRAvatarPhysics extends SXRBehavior implements SXRPhysicsLoader.IP
             }
             if (mUseAVT)
             {
-                physicsfile = avatar.getProperty("avt");
+                physicsfile = avatar.getModelProperty(modelType, "avt");
             }
             else
             {
-                physicsfile = avatar.getProperty("physics");
-                physicsfile = (physicsfile != null) ? physicsfile : avatar.getProperty("avt");
+                physicsfile = avatar.getModelProperty(modelType, "physics");
+                physicsfile = (physicsfile != null) ? physicsfile : avatar.getModelProperty(modelType, "avt");
             }
             if (physicsfile == null)
             {

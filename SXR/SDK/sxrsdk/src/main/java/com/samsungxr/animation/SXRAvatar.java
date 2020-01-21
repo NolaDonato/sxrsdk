@@ -576,7 +576,11 @@ public class SXRAvatar implements IEventReceiver, SXRAnimationQueue.IAnimationQu
     public String getModelProperty(String modelType, String propName)
     {
         Attachment a = mAttachments.get(modelType);
-        return a.getProperty(propName);
+        if (a != null)
+        {
+            return a.getProperty(propName);
+        }
+        return null;
     }
 
     public void setProperty(String propName, String val)
